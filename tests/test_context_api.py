@@ -91,8 +91,6 @@ def test_expired_context_state(env):
                 json={"product_id": pid, "ttl_s": 60})
     d = r.json()["data"]
     # force expiry by rewriting the stored record
-    from product_forge.config import load_config
-    import pathlib
     # expired check is evaluated at read time; simulate by direct store edit
     ctx = cl.app.state.ctx
     rec = ctx.store.get("session_contexts", d["id"])
