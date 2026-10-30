@@ -1,0 +1,15 @@
+{
+  "agent": "claude",
+  "command": [
+    "claude",
+    "-p",
+    "$(cat /home/edgar/Documentos/projetos/forjas/product-forge/factory/prompts/deep-regression-suite.implement.claude.md)"
+  ],
+  "created_at": "2026-10-30T11:52:16+00:00",
+  "id": "deep-regression-suite",
+  "prompt_path": "/home/edgar/Documentos/projetos/forjas/product-forge/factory/prompts/deep-regression-suite.implement.claude.md",
+  "spec_path": "/home/edgar/Documentos/projetos/forjas/product-forge/factory/specs/active/deep-regression-suite.md",
+  "spec_sha256": "ab6dc544569788b8c5b3520f44f95610d2ec597eaac17fa9b9e64066be57efe6",
+  "status": "planned",
+  "title": "Deep regression suite over the full /api/v1 surface"
+}

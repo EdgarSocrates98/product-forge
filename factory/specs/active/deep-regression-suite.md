@@ -3,7 +3,7 @@ id: deep-regression-suite
 title: Deep regression suite over the full /api/v1 surface
 agent: claude
 risk: high
-grill: pending
+grill: completed
 verification: python -m pytest tests/ -q && python -m ruff check src tests
 ---
 
@@ -33,3 +33,7 @@ verbs, id-shaped routes, and failure paths still have smoke-level depth.
 
 ## Grill Gate
 <!-- decision owner? out of scope? riskiest assumption? smallest version? -->
+- Decision owner: Edgar (answered 2026-10). Priority order: this spec first.
+- Out of scope: pg backend, OIDC, live providers.
+- Riskiest assumption: coverage floor ≥80% may expose unreachable code — record, don't inflate.
+- Smallest acceptable version: parametric envelope sweep on all methods + per-domain negatives + round-trips on core entities.

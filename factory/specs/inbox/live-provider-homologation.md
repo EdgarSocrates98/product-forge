@@ -3,7 +3,7 @@ id: live-provider-homologation
 title: Live homologation — one LLM provider + one cloud connector
 agent: claude
 risk: high
-grill: pending
+grill: completed
 verification: python -m pytest tests/ -k homolog && cat docs/providers/HOMOLOGATION_EVIDENCE.md
 ---
 
@@ -40,3 +40,7 @@ from unverified to verified, with transcripts as evidence.
 
 ## Grill Gate
 <!-- decision owner? out of scope? riskiest assumption? smallest version? -->
+- Decision owner: Edgar (answered 2026-10). Provider: Anthropic. Cloud: AWS (local profile).
+- Out of scope: Codex/Devin/Azure — stay unverified.
+- Riskiest assumption: Anthropic credentials + AWS profile actually usable from this host.
+- Smallest acceptable version: one real agent run + one real AWS list call, transcripts redacted under docs/providers/evidence/.

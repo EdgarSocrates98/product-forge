@@ -3,7 +3,7 @@ id: real-authz-multi-tenant
 title: Real authorization — OIDC + workspace isolation for multi-team use
 agent: claude
 risk: high
-grill: pending
+grill: completed
 verification: python -m pytest tests/ -k authz && python -m pytest tests/ -k isolation
 ---
 
@@ -41,3 +41,7 @@ or can land on sqlite with documented single-writer limits.
 
 ## Grill Gate
 <!-- decision owner? out of scope? riskiest assumption? smallest version? -->
+- Decision owner: Edgar (answered 2026-10). IdP: Keycloak local (docker). Tenant: workspace==tenant.
+- Out of scope: org layer, Entra/Auth0/Cognito adapters.
+- Riskiest assumption: OIDC middleware can stay optional without breaking local-bearer mode.
+- Smallest acceptable version: JWT-verified principal + workspace isolation enforced on product routes + role ladder, IdP-mocked tests.
