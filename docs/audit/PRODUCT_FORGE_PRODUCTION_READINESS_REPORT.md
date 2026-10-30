@@ -1,6 +1,6 @@
 # Product Forge — Production Readiness Report
 
-**Date**: 2026-10-30 · **Branch**: `main` · **Suite**: 94 tests green · ruff clean · CI green
+**Date**: 2026-10-30 · **Branch**: `main` · **Suite**: 95 tests green · ruff clean · CI green
 
 ## Verdict: **Ready with restrictions**
 
@@ -19,6 +19,7 @@ are real and named — none are hidden.
 | **Technical PM** | OpenAPI import → diff → contract → evidence graph → health | ✅ Homologated |
 | **Data Product Mgr** | contract → payload validation → schema discovery → audit trail | ✅ Homologated |
 | **Agent Creator** | template catalog → create → tools_allowed → eval → publish gate → run → budget | ✅ Homologated |
+| **Analyst (notebooks)** | markdown + SQL block run → version bump → render w/ provenance; DELETE block rejected | ✅ Homologated |
 | **Failure modes** | unauth 401, DROP/DELETE rejected, unknown metric clarification, empty result honest, no-provider named state, typed 404 | ✅ Homologated |
 
 ## Feature classification
@@ -40,6 +41,7 @@ are real and named — none are hidden.
 | Experiments | ✅ | guardrails/baseline verdicts; no causal claims |
 | Meeting Intel | ✅ | draft extraction; publish requires `reviewed=true` (PF-REVIEW-REQUIRED) |
 | Decision Journal | ✅ | completeness checklist, missing-field honesty |
+| Analysis Notebooks | ✅ | versioned markdown/sql blocks; SQL runs through the same read-only gate; render carries statement SHA + provenance |
 | Product Ops | ✅ | alerts, watches/run-due, scheduled reports |
 | MCP | ✅ | stdio + `POST /mcp` HTTP, 14 tools |
 | Delegation | ✅ | operator allowlist → subprocess+JSON; refused/unavailable named states |

@@ -28,6 +28,7 @@ from ..domain.models import (
     Initiative,
     KnowledgeSource,
     Meeting,
+    Notebook,
     Product,
     Workspace,
     new_id,
@@ -450,6 +451,59 @@ def create_app(home: Path | None = None) -> FastAPI:
           {"title", "hypothesis", "design", "success_metrics", "guardrails",
            "baseline", "status", "results"})
     _crud("meetings", "meetings", Meeting, {"title", "transcript"})
+    _crud("notebooks", "notebooks", Notebook, {"title"})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/notebooks/{{nid}}/blocks", status_code=201)
+    def notebook_add_block(pid: str, nid: str, body: dict[str, Any], req: Request) -> dict:
+        from ..intel.notebooks import add_block
+        nb = ctx.store.get("notebooks", nid)
+        if nb.get("product_id") != pid:
+            raise ForgeError("PF-404", "notebook not in product", 404)
+        try:
+            blk = add_block(nb, body.get("kind", "markdown"),
+                            body.get("content", ""), body.get("source_id"))
+        except ValueError as exc:
+            raise ForgeError("PF-VALIDATION", str(exc), 422) from exc
+        ctx.store.put_doc("notebooks", nb)
+        ctx.audit(req, "notebooks.block-add", "notebooks", nid, product_id=pid)
+        return envelope(blk)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/notebooks/{{nid}}/blocks/{{bid}}/run")
+    def notebook_run_block(pid: str, nid: str, bid: str, req: Request) -> dict:
+        from ..analytics.engine import execute_query, validate_query
+        from ..intel.notebooks import run_sql_block
+        nb = ctx.store.get("notebooks", nid)
+        if nb.get("product_id") != pid:
+            raise ForgeError("PF-404", "notebook not in product", 404)
+        block = next((b for b in nb.get("blocks", []) if b["id"] == bid), None)
+        if not block:
+            raise ForgeError("PF-404", "block not found", 404)
+        if block["kind"] != "sql":
+            block["version"] += 1
+            ctx.store.put_doc("notebooks", nb)
+            return envelope({"ran": False, "status": "markdown-rendered",
+                             "block_version": block["version"]})
+        dialect = "sqlite"
+        if block.get("source_id"):
+            import contextlib
+            with contextlib.suppress(Exception):
+                dialect = (ctx.store.get("data_sources", block["source_id"])
+                           .get("dialect") or "sqlite")
+        res = run_sql_block(
+            block, lambda st: validate_query(st, dialect),
+            lambda sid, st: execute_query(ctx.store, pid, sid, st))
+        ctx.store.put_doc("notebooks", nb)
+        ctx.audit(req, "notebooks.block-run", "notebooks", nid, product_id=pid,
+                  details={"block": bid, "status": res.get("status")})
+        return envelope(res)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/notebooks/{{nid}}/render")
+    def notebook_render(pid: str, nid: str) -> dict:
+        from ..intel.notebooks import render
+        nb = ctx.store.get("notebooks", nid)
+        if nb.get("product_id") != pid:
+            raise ForgeError("PF-404", "notebook not in product", 404)
+        return envelope(render(nb))
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/experiments/{{eid}}/conclude")
     def experiment_conclude(pid: str, eid: str, body: dict[str, Any], req: Request) -> dict:
@@ -459,7 +513,7 @@ def create_app(home: Path | None = None) -> FastAPI:
             raise ForgeError("PF-404", "experiment not in product", 404)
         upd = conclude_experiment(exp, body.get("results") or {}, body.get("verdict", ""))
         exp.update(upd)
-        ctx.store.put("experiments", exp)
+        ctx.store.put_doc("experiments", exp)
         ctx.audit(req, "experiments.conclude", "experiments", eid, product_id=pid)
         refs = []
         if body.get("record_decision"):
@@ -488,7 +542,7 @@ def create_app(home: Path | None = None) -> FastAPI:
             raise ForgeError("PF-404", "meeting not in product", 404)
         mtg["draft_items"] = extract_drafts(mtg.get("transcript") or "")
         mtg["status"] = "draft"
-        ctx.store.put("meetings", mtg)
+        ctx.store.put_doc("meetings", mtg)
         ctx.audit(req, "meetings.extract", "meetings", mid, product_id=pid)
         return envelope({"meeting_id": mid, "status": "draft",
                          "draft_items": mtg["draft_items"],
@@ -518,7 +572,7 @@ def create_app(home: Path | None = None) -> FastAPI:
                 refs.append(ini.id)
         mtg["status"] = "published"
         mtg["published_refs"] = refs
-        ctx.store.put("meetings", mtg)
+        ctx.store.put_doc("meetings", mtg)
         ctx.audit(req, "meetings.publish", "meetings", mid, product_id=pid,
                   details={"refs": refs})
         return envelope({"meeting_id": mid, "status": "published",

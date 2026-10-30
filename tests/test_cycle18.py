@@ -158,3 +158,30 @@ def test_failure_modes(env):
     # missing product → typed error envelope
     r = c.get("/api/v1/products/nope/context", headers=h)
     assert r.status_code == 404 and "error" in r.json()
+
+
+def test_persona_notebooks(env):
+    """Analyst: versioned notebook — markdown + real SQL run + render."""
+    c, h, pid, sid = env
+    nid = c.post(f"/api/v1/products/{pid}/notebooks", headers=h,
+                 json={"title": "Revenue analysis"}).json()["data"]["id"]
+    c.post(f"/api/v1/products/{pid}/notebooks/{nid}/blocks", headers=h,
+           json={"kind": "markdown", "content": "# Revenue by region"})
+    b = c.post(f"/api/v1/products/{pid}/notebooks/{nid}/blocks", headers=h,
+               json={"kind": "sql", "source_id": sid,
+                     "content": "SELECT region, SUM(revenue) AS r FROM orders GROUP BY region"})
+    bid = b.json()["data"]["id"]
+    run = c.post(f"/api/v1/products/{pid}/notebooks/{nid}/blocks/{bid}/run",
+                 headers=h).json()["data"]
+    assert run["status"] == "completed" and run["block_version"] == 1
+    # destructive SQL inside a notebook is rejected by the same gate
+    bad = c.post(f"/api/v1/products/{pid}/notebooks/{nid}/blocks", headers=h,
+                 json={"kind": "sql", "source_id": sid,
+                       "content": "DELETE FROM orders"}).json()["data"]
+    rr = c.post(f"/api/v1/products/{pid}/notebooks/{nid}/blocks/{bad['id']}/run",
+                headers=h).json()["data"]
+    assert rr["status"] == "rejected" and rr["ran"] is False
+    rend = c.get(f"/api/v1/products/{pid}/notebooks/{nid}/render", headers=h).json()["data"]
+    assert rend["schema"] == "productforge/NotebookRender/v1"
+    assert rend["executed"] == 1 and rend["total"] == 3
+    assert rend["blocks"][1]["result"]["statement_sha"]

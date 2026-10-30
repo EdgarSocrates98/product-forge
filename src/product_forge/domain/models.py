@@ -304,6 +304,12 @@ class Meeting(Entity):
     published_refs: list[str] = Field(default_factory=list)
 
 
+class Notebook(Entity):
+    product_id: str
+    title: str
+    blocks: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class AuditEvent(Entity):
     workspace_id: str | None = None
     product_id: str | None = None
