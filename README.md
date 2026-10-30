@@ -22,17 +22,36 @@ Surfaces: **CLI** (`productforge`), **HTTP API** (`/api/v1`, `forge/PortalApi/1`
 
 ## Install
 
+Bootstrap the CLI (wheel → isolated venv → launcher):
+
 ```bash
-uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
-# or: pip install -e ".[api,mcp,analytics]"
-productforge install --yes                        # user scope (runtime home + hosts)
-productforge install --scope project --yes        # into a repo: skills + .mcp.json + AGENTS.md
+./install.sh          # POSIX · ./install.windows.sh · ./install.ps1
+# or dev flow: uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
+```
+
+Then install the Forge — bare `productforge install` on a TTY opens the
+**guided wizard** (same contract as `sparkforge-aws install`):
+
+1. **Scope** — `project` | `workspace` | `user`
+2. **Install profile** — `minimal` | `recommended` | `full`
+3. **Execution profile** — `economy` | `balanced` | `deep`
+4. **Components** — `skills`, `agents`, `mcp`, `tui`, `graph-studio`
+5. **Hosts** — `claude`, `devin`, `codex`, `copilot` | `all` | `none`
+6. Real dry-run plan → confirm → apply → doctor
+
+Flags keep CI non-interactive JSON:
+
+```bash
+productforge install --yes --scope project --host claude,devin \
+  --components skills,agents,mcp --gateway-profile balanced
 productforge install --dry-run                    # plan only, zero writes
 productforge repair / update / uninstall          # lifecycle verbs (ledger-governed)
 productforge status
 ```
 
-Install is governed by the **vendored forge installkit** (`src/product_forge/_installkit.py`, canonical `the-forge/scripts/installkit`) — the same engine spark-forge-aws uses: profile-gated assets (`minimal|recommended|full`), ledger-tracked ownership (uninstall removes only owned files), AGENTS.md marker blocks, `.mcp.json` registration, drift detection and repair. The 16 `pf-*` skills are shipped inside the wheel (`force-include`) and placed into each selected host's skills dir (`.devin/skills`, `.agents/skills`, `.claude/skills`, `.codex`, …).
+Install is governed by the **vendored forge installkit** (`src/product_forge/_installkit.py`, canonical `the-forge/scripts/installkit`) — the same engine spark-forge-aws uses: profile-gated assets, ledger-tracked ownership (uninstall removes only owned files), AGENTS.md marker blocks, `.mcp.json` registration, drift detection and repair. The 16 `pf-*` skills ship inside the wheel (`force-include`) into each selected host's skills dir; content bundles (`rules`, `evals`, `knowledge`) land under `<state_dir>/bundle/`.
+
+Full guide: [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Quickstart
 
@@ -64,4 +83,16 @@ productforge mcp serve            # MCP tools for agent hosts
 
 ## Status
 
-Beta — Cycles 1–12 complete: foundation → knowledge/graph → agent runtime → analytics → dashboards → planning → cloud/API/data-product intelligence → operations → advanced agentic → homologation. The Payments Product Intelligence scenario runs end-to-end (`tests/test_homologation.py`, 30 steps) plus a negative-scenario suite. See `docs/audit/` for the ecosystem audit, ADRs and the final implementation gap matrix; deferred items are listed there explicitly.
+Beta — Cycles 1–18 complete: foundation → knowledge/graph → agent runtime → analytics → dashboards → planning → cloud/API/data-product intelligence → operations → advanced agentic → homologation → Portal studio → real LLM runtime → semantic metrics → health/evidence/experiments → persona homologation. The Payments Product Intelligence scenario runs end-to-end (`tests/test_homologation.py`) plus a negative-scenario suite. See `docs/audit/` for the ecosystem audit, ADRs and the readiness report; deferred items are listed there explicitly.
+
+## Docs
+
+| Doc | Covers |
+|---|---|
+| [docs/INSTALL.md](docs/INSTALL.md) | bootstrap scripts, guided wizard, scopes/profiles/components/hosts, bundles, lifecycle verbs |
+| [docs/API.md](docs/API.md) | `forge/PortalApi/1` envelope, auth, full `/api/v1` route index |
+| [docs/MCP.md](docs/MCP.md) | 14 MCP tools + transport + registration |
+| [docs/adr/](docs/adr/) | architecture decisions |
+| [docs/audit/](docs/audit/) | ecosystem audit, integration contracts, readiness report |
+| [CHANGELOG.md](CHANGELOG.md) | cycle history + hard invariants |
+| [AGENTS.md](AGENTS.md) | hard rules + commands for agents working in this repo |
