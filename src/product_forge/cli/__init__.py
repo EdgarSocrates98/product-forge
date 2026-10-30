@@ -425,6 +425,70 @@ def src_verify(product_id: str, source_id: str) -> None:
     _out(res)
 
 
+# -- dashboards + planning --------------------------------------------------
+
+dash_app = typer.Typer(help="Dashboards")
+plan_app = typer.Typer(help="Planning: initiatives, PRD, roadmap")
+app.add_typer(dash_app, name="dashboard")
+app.add_typer(plan_app, name="plan")
+
+
+@dash_app.command("create")
+def dash_create(product_id: str, name: str, widgets: str = "[]") -> None:
+    from ..domain.models import Dashboard, new_id
+
+    st = _store()
+    st.get("products", product_id)
+    d = Dashboard(id=new_id("dsh"), product_id=product_id, name=name,
+                  widgets=json.loads(widgets))
+    st.put("dashboards", d)
+    st.close()
+    _out(d.model_dump(mode="json", by_alias=True))
+
+
+@dash_app.command("render")
+def dash_render(product_id: str, dashboard_id: str) -> None:
+    from ..dashboards.render import render_dashboard
+
+    st = _store()
+    dash = st.get("dashboards", dashboard_id)
+    _out(render_dashboard(st, product_id, dash))
+    st.close()
+
+
+@plan_app.command("prioritize")
+def plan_prioritize(initiative_id: str, factors: str = "{}") -> None:
+    from ..domain.models import Initiative
+    from ..planning.prioritize import score_initiative
+
+    st = _store()
+    doc = st.get("initiatives", initiative_id)
+    res = score_initiative(doc, json.loads(factors).get("factors", {}))
+    doc["priority_score"] = res["score"]
+    st.put("initiatives", Initiative.model_validate(doc))
+    _out(res)
+    st.close()
+
+
+@plan_app.command("prd")
+def plan_prd(initiative_id: str) -> None:
+    from ..planning.prd import generate_prd
+
+    st = _store()
+    doc = st.get("initiatives", initiative_id)
+    _out(generate_prd(st, doc["product_id"], doc))
+    st.close()
+
+
+@plan_app.command("roadmap")
+def plan_roadmap(product_id: str) -> None:
+    from ..planning.roadmap import build_roadmap
+
+    st = _store()
+    _out(build_roadmap(st, product_id))
+    st.close()
+
+
 # -- mcp ------------------------------------------------------------------
 
 @mcp_app.command("serve")

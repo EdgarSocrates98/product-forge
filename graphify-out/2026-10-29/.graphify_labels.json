@@ -2,13 +2,13 @@
   "0": "app.py",
   "1": "build_relations",
   "2": "Store",
-  "3": "command",
+  "3": "_out",
   "4": "__init__.py",
-  "5": "knowledge_health",
-  "6": "status",
+  "5": "run_agent",
+  "6": "command",
   "7": "kn_import",
-  "8": "api_token",
+  "8": "ag_eval",
   "9": "install",
   "10": "kn_health",
-  "11": "kn_query"
+  "11": "kn_extract"
 }

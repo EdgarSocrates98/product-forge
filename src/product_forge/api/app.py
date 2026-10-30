@@ -574,6 +574,60 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.audit(req, "source.verify", "data_sources", sid, product_id=pid)
         return envelope(result)
 
+    # -- dashboards (Cycle 6) --------------------------------------------------
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/dashboards/{{did}}/render")
+    def dash_render(pid: str, did: str, req: Request) -> dict:
+        from ..dashboards.render import render_dashboard
+
+        dash = ctx.store.get("dashboards", did)
+        if dash.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"dashboard {did} not in product {pid}")
+        result = render_dashboard(ctx.store, pid, dash)
+        ctx.audit(req, "dashboard.render", "dashboards", did, product_id=pid)
+        return envelope(result)
+
+    # -- planning (Cycle 7) ------------------------------------------------------
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/initiatives/{{iid}}/prioritize")
+    def initiative_prioritize(pid: str, iid: str, req: Request, body: ScopedIn | None = None) -> dict:
+        from ..planning.prioritize import score_initiative
+
+        doc = ctx.store.get("initiatives", iid)
+        if doc.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"initiative {iid} not in product {pid}")
+        factors = (body.model_dump() if body else {})
+        res = score_initiative(doc, factors.get("factors", {}))
+        doc["priority_score"] = res["score"]
+        doc.setdefault("metadata", {})["prioritization"] = res
+        from ..domain.models import Initiative
+
+        ent = Initiative.model_validate(doc)
+        ctx.store.put("initiatives", ent)
+        ctx.audit(req, "initiative.prioritize", "initiatives", iid, product_id=pid)
+        return envelope(res)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/initiatives/{{iid}}/prd")
+    def initiative_prd(pid: str, iid: str, req: Request) -> dict:
+        from ..planning.prd import generate_prd
+
+        doc = ctx.store.get("initiatives", iid)
+        if doc.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"initiative {iid} not in product {pid}")
+        prd = generate_prd(ctx.store, pid, doc)
+        ctx.audit(req, "initiative.prd", "initiatives", iid, product_id=pid)
+        return envelope(prd)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/roadmap")
+    def roadmap(pid: str) -> dict:
+        from ..planning.roadmap import build_roadmap
+
+        ctx.store.get("products", pid)
+        return envelope(build_roadmap(ctx.store, pid))
+
     @app.get(f"{API_PREFIX}/audit")
     def audit_log(product_id: str | None = None, limit: int = 100) -> dict:
         return envelope({"items": ctx.store.list("audit_events", product_id=product_id, limit=limit)})

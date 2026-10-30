@@ -54,15 +54,15 @@
     "semantic_hash": ""
   },
   "src/product_forge/api/app.py": {
-    "mtime": 1793321913.7870457,
-    "seen": 1793321956.9117446,
-    "ast_hash": "f3aeefcb08a3e24fc74fef7713a9a623",
+    "mtime": 1793322018.0883815,
+    "seen": 1793322111.460076,
+    "ast_hash": "741128375a41164aa0faeffb537994fc",
     "semantic_hash": ""
   },
   "src/product_forge/cli/__init__.py": {
-    "mtime": 1793321914.3030546,
-    "seen": 1793321956.9117455,
-    "ast_hash": "2a59141bff0d867114273e5fca86d8ea",
+    "mtime": 1793322018.6263862,
+    "seen": 1793322111.4600773,
+    "ast_hash": "3df31c9304c635f9342c23f313d26c96",
     "semantic_hash": ""
   },
   "src/product_forge/config.py": {
@@ -168,9 +168,9 @@
     "semantic_hash": ""
   },
   "src/product_forge/security.py": {
-    "mtime": 1793321284.0567684,
-    "seen": 1793321848.3738399,
-    "ast_hash": "6cf1079a3711ec5be154538929001385",
+    "mtime": 1793322051.3516347,
+    "seen": 1793322111.460101,
+    "ast_hash": "99a25cbc90cc74f3490091d0a3545db2",
     "semantic_hash": ""
   },
   "src/product_forge/services/__init__.py": {
@@ -297,6 +297,30 @@
     "mtime": 1793321923.327208,
     "seen": 1793321956.9117737,
     "ast_hash": "6af8223e7ebf94f4ce077be05c3d32d2",
+    "semantic_hash": ""
+  },
+  "src/product_forge/analytics/connectors.py": {
+    "mtime": 1793322100.4109664,
+    "seen": 1793322111.4600706,
+    "ast_hash": "a83e93735e978e6a16770dd368b967e2",
+    "semantic_hash": ""
+  },
+  "src/product_forge/analytics/engine.py": {
+    "mtime": 1793322100.4108121,
+    "seen": 1793322111.4600723,
+    "ast_hash": "0d8742e22d7d7dae9210fd519c49e43e",
+    "semantic_hash": ""
+  },
+  "src/product_forge/analytics/sqlvalidate.py": {
+    "mtime": 1793322100.4458897,
+    "seen": 1793322111.4600732,
+    "ast_hash": "d96fd35cd8025ce54707dc2e57a40835",
+    "semantic_hash": ""
+  },
+  "tests/test_cycle5.py": {
+    "mtime": 1793322028.211466,
+    "seen": 1793322111.4601092,
+    "ast_hash": "e48c1726ef264d006504d38f9796d10b",
     "semantic_hash": ""
   }
 }
