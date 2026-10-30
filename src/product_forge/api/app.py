@@ -621,11 +621,43 @@ def create_app(home: Path | None = None) -> FastAPI:
         sql = compile_spec(body.spec)
         return envelope({"sql": sql, "spec": body.spec})
 
+    @app.get(f"{API_PREFIX}/products/{{pid}}/metrics")
+    def metrics_list(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("metrics", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/metrics")
+    def metrics_put(pid: str, body: dict[str, Any], req: Request) -> dict:
+        from ..analytics.metrics import put_metric
+        ctx.store.get("products", pid)
+        doc = put_metric(ctx.store, pid, body)
+        ctx.audit(req, "metric.put", "metrics", doc["id"], product_id=pid)
+        return envelope(doc)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/metrics/resolve")
+    def metrics_resolve(pid: str, body: QueryIn) -> dict:
+        from ..analytics.metrics import resolve
+        ctx.store.get("products", pid)
+        return envelope(resolve(ctx.store, pid, body.question))
+
     @app.post(f"{API_PREFIX}/products/{{pid}}/queries/nl")
     def q_nl(pid: str, body: NlIn) -> dict:
         from ..analytics.engine import compile_spec, nl_to_sql
+        from ..analytics.metrics import metric_sql, resolve
 
         ctx.store.get("products", pid)
+        # §6.2: resolve catalog metric FIRST — agents never invent KPI formulas
+        mres = resolve(ctx.store, pid, body.question)
+        if mres["status"] == "matched":
+            m = mres["matched"][0]["metric"]
+            if m.get("source_id"):
+                ds = ctx.store.get("data_sources", m["source_id"])
+                tables = ds.get("catalog_allowlist") or ds.get("tables") or []
+                if tables:
+                    sql = metric_sql(m, tables[0])
+                    return envelope({"ok": True, "sql": sql,
+                                     "metric": {"id": m["id"], "name": m["name"]},
+                                     "via": "semantic-catalog"})
         tables: list[str] = []
         if body.source_id:
             ds = ctx.store.get("data_sources", body.source_id)
@@ -633,6 +665,9 @@ def create_app(home: Path | None = None) -> FastAPI:
         res = nl_to_sql(body.question, tables)
         if res.get("ok"):
             res["sql"] = compile_spec(res["spec"])
+            res["via"] = "deterministic-nl"
+        else:
+            res["metric_resolution"] = mres  # unknown-metric stays explicit
         return envelope(res)
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/queries/execute")

@@ -37,6 +37,7 @@ COLLECTIONS = (
     "contracts",
     "workflow_runs",
     "budget_ledger",
+    "metrics",
     "watches",
     "alerts",
     "reports",

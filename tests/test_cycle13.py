@@ -158,3 +158,24 @@ def test_rbac_workspace_scope(tmp_path, monkeypatch):
     assert c.get(f"/api/v1/products/{pid}", headers=h_adm).status_code == 403
     # unknown-token principal → 401, not a scope leak
     assert c.get(f"/api/v1/products/{pid}").status_code == 401
+
+
+def test_metrics_catalog_and_nl(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "pf"))
+    from product_forge.analytics.metrics import metric_sql, put_metric, resolve
+    from product_forge.config import db_path, home_dir, load_config
+    from product_forge.store.sqlite import Store
+
+    home = home_dir("user")
+    (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
+    st = Store(db_path(home, load_config(home)))
+    put_metric(st, "p1", {"name": "monthly recurring revenue",
+                          "formula": "SUM(mrr)", "source_id": "s1",
+                          "dimensions": ["region"], "owner": "finops"})
+    r = resolve(st, "p1", "show me monthly recurring revenue by region")
+    assert r["status"] == "matched"
+    sql = metric_sql(r["matched"][0]["metric"], "subscriptions")
+    assert "SUM(mrr)" in sql and "GROUP BY region" in sql
+    unknown = resolve(st, "p1", "how many widgets flew?")
+    assert unknown["status"] == "unknown-metric"
+    st.close()
