@@ -621,6 +621,18 @@ def create_app(home: Path | None = None) -> FastAPI:
         sql = compile_spec(body.spec)
         return envelope({"sql": sql, "spec": body.spec})
 
+    @app.get(f"{API_PREFIX}/products/{{pid}}/health")
+    def product_health(pid: str) -> dict:
+        from ..intel.health import compute_health
+        ctx.store.get("products", pid)
+        return envelope(compute_health(ctx.store, pid))
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/evidence-graph")
+    def evidence_graph(pid: str) -> dict:
+        from ..intel.health import evidence_graph
+        ctx.store.get("products", pid)
+        return envelope(evidence_graph(ctx.store, pid))
+
     @app.get(f"{API_PREFIX}/products/{{pid}}/metrics")
     def metrics_list(pid: str) -> dict:
         ctx.store.get("products", pid)

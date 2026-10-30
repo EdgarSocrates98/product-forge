@@ -179,3 +179,27 @@ def test_metrics_catalog_and_nl(tmp_path, monkeypatch):
     unknown = resolve(st, "p1", "how many widgets flew?")
     assert unknown["status"] == "unknown-metric"
     st.close()
+
+
+def test_health_center_and_evidence_graph(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "pf"))
+    from product_forge.config import db_path, home_dir, load_config
+    from product_forge.domain.models import Product
+    from product_forge.intel.health import compute_health, evidence_graph
+    from product_forge.store.sqlite import Store
+
+    home = home_dir("user")
+    (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
+    st = Store(db_path(home, load_config(home)))
+    st.put("products", Product(id="p1", workspace_id="w1", name="X"))
+    h = compute_health(st, "p1")
+    assert h["schema"] == "productforge/ProductHealth/v1"
+    assert set(h["dimensions"]) == {"value", "adoption", "experience",
+                                    "reliability", "cost", "delivery",
+                                    "knowledge", "risk"}
+    # every score is explainable — evidence lists non-empty
+    for d in h["dimensions"].values():
+        assert d["evidence"], "score without provenance is forbidden"
+    g = evidence_graph(st, "p1")
+    assert g["counts"]["nodes"] >= 1 and g["schema"] == "productforge/EvidenceGraph/v1"
+    st.close()
