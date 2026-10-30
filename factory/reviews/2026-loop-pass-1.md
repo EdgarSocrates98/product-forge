@@ -31,3 +31,9 @@ Date: $(date -Iseconds) | Scope: 3 active specs | Gate: STOP before archive.
 
 Suite: 70 passed · ruff clean. Specs remain in active/ — archive requires
 human `--accepted`.
+
+## ACCEPTED — 2026-10-30 (user --accept)
+All four implemented specs archived: mcp-http-transport,
+native-agent-templates, llm-gateway-integration, inter-forge-delegation.
+Remaining inbox (awaiting grill gate): postgres-backend,
+notification-delivery, portal-angular-module.
