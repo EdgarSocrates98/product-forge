@@ -1,0 +1,21 @@
+# PF-AGENT — agent lifecycle gates
+version: 1
+rules:
+- id: PF-AGENT-001
+  severity: error
+  area: PF-AGENT
+  when: publish and agent.tools_allowed empty
+  finding: publish requires declared tools_allowed — gate blocks
+  action: {kind: refuse, target: publish, direction: declare-tools}
+- id: PF-AGENT-002
+  severity: error
+  area: PF-AGENT
+  when: publish and eval.score < 0.5
+  finding: eval score below publish gate (0.5)
+  action: {kind: refuse, target: publish, direction: improve-eval}
+- id: PF-AGENT-003
+  severity: error
+  area: PF-AGENT
+  when: run.input matches injection pattern
+  finding: prompt-injection pattern in agent input — run blocked by policy
+  action: {kind: refuse, target: run, direction: sanitize-input}

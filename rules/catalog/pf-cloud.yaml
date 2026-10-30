@@ -1,0 +1,21 @@
+# PF-CLOUD — honesty rules for cloud/API/contract intel
+version: 1
+rules:
+- id: PF-CLOUD-001
+  severity: error
+  area: PF-CLOUD
+  when: inventory reported and credentials absent
+  finding: inventory without credentials is fabrication — must be unverified
+  action: {kind: refuse, target: report, direction: unverified-state}
+- id: PF-API-001
+  severity: warn
+  area: PF-API
+  when: diff.breaking non-empty
+  finding: breaking API change — impact analysis required before ship
+  action: {kind: advisory, target: api, direction: run-impact}
+- id: PF-CONTRACT-001
+  severity: error
+  area: PF-CONTRACT
+  when: contract.validate.errors non-empty
+  finding: payload violates declared contract — do not proceed silently
+  action: {kind: refuse, target: ingest, direction: fix-payload}

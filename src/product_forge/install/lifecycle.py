@@ -61,29 +61,45 @@ def _skills_root() -> Path | None:
     return repo if repo.is_dir() else None
 
 
-def _skill_files(root: Path) -> dict[str, bytes]:
+def _bundle_files(root: Path, glob_pat: str) -> dict[str, bytes]:
+    """{rel_path: bytes} for every file under matching dirs."""
     files: dict[str, bytes] = {}
-    for skill_dir in sorted(root.glob("pf-*/")):
-        for f in skill_dir.rglob("*"):
+    for d in sorted(root.glob(glob_pat)):
+        for f in d.rglob("*"):
             if f.is_file():
                 files[str(f.relative_to(root))] = f.read_bytes()
     return files
 
 
+def _agents_root() -> Path | None:
+    """Agent profiles dir. Wheel: force-included into product_forge/agents
+    (alongside the runtime package — only *.md counts). Dev: repo-root
+    agents/. The package itself holds no .md, so the .md check picks right."""
+    pkg = Path(__file__).resolve().parent.parent / "agents"
+    if pkg.is_dir() and any(pkg.rglob("*.md")):
+        return pkg
+    repo = Path(__file__).resolve().parents[3] / "agents"
+    return repo if repo.is_dir() and any(repo.rglob("*.md")) else None
+
+
 def _render_assets(ctx: kit.InstallContext) -> dict[str, bytes]:
-    """Ship the pf-* skills into every selected host's skills dir."""
+    """Ship pf-* skills into host skills dirs and agent profiles into host
+    agents dirs — the installkit's `skill`/`agent` asset kinds gate both."""
     assets: dict[str, bytes] = {}
     skills_root = _skills_root()
-    if skills_root is None:
-        return assets
-    skill_files = _skill_files(skills_root)
+    skill_files = _bundle_files(skills_root, "pf-*/") if skills_root else {}
+    agents_root = _agents_root()
+    agent_files = {str(f.relative_to(agents_root)): f.read_bytes()
+                   for f in agents_root.rglob("*.md")} if agents_root else {}
     for host in ctx.hosts:
         for host_dir in kit._host_dirs(host, ctx.scope):
             rel_dir = host_dir.lstrip("~/") if ctx.scope == "user" else host_dir
-            if not rel_dir.endswith("skills"):
-                continue
-            for rel, data in skill_files.items():
-                assets[f"{rel_dir}/{rel}"] = data
+            if rel_dir.endswith("skills"):
+                for rel, data in skill_files.items():
+                    assets[f"{rel_dir}/{rel}"] = data
+            elif rel_dir.endswith("agents"):
+                for rel, data in agent_files.items():
+                    assets[f"{rel_dir}/{rel}"] = data
     return assets
 
 

@@ -1,0 +1,21 @@
+# PF-KNOW — knowledge health rules (versioned, deterministic)
+version: 1
+rules:
+- id: PF-KNOW-001
+  severity: warn
+  area: PF-KNOW
+  when: product.docs == 0
+  finding: product has no knowledge docs — context package is thin
+  action: {kind: advisory, target: product, direction: import-docs}
+- id: PF-KNOW-002
+  severity: info
+  area: PF-KNOW
+  when: entities.orphans > 0
+  finding: orphan entities with no relations — run knowledge/extract again after doc import
+  action: {kind: advisory, target: knowledge, direction: re-extract}
+- id: PF-KNOW-003
+  severity: warn
+  area: PF-KNOW
+  when: query.citations == 0
+  finding: knowledge query returned no citations — do not answer from memory
+  action: {kind: refuse, target: answer, direction: cite-or-abstain}

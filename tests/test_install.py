@@ -26,6 +26,8 @@ def test_install_plan_then_apply(project, tmp_path, monkeypatch):
     assert doc["checks"][0]["status"] == "PASS"
     assert (project / ".agents/skills/pf-sql/SKILL.md").is_file()
     assert (project / ".devin/skills/pf-aws/SKILL.md").is_file()
+    assert (project / ".agents/agents/product-intel-coordinator.md").is_file()
+    assert (project / ".agents/agents/executors/pf-judge.md").is_file()
     assert "product-forge:managed" in (project / "AGENTS.md").read_text()
     mcp = json.loads((project / ".mcp.json").read_text())
     assert mcp["mcpServers"]["product-forge"]["command"] == "productforge"

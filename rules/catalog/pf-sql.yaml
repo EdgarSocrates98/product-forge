@@ -1,0 +1,21 @@
+# PF-SQL — query safety rules
+version: 1
+rules:
+- id: PF-SQL-001
+  severity: error
+  area: PF-SQL
+  when: statement has write/ddl/multi-statement
+  finding: non-read-only SQL rejected — analytics is read-only by contract
+  action: {kind: refuse, target: execute, direction: read-only}
+- id: PF-SQL-002
+  severity: warn
+  area: PF-SQL
+  when: source.status != healthy
+  finding: query against unverified/error source — report honest status
+  action: {kind: advisory, target: source, direction: verify-first}
+- id: PF-DASH-001
+  severity: warn
+  area: PF-DASH
+  when: widget.query_run missing
+  finding: widget bound to absent run renders error state, not zeros
+  action: {kind: advisory, target: dashboard, direction: rebind-run}
