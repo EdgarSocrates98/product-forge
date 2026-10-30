@@ -1,5 +1,9 @@
 # Product Forge
 
+<p align="center">
+  <img src="docs/assets/logo.png" alt="CProduct Forge logo" width="420" />
+</p>
+
 **Product Intelligence, Analytics Intelligence & Agentic Workspace** — a specialist Forge in the Forge ecosystem for Product Managers, Product Analysts and technical teams.
 
 ## What it is
