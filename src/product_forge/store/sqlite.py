@@ -35,6 +35,8 @@ COLLECTIONS = (
     "agent_runs",
     "api_specs",
     "contracts",
+    "workflow_runs",
+    "budget_ledger",
     "watches",
     "alerts",
     "reports",

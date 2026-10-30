@@ -761,6 +761,133 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.store.get("products", pid)
         return envelope(impact_analysis(ctx.store, pid, eid))
 
+    # -- product operations (Cycle 10) -------------------------------------------
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/watches", status_code=201)
+    def watch_create(pid: str, body: ScopedIn, req: Request) -> dict:
+        from ..operations.watches import create_watch
+
+        ctx.store.get("products", pid)
+        w = create_watch(ctx.store, pid, body.model_dump())
+        ctx.audit(req, "watch.create", "watches", w["id"], product_id=pid)
+        return envelope(w)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/watches")
+    def watch_list(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("watches", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/watches/{{wid}}/run")
+    def watch_run(pid: str, wid: str, req: Request) -> dict:
+        from ..operations.watches import evaluate_watch
+
+        w = ctx.store.get("watches", wid)
+        if w.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"watch {wid} not in product {pid}")
+        res = evaluate_watch(ctx.store, w)
+        ctx.audit(req, "watch.run", "watches", wid, product_id=pid)
+        return envelope(res)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/watches/run-due")
+    def watch_run_due(pid: str, req: Request) -> dict:
+        from ..operations.watches import run_due
+
+        ctx.store.get("products", pid)
+        res = run_due(ctx.store, pid)
+        ctx.audit(req, "watch.run-due", "products", pid, product_id=pid)
+        return envelope(res)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/alerts")
+    def alert_list(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("alerts", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/alerts/{{alid}}/{{action}}")
+    def alert_transition(pid: str, alid: str, action: str, req: Request) -> dict:
+        a = ctx.store.get("alerts", alid)
+        if a.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"alert {alid} not in product {pid}")
+        if action not in {"ack", "resolve", "reopen"}:
+            from ..errors import ValidationError
+            raise ValidationError("action must be ack|resolve|reopen")
+        a["state"] = {"ack": "acknowledged", "resolve": "resolved", "reopen": "open"}[action]
+        a["updated_at"] = utcnow()
+        ctx.store.put_doc("alerts", a, status=a["state"])
+        ctx.audit(req, f"alert.{action}", "alerts", alid, product_id=pid)
+        return envelope(a)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/reports/executive", status_code=201)
+    def report_exec(pid: str, req: Request) -> dict:
+        from ..operations.reports import generate_executive
+
+        ctx.store.get("products", pid)
+        rec = generate_executive(ctx.store, pid)
+        ctx.audit(req, "report.generate", "reports", rec["id"], product_id=pid)
+        return envelope(rec)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/reports")
+    def report_list(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("reports", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/approvals", status_code=201)
+    def approval_create(pid: str, body: ScopedIn, req: Request) -> dict:
+        from ..operations.approvals import request_approval
+
+        ctx.store.get("products", pid)
+        p = body.model_dump()
+        rec = request_approval(ctx.store, pid, p.get("action", ""),
+                               p.get("payload", {}), requester="api")
+        ctx.audit(req, "approval.request", "approvals", rec["id"], product_id=pid)
+        return envelope(rec)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/approvals/{{apid}}/{{decision}}")
+    def approval_decide(pid: str, apid: str, decision: str, req: Request) -> dict:
+        from ..operations.approvals import decide
+
+        rec = ctx.store.get("approvals", apid)
+        if rec.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"approval {apid} not in product {pid}")
+        rec = decide(ctx.store, apid, decision == "approve")
+        ctx.audit(req, f"approval.{decision}", "approvals", apid, product_id=pid)
+        return envelope(rec)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/approvals")
+    def approval_list(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("approvals", product_id=pid)})
+
+    # -- advanced agentic (Cycle 11) ---------------------------------------------
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/workflows/run")
+    def workflow_run(pid: str, body: ScopedIn, req: Request) -> dict:
+        from ..agents.workflows import run_workflow
+
+        ctx.store.get("products", pid)
+        rec = run_workflow(ctx.store, pid, body.model_dump())
+        ctx.audit(req, "workflow.run", "workflow_runs", rec["id"], product_id=pid)
+        return envelope(rec)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/workflows")
+    def workflow_list(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("workflow_runs", product_id=pid)})
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/routing")
+    def routing_info(pid: str, task_class: str = "synthesis") -> dict:
+        from ..agents.routing import route
+
+        ctx.store.get("products", pid)
+        return envelope(route(task_class, ctx.cfg.get("gateway_profile", "balanced")))
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/budget")
+    def budget(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("budget_ledger", product_id=pid)})
+
     @app.get(f"{API_PREFIX}/audit")
     def audit_log(product_id: str | None = None, limit: int = 100) -> dict:
         return envelope({"items": ctx.store.list("audit_events", product_id=product_id, limit=limit)})
