@@ -1,0 +1,19 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install
+        run: |
+          uv venv .venv --python ${{ matrix.python }}
+          uv pip install -p .venv/bin/python -e ".[dev]"
+      - name: Lint
+        run: .venv/bin/python -m ruff check src tests
+      - name: Test
+        run: .venv/bin/python -m pytest -q

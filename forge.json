@@ -1,0 +1,25 @@
+{
+  "forge_id": "product-forge",
+  "package": "product_forge",
+  "distribution": "product-forge",
+  "cli": "productforge",
+  "python": ">=3.11",
+  "version": "0.1.0",
+  "mcp_server_name": "product-forge",
+  "mcp_command": [
+    "productforge",
+    "mcp",
+    "serve"
+  ],
+  "extras": [
+    "api",
+    "mcp",
+    "analytics",
+    "docs"
+  ],
+  "install_command": [
+    "productforge",
+    "install",
+    "--yes"
+  ]
+}

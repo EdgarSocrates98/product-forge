@@ -1,0 +1,41 @@
+{
+  "schema": "forge/SpecialistAgenticManifest/v1",
+  "provider": "product-forge",
+  "version": "0.1.0",
+  "cli": "productforge",
+  "cli_entry": "product_forge.cli:app",
+  "workflows": [
+    {
+      "id": "doctor",
+      "mode": "DIAGNOSTIC_ONLY",
+      "command": ["{cli}", "doctor"],
+      "description": "Environment health and capability diagnostics",
+      "read_only": true
+    },
+    {
+      "id": "product-context",
+      "mode": "DIRECT_CAPABILITY",
+      "command": ["{cli}", "product", "context", "{product_id}"],
+      "description": "Recover the Product Context Package for a product",
+      "read_only": true
+    },
+    {
+      "id": "knowledge-query",
+      "mode": "DIRECT_CAPABILITY",
+      "command": ["{cli}", "knowledge", "query", "{question}"],
+      "description": "Grounded answer over product knowledge with citations",
+      "read_only": true
+    }
+  ],
+  "skills": [],
+  "agents": [],
+  "coordinators": [],
+  "mcp_command": ["{cli}", "mcp", "serve"],
+  "host_adapters": ["claude", "devin", "codex", "copilot"],
+  "host_partial": {
+    "cursor": "marker + .mcp.json only — no skill/agent catalog adapter"
+  },
+  "read_only_default": true,
+  "requires_aws_credentials": false,
+  "requires_llm": false
+}
