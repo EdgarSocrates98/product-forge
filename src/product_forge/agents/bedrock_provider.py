@@ -62,7 +62,7 @@ def main() -> int:
         return 2
     try:
         import boto3  # noqa: PLC0415 — optional dependency by design
-        from botocore.exceptions import ClientError, NoCredentialsError, ProfileNotFound, SSOTokenLoadError  # noqa: PLC0415
+        from botocore.exceptions import ClientError, MissingDependencyException, NoCredentialsError, ProfileNotFound, SSOTokenLoadError  # noqa: PLC0415
     except ModuleNotFoundError:
         _reply({"error": {"code": "PF-PROVIDER",
                           "message": "boto3 not installed — "
@@ -79,6 +79,11 @@ def main() -> int:
             region_name=os.environ.get("PF_BEDROCK_REGION") or
             session.region_name or "us-east-1")
         resp = client.converse(**build_converse_request(req))
+    except MissingDependencyException as e:
+        _reply({"error": {"code": "PF-PROVIDER",
+                          "message": str(e)[:200],
+                          "state": "unavailable:dependency"}})
+        return 3
     except ProfileNotFound as e:
         _reply({"error": {"code": "PF-PROVIDER", "message": str(e)[:200],
                           "state": "unavailable:no-profile"}})
