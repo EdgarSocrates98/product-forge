@@ -33,6 +33,8 @@ COLLECTIONS = (
     "initiatives",
     "decisions",
     "agent_runs",
+    "api_specs",
+    "contracts",
     "watches",
     "alerts",
     "reports",

@@ -104,6 +104,21 @@ class NlIn(BaseModel):
     source_id: str | None = None
 
 
+def _surface_to_paths(surface: dict[str, Any]) -> dict[str, Any]:
+    """Rebuild an OpenAPI paths dict from a stored parsed surface."""
+    paths: dict[str, Any] = {}
+    for op in surface.get("operations", []):
+        paths.setdefault(op["path"], {})[op["method"].lower()] = {
+            "operationId": op.get("operation_id"),
+            "summary": op.get("summary", ""),
+            "parameters": [{"name": p["name"], "in": p["in"], "required": p["required"],
+                            "schema": {"type": p.get("type")}} for p in op.get("params", [])],
+            "requestBody": {"required": op.get("request_body_required", False)},
+            "responses": {c: {} for c in op.get("responses", [])},
+        }
+    return paths
+
+
 class Ctx:
     """Shared runtime: home, config, store, token, rate buckets, audit."""
 
@@ -627,6 +642,124 @@ def create_app(home: Path | None = None) -> FastAPI:
 
         ctx.store.get("products", pid)
         return envelope(build_roadmap(ctx.store, pid))
+
+    # -- cloud intelligence (Cycle 8) ------------------------------------------
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/cloud/inventory")
+    def cloud_inventory(pid: str, body: ScopedIn, req: Request) -> dict:
+        ctx.store.get("products", pid)
+        p = body.model_dump()
+        provider, service = p.get("provider"), p.get("service")
+        try:
+            if provider == "aws":
+                from ..integrations import aws
+
+                fn = {"glue": lambda: aws.glue_catalog(p.get("database"), p.get("region")),
+                      "quicksight": lambda: aws.quicksight_inventory(p["account_id"], p.get("region")),
+                      "cost": lambda: aws.cost_summary(int(p.get("days", 30)), p.get("region"))}
+            elif provider == "azure":
+                from ..integrations import azure
+
+                fn = {"kql-verify": lambda: azure.KQLConnector(p["workspace_id"]).verify(),
+                      "powerbi": lambda: azure.powerbi_inventory(p.get("token")),
+                      "fabric": lambda: azure.fabric_inventory(p["workspace_id"], p.get("token"))}
+            else:
+                from ..errors import ValidationError
+                raise ValidationError(f"provider must be aws|azure, got {provider}")
+            if service not in fn:
+                from ..errors import ValidationError
+                raise ValidationError(f"service must be one of {sorted(fn)}")
+            result = fn[service]()
+        except ForgeError:
+            raise
+        ctx.audit(req, "cloud.inventory", "products", pid, product_id=pid)
+        return envelope(result)
+
+    # -- api & data-product intelligence (Cycle 9) ------------------------------
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/apis/import", status_code=201)
+    def api_import(pid: str, body: ScopedIn, req: Request) -> dict:
+        from ..domain.models import EntityKind, KnowledgeEntity
+        from ..integrations.apispec import load_spec, parse_asyncapi, parse_openapi
+
+        ctx.store.get("products", pid)
+        p = body.model_dump()
+        spec = load_spec(p.get("spec") or p.get("spec_yaml") or "")
+        try:
+            parsed = parse_openapi(spec)
+        except Exception:
+            parsed = parse_asyncapi(spec)
+        rec = {"id": new_id("api"), "schema": "productforge/ApiSpec/v1",
+               "product_id": pid, "name": p.get("name") or parsed.get("title", "api"),
+               "kind": parsed["kind"], "version": parsed.get("version"),
+               "surface": parsed, "created_at": utcnow(), "updated_at": utcnow()}
+        ctx.store.put_doc("api_specs", rec, name=rec["name"])
+        n = 0
+        for op in parsed.get("operations", []):
+            ent = KnowledgeEntity(id=new_id("ent"), product_id=pid, kind=EntityKind.API,
+                                  name=f"{op['method']} {op['path']}",
+                                  description=op.get("summary", ""), confidence=0.95,
+                                  provisional=False,
+                                  attributes={"operation_id": op.get("operation_id"),
+                                              "api_spec_id": rec["id"]})
+            ctx.store.put("entities", ent)
+            n += 1
+        ctx.audit(req, "api.import", "api_specs", rec["id"], product_id=pid)
+        return envelope({"api_spec_id": rec["id"], "kind": parsed["kind"],
+                         "entities_created": n})
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/apis")
+    def api_list(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("api_specs", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/apis/{{aid}}/diff")
+    def api_diff(pid: str, aid: str, body: ScopedIn, req: Request) -> dict:
+        from ..integrations.apispec import diff_openapi, load_spec
+
+        rec = ctx.store.get("api_specs", aid)
+        if rec.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"api {aid} not in product {pid}")
+        old_doc = {"openapi": rec["surface"].get("version"),
+                   "info": {"title": rec["name"]},
+                   "paths": _surface_to_paths(rec["surface"]),
+                   "components": {"schemas": {k: {"type": v["type"], "required": v["required"],
+                                                  "properties": {p_: {} for p_ in v["properties"]}}
+                                              for k, v in rec["surface"]["schemas"].items()}}}
+        new_spec = load_spec(body.model_dump().get("spec") or {})
+        report = diff_openapi(old_doc, new_spec)
+        ctx.audit(req, "api.diff", "api_specs", aid, product_id=pid)
+        return envelope(report)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/contracts", status_code=201)
+    def contract_create(pid: str, body: ScopedIn, req: Request) -> dict:
+        ctx.store.get("products", pid)
+        p = body.model_dump()
+        rec = {"id": new_id("ctr"), "schema": "productforge/DataContract/v1",
+               "product_id": pid, "name": p.get("name", "contract"),
+               "fields": p.get("fields", []), "quality": p.get("quality", []),
+               "created_at": utcnow(), "updated_at": utcnow()}
+        ctx.store.put_doc("contracts", rec, name=rec["name"])
+        ctx.audit(req, "contract.create", "contracts", rec["id"], product_id=pid)
+        return envelope(rec)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/contracts/{{cid}}/validate")
+    def contract_validate(pid: str, cid: str, body: ScopedIn) -> dict:
+        from ..integrations.datacontract import validate_payload
+
+        rec = ctx.store.get("contracts", cid)
+        if rec.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"contract {cid} not in product {pid}")
+        return envelope(validate_payload(rec, body.model_dump().get("payload", {})))
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/impact/{{eid}}")
+    def impact(pid: str, eid: str) -> dict:
+        from ..integrations.datacontract import impact_analysis
+
+        ctx.store.get("products", pid)
+        return envelope(impact_analysis(ctx.store, pid, eid))
 
     @app.get(f"{API_PREFIX}/audit")
     def audit_log(product_id: str | None = None, limit: int = 100) -> dict:
