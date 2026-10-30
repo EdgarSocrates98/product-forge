@@ -55,10 +55,12 @@ def call(cfg: dict[str, Any], store: Any, product_id: str | None,
     # audit-safe record of the call (redacted before persistence); an audit
     # failure must never hide the delegate's result
     with contextlib.suppress(Exception):
-        store.audit({"id": f"aud_del_{delegate_id}", "created_at": "",
+        from ..domain.models import new_id, utcnow
+        store.audit({"id": new_id("aud"), "created_at": utcnow(),
                      "actor": "delegate", "actor_kind": "system",
                      "action": "delegate.call", "resource_type": "delegate",
                      "resource_id": delegate_id, "correlation_id": "",
-                     "product_id": product_id, "workflow": workflow})
+                     "product_id": product_id, "workflow": workflow,
+                     "outcome": "ok"})
     return {"status": "ok", "delegate": delegate_id, "workflow": workflow,
             "result": redact(payload)}

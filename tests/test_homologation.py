@@ -93,7 +93,7 @@ def test_payments_product_intelligence(client):
     step(6, c.post(f"/api/v1/products/{pid}/data-sources/{sid}/verify",
                    headers=h).json()["data"]["status"] == "healthy")
     step(7, any(t["name"] == "transactions" for t in
-                c.get(f"/api/v1/products/{pid}/data-sources/{sid}/schema")
+                c.get(f"/api/v1/products/{pid}/data-sources/{sid}/schema", headers=h)
                 .json()["data"]["tables"]))
 
     # 8-9 index knowledge + grounded answer with citations
@@ -104,10 +104,10 @@ def test_payments_product_intelligence(client):
     step(9, r.json()["data"]["entities"] > 0)
 
     # 10-11 context package + navigable graph
-    ctx = c.get(f"/api/v1/products/{pid}/context").json()["data"]
+    ctx = c.get(f"/api/v1/products/{pid}/context", headers=h).json()["data"]
     step(10, ctx["schema"] == "productforge/ProductContextPackage/v1"
          and len(ctx["entities"]) >= 2)
-    g = c.get(f"/api/v1/products/{pid}/graph").json()["data"]
+    g = c.get(f"/api/v1/products/{pid}/graph", headers=h).json()["data"]
     step(11, g["stats"]["nodes"] >= 4 and g["stats"]["edges"] >= 4)
 
     # 12-15 agent: create, configure, eval, publish
@@ -173,7 +173,7 @@ def test_payments_product_intelligence(client):
                                           "confidence": 70, "effort": 3}}},
                headers=h)
     step(23, r.json()["data"]["score"] > 2000)
-    rm = c.get(f"/api/v1/products/{pid}/roadmap").json()["data"]
+    rm = c.get(f"/api/v1/products/{pid}/roadmap", headers=h).json()["data"]
     step(24, any(x["id"] == iid for x in rm["lanes"]["later"]))
     dec = c.post(f"/api/v1/products/{pid}/decisions",
                  json={"title": "Adopt retry-with-backoff",
@@ -192,7 +192,7 @@ def test_payments_product_intelligence(client):
                json={"payload": {"id": "c1", "amount": 10.5}}, headers=h).json()["data"]
     step(26, v["valid"])
     api_ent = next(e for e in ctx["entities"] if e["kind"] == "api")
-    imp = c.get(f"/api/v1/products/{pid}/impact/{api_ent['id']}").json()["data"]
+    imp = c.get(f"/api/v1/products/{pid}/impact/{api_ent['id']}", headers=h).json()["data"]
     step(27, imp["schema"] == "productforge/ImpactAnalysis/v1")
 
     # 28 executive report
@@ -209,7 +209,7 @@ def test_payments_product_intelligence(client):
     step(29, wr["breached"] and wr["alert_id"])
 
     # 30 audit trail covers the journey
-    audit = c.get("/api/v1/audit", params={"product_id": pid}).json()["data"]["items"]
+    audit = c.get("/api/v1/audit", params={"product_id": pid}, headers=h).json()["data"]["items"]
     actions = {a["action"] for a in audit}
     step(30, {"product.create", "agent.publish", "query.execute",
               "dashboard.render", "watch.run"} <= actions)

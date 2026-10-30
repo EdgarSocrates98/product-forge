@@ -121,5 +121,5 @@ def test_api_dashboard_planning(home, dbfile):
                json={"factors": {"wsjf": {"user_value": 8, "time_criticality": 5,
                                           "risk_reduction": 3, "job_size": 2}}}, headers=h)
     assert r.json()["data"]["methods"]["wsjf"]["score"] == 8.0
-    r = c.get(f"/api/v1/products/{pid}/roadmap")
+    r = c.get(f"/api/v1/products/{pid}/roadmap", headers=h)
     assert r.json()["data"]["schema"] == "productforge/Roadmap/v1"

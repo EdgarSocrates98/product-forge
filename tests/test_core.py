@@ -127,7 +127,7 @@ def test_api_endpoints(home):
     assert r.status_code == 201
     pid = r.json()["data"]["id"]
 
-    r = client.get(f"/api/v1/products/{pid}/context")
+    r = client.get(f"/api/v1/products/{pid}/context", headers=h)
     assert r.status_code == 200
     assert r.json()["data"]["schema"] == "productforge/ProductContextPackage/v1"
 
@@ -136,5 +136,5 @@ def test_api_endpoints(home):
     assert r.status_code == 401
 
     # audit written
-    r = client.get("/api/v1/audit")
+    r = client.get("/api/v1/audit", headers=h)
     assert any(e["action"] == "product.create" for e in r.json()["data"]["items"])

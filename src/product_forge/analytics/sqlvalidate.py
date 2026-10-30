@@ -42,12 +42,10 @@ def validate(statement: str, dialect: str = "sql") -> Validation:
     if not sql:
         v.errors.append("empty-statement")
         return v
-    if dialect in {"dax", "kql"}:
-        # Non-SQL languages: validated by their own connectors later.
-        v.ok = True
-        v.statement_kind = dialect
-        v.engine = "passthrough"
-        return v
+    if dialect == "dax":
+        return _dax_validate(sql, v)
+    if dialect == "kql":
+        return _kql_validate(sql, v)
     try:
         return _sqlglot_validate(sql, v)
     except ImportError:
@@ -80,6 +78,49 @@ def _sqlglot_validate(sql: str, v: Validation) -> Validation:
     v.statement_kind = type(node).__name__
     v.tables = sorted({t.name for t in node.find_all(exp.Table)})
     v.ok = True
+    return v
+
+
+_KQL_FORBIDDEN = re.compile(
+    r"\.\s*(alter|drop|create|ingest|set|append|replace|merge|move|rename|"
+    r"clear|execute|revoke|grant)\b|\bexternaldata\b|\bhttp_request\b", re.I)
+_DAX_FORBIDDEN = re.compile(r"\b(import|export|backup|restore)\b", re.I)
+
+
+def _kql_validate(sql: str, v: Validation) -> Validation:
+    """KQL: conservative — single tabular query, no .management commands."""
+    v.engine = "kql-lite"
+    if ";" in sql:
+        v.errors.append("multi-statement-not-allowed")
+        return v
+    if _KQL_FORBIDDEN.search(sql):
+        v.errors.append("kql-management-or-external-op-denied")
+        return v
+    head = sql.split(None, 1)[0].rstrip("|").lower()
+    if head in {"let", "set", "print"} and head != "let":
+        v.errors.append(f"kql-statement-not-read-only:{head}")
+        return v
+    v.statement_kind = "tabular"
+    v.ok = True
+    # §3.3: partial validation — mark unverified, provider must execute restricted
+    v.engine = "kql-lite:unverified"
+    return v
+
+
+def _dax_validate(sql: str, v: Validation) -> Validation:
+    """DAX: only EVALUATE queries pass; anything else is refused."""
+    v.engine = "dax-lite"
+    head = sql.split(None, 1)[0].upper()
+    if head != "EVALUATE":
+        v.errors.append(f"dax-must-start-with-evaluate:{head.lower()}")
+        return v
+    if _DAX_FORBIDDEN.search(sql):
+        v.errors.append("dax-forbidden-keyword-detected")
+        return v
+    v.statement_kind = "evaluate"
+    v.ok = True
+    # §3.3: partial validation — mark unverified, provider must execute restricted
+    v.engine = "dax-lite:unverified"
     return v
 
 

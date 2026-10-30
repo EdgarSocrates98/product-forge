@@ -80,7 +80,7 @@ def test_api_knowledge_flow(home):
     assert r.status_code == 200 and r.json()["data"]["citations"]
     r = c.post(f"/api/v1/products/{pid}/knowledge/extract", headers=h)
     assert r.status_code == 200 and r.json()["data"]["entities"] > 0
-    r = c.get(f"/api/v1/products/{pid}/graph")
+    r = c.get(f"/api/v1/products/{pid}/graph", headers=h)
     assert r.json()["data"]["stats"]["nodes"] > 0
-    r = c.get(f"/api/v1/products/{pid}/knowledge-health")
+    r = c.get(f"/api/v1/products/{pid}/knowledge-health", headers=h)
     assert r.json()["data"]["schema"] == "productforge/KnowledgeHealth/v1"

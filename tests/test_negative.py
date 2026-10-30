@@ -100,5 +100,5 @@ def test_agent_publish_gate(client):
 
 def test_unknown_paths_404(client):
     c, h, pid, _ = client
-    assert c.get("/api/v1/products/nope").status_code == 404
-    assert c.get(f"/api/v1/products/{pid}/agents/nope").status_code == 404
+    assert c.get("/api/v1/products/nope", headers=h).status_code == 404
+    assert c.get(f"/api/v1/products/{pid}/agents/nope", headers=h).status_code == 404

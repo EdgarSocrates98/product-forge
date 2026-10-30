@@ -79,6 +79,35 @@ CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
 END;
 """
 
+# Incremental migrations: (target_version, DDL). Applied in order inside one
+# transaction each; schema_migrations records every applied step — a migration
+# must never destroy data silently (ADR-001).
+MIGRATIONS: list[tuple[int, str]] = [
+    (2, """
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    applied_at TEXT NOT NULL,
+    checksum TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS jobs (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    product_id TEXT,
+    status TEXT NOT NULL,
+    payload TEXT NOT NULL DEFAULT '{}',
+    result TEXT,
+    attempt INTEGER NOT NULL DEFAULT 0,
+    idempotency_key TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    checkpoint TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status, updated_at);
+CREATE INDEX IF NOT EXISTS idx_jobs_idem ON jobs(idempotency_key);
+"""),
+]
+SCHEMA_VERSION = max(v for v, _ in MIGRATIONS)
+
 
 class Store:
     """Thread-safe JSON-document store over SQLite."""
@@ -88,12 +117,46 @@ class Store:
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(str(path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        if str(path) != ":memory:":
+            self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA foreign_keys=ON")
         self._conn.executescript(_DDL)
-        self._conn.execute(
-            "INSERT OR REPLACE INTO meta(key, value) VALUES('schema_version', ?)",
-            (str(SCHEMA_VERSION),),
-        )
-        self._conn.commit()
+        self.migrate()
+
+    def migrate(self) -> list[int]:
+        """Apply pending migrations transactionally; returns applied versions."""
+        import hashlib
+        current = int(self._meta("schema_version") or "1")
+        applied: list[int] = []
+        for version, ddl in MIGRATIONS:
+            if version <= current:
+                continue
+            chk = hashlib.sha256(ddl.encode()).hexdigest()[:16]
+            with self._lock, self._conn:  # single transaction per migration
+                self._conn.executescript(ddl)
+                self._conn.execute(
+                    "INSERT INTO schema_migrations(version, applied_at, checksum)"
+                    " VALUES(?,?,?)", (version, utcnow(), chk))
+                self._conn.execute(
+                    "INSERT OR REPLACE INTO meta(key, value)"
+                    " VALUES('schema_version', ?)", (str(version),))
+            applied.append(version)
+        return applied
+
+    def _meta(self, key: str) -> str | None:
+        row = self._conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+        return row["value"] if row else None
+
+    def backup(self, dest: Path) -> Path:
+        """Consistent online backup (sqlite3 backup API); returns dest path."""
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with self._lock, sqlite3.connect(str(dest)) as target:
+            self._conn.backup(target)
+        return dest
+
+    def integrity_check(self) -> bool:
+        row = self._conn.execute("PRAGMA integrity_check").fetchone()
+        return bool(row) and row[0] == "ok"
 
     def close(self) -> None:
         with self._lock:

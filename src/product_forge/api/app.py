@@ -195,12 +195,13 @@ def create_app(home: Path | None = None) -> FastAPI:
                 err = {"code": "PF-RATE-LIMIT", "message": "rate limit",
                        "severity": "warning", "retryable": True}
                 return JSONResponse(status_code=429, content=envelope(error=err, cid=req.state.cid))
-            if req.method in {"POST", "PUT", "PATCH", "DELETE"}:
-                auth = req.headers.get("authorization", "")
-                if not ctx.tokens.check(auth.removeprefix("Bearer ").strip()):
-                    err = {"code": "PF-UNAUTHORIZED", "message": "invalid or missing token",
-                           "severity": "error", "retryable": False}
-                    return JSONResponse(status_code=401, content=envelope(error=err, cid=req.state.cid))
+            # §3.2: every private route requires bearer — GETs included.
+            # Only /health is public (it discloses forge_id/version only).
+            auth = req.headers.get("authorization", "")
+            if not ctx.tokens.check(auth.removeprefix("Bearer ").strip()):
+                err = {"code": "PF-UNAUTHORIZED", "message": "invalid or missing token",
+                       "severity": "error", "retryable": False}
+                return JSONResponse(status_code=401, content=envelope(error=err, cid=req.state.cid))
             if int(req.headers.get("content-length", 0)) > MAX_BODY:
                 err = {"code": "PF-PAYLOAD-TOO-LARGE", "message": "payload too large",
                        "severity": "warning", "retryable": False}
@@ -208,6 +209,9 @@ def create_app(home: Path | None = None) -> FastAPI:
         resp = await call_next(req)
         resp.headers["X-Correlation-Id"] = req.state.cid
         resp.headers["Cache-Control"] = "no-store"
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+        resp.headers["X-Frame-Options"] = "DENY"
+        resp.headers["Referrer-Policy"] = "no-referrer"
         return resp
 
     def _d(body: BaseModel) -> dict[str, Any]:
