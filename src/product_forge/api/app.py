@@ -566,7 +566,9 @@ def create_app(home: Path | None = None) -> FastAPI:
         if ds.get("product_id") != pid:
             from ..errors import NotFoundError
             raise NotFoundError(f"data source {sid} not in product {pid}")
-        return envelope(connector_for(ds).schema())
+        from pathlib import Path
+
+        return envelope(connector_for(ds, [Path(ds.get("locator", ".")).parent]).schema())
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/data-sources/{{sid}}/verify")
     def ds_verify(pid: str, sid: str, req: Request) -> dict:
@@ -579,7 +581,9 @@ def create_app(home: Path | None = None) -> FastAPI:
             raise NotFoundError(f"data source {sid} not in product {pid}")
         ds = DataSource.model_validate(doc)
         try:
-            result = connector_for(doc).verify()
+            from pathlib import Path
+
+            result = connector_for(doc, [Path(doc.get("locator", ".")).parent]).verify()
             ds.status = ds.status.HEALTHY
         except Exception as e:
             ds.status = ds.status.ERROR

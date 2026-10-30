@@ -45,6 +45,15 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}", self._product_get))
         self.register(Operation("GET", "/products/{pid}/context", self._product_context))
         self.register(Operation("GET", "/products/{pid}/agents", self._agents))
+        self.register(Operation("POST", "/products/{pid}/knowledge/query", self._kn_query))
+        self.register(Operation("GET", "/products/{pid}/graph", self._graph))
+        self.register(Operation("GET", "/products/{pid}/knowledge-health", self._kn_health))
+        self.register(Operation("POST", "/products/{pid}/queries/execute", self._q_exec,
+                                mutating=True, confirm="execute"))
+        self.register(Operation("POST", "/products/{pid}/agents/{aid}/run", self._agent_run,
+                                mutating=True, confirm="run"))
+        self.register(Operation("GET", "/products/{pid}/roadmap", self._roadmap))
+        self.register(Operation("GET", "/products/{pid}/alerts", self._alerts))
         self.register(Operation("GET", "/audit", self._audit))
 
     # -- capability surface -------------------------------------------------
@@ -151,5 +160,79 @@ class ProductForgePortal(PortalAdapter):
         st = _store()
         try:
             return {"items": st.list("audit_events", limit=100)}
+        finally:
+            st.close()
+
+    def _kn_query(self, ctx: RequestContext) -> dict[str, Any]:
+        pid = ctx.params["pid"]
+        question = (ctx.body or {}).get("question", "")
+        st = _store()
+        try:
+            hits = st.search_fts(pid, question, limit=10)
+            return {"question": question,
+                    "citations": [{"chunk_id": h["id"], "document_id": h["document_id"],
+                                   "snippet": h["snip"], "title": st.doc_title(h["document_id"])}
+                                  for h in hits]}
+        finally:
+            st.close()
+
+    def _graph(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..knowledge.graph import product_graph
+
+        st = _store()
+        try:
+            return product_graph(st, ctx.params["pid"])
+        finally:
+            st.close()
+
+    def _kn_health(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..knowledge.graph import knowledge_health
+
+        st = _store()
+        try:
+            return knowledge_health(st, ctx.params["pid"])
+        finally:
+            st.close()
+
+    def _q_exec(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..analytics.engine import compile_spec, execute_query
+
+        body = ctx.body or {}
+        statement = body.get("statement") or (
+            compile_spec(body["spec"]) if body.get("spec") else None)
+        st = _store()
+        try:
+            run = execute_query(st, ctx.params["pid"], body["source_id"], statement)
+            ctx.emit("query.executed", resource_id=run["id"], status=run["status"])
+            return run
+        finally:
+            st.close()
+
+    def _agent_run(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..agents.runtime import run_agent
+        from ..domain.models import AgentDefinition
+
+        st = _store()
+        try:
+            agent = AgentDefinition.model_validate(st.get("agents", ctx.params["aid"]))
+            run = run_agent(st, agent, (ctx.body or {}).get("input", ""), actor="portal")
+            ctx.emit("agent.run", resource_id=run["id"], status=run["status"])
+            return run
+        finally:
+            st.close()
+
+    def _roadmap(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..planning.roadmap import build_roadmap
+
+        st = _store()
+        try:
+            return build_roadmap(st, ctx.params["pid"])
+        finally:
+            st.close()
+
+    def _alerts(self, ctx: RequestContext) -> dict[str, Any]:
+        st = _store()
+        try:
+            return {"items": st.list("alerts", product_id=ctx.params["pid"])}
         finally:
             st.close()

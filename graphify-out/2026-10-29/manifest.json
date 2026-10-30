@@ -54,9 +54,9 @@
     "semantic_hash": ""
   },
   "src/product_forge/api/app.py": {
-    "mtime": 1793322143.035013,
-    "seen": 1793322202.0513453,
-    "ast_hash": "b71b7afb809d91927a020d86a37a0147",
+    "mtime": 1793322278.4029531,
+    "seen": 1793322311.233914,
+    "ast_hash": "7348a30ba5c8bf5b9d1c364d597e89c8",
     "semantic_hash": ""
   },
   "src/product_forge/cli/__init__.py": {
@@ -186,9 +186,9 @@
     "semantic_hash": ""
   },
   "src/product_forge/store/sqlite.py": {
-    "mtime": 1793321942.0925014,
-    "seen": 1793321956.9117699,
-    "ast_hash": "29e2b5bc11ccf73d27348c3982cc6c5f",
+    "mtime": 1793322263.3379872,
+    "seen": 1793322311.233954,
+    "ast_hash": "fa91d2a2fcbb93089ba3a4b919e4f547",
     "semantic_hash": ""
   },
   "tests/test_core.py": {
@@ -351,6 +351,36 @@
     "mtime": 1793322187.0556493,
     "seen": 1793322202.0513835,
     "ast_hash": "a994d9e2c3125155e5373a9b40c57d3b",
+    "semantic_hash": ""
+  },
+  "src/product_forge/integrations/apispec.py": {
+    "mtime": 1793322300.2978246,
+    "seen": 1793322311.233926,
+    "ast_hash": "b65f980ea198ddf92c2b7fefb7714b8c",
+    "semantic_hash": ""
+  },
+  "src/product_forge/integrations/aws.py": {
+    "mtime": 1793322230.4330404,
+    "seen": 1793322311.2339275,
+    "ast_hash": "b0195f4866f6e85d86ced90abd164d5d",
+    "semantic_hash": ""
+  },
+  "src/product_forge/integrations/azure.py": {
+    "mtime": 1793322231.0440397,
+    "seen": 1793322311.2339287,
+    "ast_hash": "2b16542b79bcc99636750c45a240acba",
+    "semantic_hash": ""
+  },
+  "src/product_forge/integrations/datacontract.py": {
+    "mtime": 1793322304.4678812,
+    "seen": 1793322311.2339296,
+    "ast_hash": "0c26d86648eba310c5f14bf8c3a8fb0e",
+    "semantic_hash": ""
+  },
+  "tests/test_cycle89.py": {
+    "mtime": 1793322278.9449518,
+    "seen": 1793322311.2339616,
+    "ast_hash": "6914c2718235b94fdd70bbdfa6773f1b",
     "semantic_hash": ""
   }
 }

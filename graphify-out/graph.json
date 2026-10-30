@@ -140,7 +140,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": "kqlconnector",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -183,7 +183,7 @@
       "file_type": "code",
       "norm_label": "store",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L81"
+      "source_location": "L83"
     },
     {
       "id": "src_product_forge_analytics_connectors_connector",
@@ -290,6 +290,30 @@
       "source_location": "L33"
     },
     {
+      "id": "src_product_forge_agents_routing_record_usage",
+      "label": "record_usage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "record_usage()",
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L37"
+    },
+    {
+      "id": "src_product_forge_agents_routing_route",
+      "label": "route()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "route()",
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L24"
+    },
+    {
       "id": "src_product_forge_api_app_cid",
       "label": "_cid()",
       "_callable": true,
@@ -374,160 +398,184 @@
       "source_location": "L107"
     },
     {
-      "id": "src_product_forge_integrations_apispec_diff_openapi",
-      "label": "diff_openapi()",
+      "id": "src_product_forge_operations_approvals_check_gate",
+      "label": "check_gate()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "diff_openapi()",
-      "source_file": "src/product_forge/integrations/apispec.py",
-      "source_location": "L66"
+      "norm_label": "check_gate()",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L35"
     },
     {
-      "id": "src_product_forge_integrations_apispec_load_spec",
-      "label": "load_spec()",
+      "id": "src_product_forge_operations_approvals_decide",
+      "label": "decide()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "load_spec()",
-      "source_file": "src/product_forge/integrations/apispec.py",
-      "source_location": "L12"
+      "norm_label": "decide()",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L24"
     },
     {
-      "id": "src_product_forge_integrations_apispec_parse_asyncapi",
-      "label": "parse_asyncapi()",
+      "id": "src_product_forge_operations_approvals_request_approval",
+      "label": "request_approval()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "parse_asyncapi()",
-      "source_file": "src/product_forge/integrations/apispec.py",
-      "source_location": "L51"
+      "norm_label": "request_approval()",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L15"
     },
     {
-      "id": "src_product_forge_integrations_apispec_parse_openapi",
-      "label": "parse_openapi()",
+      "id": "src_product_forge_operations_watches_create_watch",
+      "label": "create_watch()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "parse_openapi()",
-      "source_file": "src/product_forge/integrations/apispec.py",
-      "source_location": "L19"
+      "norm_label": "create_watch()",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L27"
     },
     {
-      "id": "src_product_forge_integrations_datacontract_impact_analysis",
-      "label": "impact_analysis()",
+      "id": "src_product_forge_operations_watches_evaluate_watch",
+      "label": "evaluate_watch()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "impact_analysis()",
-      "source_file": "src/product_forge/integrations/datacontract.py",
-      "source_location": "L45"
+      "norm_label": "evaluate_watch()",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L39"
     },
     {
-      "id": "src_product_forge_integrations_datacontract_validate_payload",
-      "label": "validate_payload()",
+      "id": "src_product_forge_operations_watches_run_due",
+      "label": "run_due()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "validate_payload()",
-      "source_file": "src/product_forge/integrations/datacontract.py",
-      "source_location": "L14"
-    },
-    {
-      "id": "tests_test_cycle4_test_api_agent_flow",
-      "label": "test_api_agent_flow()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "code",
-      "norm_label": "test_api_agent_flow()",
-      "source_file": "tests/test_cycle4.py",
-      "source_location": "L86"
-    },
-    {
-      "id": "tests_test_cycle89_test_api_import_and_diff_endpoint",
-      "label": "test_api_import_and_diff_endpoint()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "code",
-      "norm_label": "test_api_import_and_diff_endpoint()",
-      "source_file": "tests/test_cycle89.py",
-      "source_location": "L133"
-    },
-    {
-      "id": "tests_test_cycle89_test_breaking_change_diff",
-      "label": "test_breaking_change_diff()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "code",
-      "norm_label": "test_breaking_change_diff()",
-      "source_file": "tests/test_cycle89.py",
-      "source_location": "L61"
-    },
-    {
-      "id": "tests_test_cycle89_test_cloud_honest_unavailable",
-      "label": "test_cloud_honest_unavailable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "code",
-      "norm_label": "test_cloud_honest_unavailable()",
-      "source_file": "tests/test_cycle89.py",
-      "source_location": "L115"
-    },
-    {
-      "id": "tests_test_cycle89_test_contract_validation",
-      "label": "test_contract_validation()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "code",
-      "norm_label": "test_contract_validation()",
-      "source_file": "tests/test_cycle89.py",
+      "norm_label": "run_due()",
+      "source_file": "src/product_forge/operations/watches.py",
       "source_location": "L75"
     },
     {
-      "id": "tests_test_cycle89_test_impact_analysis",
-      "label": "test_impact_analysis()",
+      "id": "src_product_forge_operations_watches_touch",
+      "label": "_touch()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "test_impact_analysis()",
-      "source_file": "tests/test_cycle89.py",
+      "norm_label": "_touch()",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L95"
+    },
+    {
+      "id": "src_product_forge_operations_watches_ts",
+      "label": "_ts()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "_ts()",
+      "source_file": "src/product_forge/operations/watches.py",
       "source_location": "L89"
     },
     {
-      "id": "tests_test_cycle89_test_openapi_parse",
-      "label": "test_openapi_parse()",
+      "id": "tests_test_cycle1011_store",
+      "label": "_store()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "test_openapi_parse()",
-      "source_file": "tests/test_cycle89.py",
-      "source_location": "L52"
+      "norm_label": "_store()",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L20"
+    },
+    {
+      "id": "tests_test_cycle1011_test_approvals_gate",
+      "label": "test_approvals_gate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "test_approvals_gate()",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L47"
+    },
+    {
+      "id": "tests_test_cycle1011_test_executive_report",
+      "label": "test_executive_report()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "test_executive_report()",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L65"
+    },
+    {
+      "id": "tests_test_cycle1011_test_routing_and_budget",
+      "label": "test_routing_and_budget()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "test_routing_and_budget()",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L122"
+    },
+    {
+      "id": "tests_test_cycle1011_test_watch_breach_opens_alert",
+      "label": "test_watch_breach_opens_alert()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "test_watch_breach_opens_alert()",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L27"
+    },
+    {
+      "id": "tests_test_cycle1011_test_workflow_halts_on_cross_product",
+      "label": "test_workflow_halts_on_cross_product()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "test_workflow_halts_on_cross_product()",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L109"
+    },
+    {
+      "id": "tests_test_cycle1011_test_workflow_multi_agent",
+      "label": "test_workflow_multi_agent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "test_workflow_multi_agent()",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L79"
     },
     {
       "id": "src_product_forge_knowledge_extract_build_relations",
@@ -552,6 +600,18 @@
       "norm_label": "extract_entities()",
       "source_file": "src/product_forge/knowledge/extract.py",
       "source_location": "L29"
+    },
+    {
+      "id": "tests_test_cycle3_home",
+      "label": "home()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 1,
+      "community_name": "build_relations",
+      "file_type": "code",
+      "norm_label": "home()",
+      "source_file": "tests/test_cycle3.py",
+      "source_location": "L7"
     },
     {
       "id": "tests_test_cycle3_seed",
@@ -602,12 +662,60 @@
       "source_location": "L50"
     },
     {
+      "id": "src_product_forge_integrations_apispec_diff_openapi",
+      "label": "diff_openapi()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "diff_openapi()",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L66"
+    },
+    {
+      "id": "src_product_forge_integrations_apispec_load_spec",
+      "label": "load_spec()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "load_spec()",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L12"
+    },
+    {
+      "id": "src_product_forge_integrations_apispec_parse_asyncapi",
+      "label": "parse_asyncapi()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "parse_asyncapi()",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L51"
+    },
+    {
+      "id": "src_product_forge_integrations_apispec_parse_openapi",
+      "label": "parse_openapi()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "parse_openapi()",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L19"
+    },
+    {
       "id": "src_product_forge_integrations_azure_credential",
       "label": "_credential()",
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": "_credential()",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -619,7 +727,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": "fabric_inventory()",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -631,7 +739,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": "._client()",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -643,7 +751,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": ".execute()",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -655,7 +763,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": ".__init__()",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -667,7 +775,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": ".verify()",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -679,71 +787,107 @@
       "_callable": true,
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": "powerbi_inventory()",
       "source_file": "src/product_forge/integrations/azure.py",
       "source_location": "L64"
     },
     {
-      "id": "src_product_forge_planning_prioritize_score_initiative",
-      "label": "score_initiative()",
+      "id": "src_product_forge_integrations_datacontract_impact_analysis",
+      "label": "impact_analysis()",
       "_callable": true,
       "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
+      "community": 10,
+      "community_name": "test_cycle89.py",
       "file_type": "code",
-      "norm_label": "score_initiative()",
-      "source_file": "src/product_forge/planning/prioritize.py",
-      "source_location": "L21"
+      "norm_label": "impact_analysis()",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L45"
     },
     {
-      "id": "src_product_forge_planning_prioritize_score_rice",
-      "label": "score_rice()",
+      "id": "src_product_forge_integrations_datacontract_validate_payload",
+      "label": "validate_payload()",
       "_callable": true,
       "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
+      "community": 10,
+      "community_name": "test_cycle89.py",
       "file_type": "code",
-      "norm_label": "score_rice()",
-      "source_file": "src/product_forge/planning/prioritize.py",
-      "source_location": "L8"
-    },
-    {
-      "id": "src_product_forge_planning_prioritize_score_wsjf",
-      "label": "score_wsjf()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
-      "file_type": "code",
-      "norm_label": "score_wsjf()",
-      "source_file": "src/product_forge/planning/prioritize.py",
+      "norm_label": "validate_payload()",
+      "source_file": "src/product_forge/integrations/datacontract.py",
       "source_location": "L14"
     },
     {
-      "id": "src_product_forge_planning_roadmap_build_roadmap",
-      "label": "build_roadmap()",
+      "id": "tests_test_cycle89_test_api_import_and_diff_endpoint",
+      "label": "test_api_import_and_diff_endpoint()",
       "_callable": true,
       "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
+      "community": 10,
+      "community_name": "test_cycle89.py",
       "file_type": "code",
-      "norm_label": "build_roadmap()",
-      "source_file": "src/product_forge/planning/roadmap.py",
-      "source_location": "L18"
+      "norm_label": "test_api_import_and_diff_endpoint()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L133"
     },
     {
-      "id": "tests_test_cycle67_test_prioritize_and_roadmap",
-      "label": "test_prioritize_and_roadmap()",
+      "id": "tests_test_cycle89_test_breaking_change_diff",
+      "label": "test_breaking_change_diff()",
       "_callable": true,
       "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
+      "community": 10,
+      "community_name": "test_cycle89.py",
       "file_type": "code",
-      "norm_label": "test_prioritize_and_roadmap()",
-      "source_file": "tests/test_cycle67.py",
-      "source_location": "L57"
+      "norm_label": "test_breaking_change_diff()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L61"
+    },
+    {
+      "id": "tests_test_cycle89_test_cloud_honest_unavailable",
+      "label": "test_cloud_honest_unavailable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "test_cloud_honest_unavailable()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L115"
+    },
+    {
+      "id": "tests_test_cycle89_test_contract_validation",
+      "label": "test_contract_validation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "test_contract_validation()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L75"
+    },
+    {
+      "id": "tests_test_cycle89_test_impact_analysis",
+      "label": "test_impact_analysis()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "test_impact_analysis()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L89"
+    },
+    {
+      "id": "tests_test_cycle89_test_openapi_parse",
+      "label": "test_openapi_parse()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "test_openapi_parse()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L52"
     },
     {
       "id": "src_product_forge_agents_tools_context_package",
@@ -818,6 +962,42 @@
       "source_location": "L33"
     },
     {
+      "id": "src_product_forge_agents_workflows_interpolate",
+      "label": "_interpolate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "_interpolate()",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L24"
+    },
+    {
+      "id": "src_product_forge_agents_workflows_plan_is_deterministic",
+      "label": "plan_is_deterministic()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "plan_is_deterministic()",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L96"
+    },
+    {
+      "id": "src_product_forge_agents_workflows_run_workflow",
+      "label": "run_workflow()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "run_workflow()",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L36"
+    },
+    {
       "id": "src_product_forge_knowledge_graph_knowledge_health",
       "label": "knowledge_health()",
       "_callable": true,
@@ -842,6 +1022,42 @@
       "source_location": "L10"
     },
     {
+      "id": "src_product_forge_operations_reports_generate_executive",
+      "label": "generate_executive()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "generate_executive()",
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L12"
+    },
+    {
+      "id": "src_product_forge_security_redact",
+      "label": "redact()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "redact()",
+      "source_file": "src/product_forge/security.py",
+      "source_location": "L40"
+    },
+    {
+      "id": "src_product_forge_security_secretish",
+      "label": "_secretish()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "_secretish()",
+      "source_file": "src/product_forge/security.py",
+      "source_location": "L35"
+    },
+    {
       "id": "src_product_forge_store_sqlite_store_audit",
       "label": ".audit()",
       "_callable": true,
@@ -851,7 +1067,7 @@
       "file_type": "code",
       "norm_label": ".audit()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L236"
+      "source_location": "L238"
     },
     {
       "id": "src_product_forge_store_sqlite_store_close",
@@ -863,7 +1079,7 @@
       "file_type": "code",
       "norm_label": ".close()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L96"
+      "source_location": "L98"
     },
     {
       "id": "src_product_forge_store_sqlite_store_delete",
@@ -875,7 +1091,7 @@
       "file_type": "code",
       "norm_label": ".delete()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L154"
+      "source_location": "L156"
     },
     {
       "id": "src_product_forge_store_sqlite_store_doc_title",
@@ -887,7 +1103,7 @@
       "file_type": "code",
       "norm_label": ".doc_title()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L212"
+      "source_location": "L214"
     },
     {
       "id": "src_product_forge_store_sqlite_store_get",
@@ -899,7 +1115,7 @@
       "file_type": "code",
       "norm_label": ".get()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L145"
+      "source_location": "L147"
     },
     {
       "id": "src_product_forge_store_sqlite_store_init",
@@ -911,7 +1127,7 @@
       "file_type": "code",
       "norm_label": ".__init__()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L84"
+      "source_location": "L86"
     },
     {
       "id": "src_product_forge_store_sqlite_store_list",
@@ -923,7 +1139,7 @@
       "file_type": "code",
       "norm_label": ".list()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L163"
+      "source_location": "L165"
     },
     {
       "id": "src_product_forge_store_sqlite_store_list_chunks",
@@ -935,7 +1151,19 @@
       "file_type": "code",
       "norm_label": ".list_chunks()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L203"
+      "source_location": "L205"
+    },
+    {
+      "id": "src_product_forge_store_sqlite_store_put",
+      "label": ".put()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": ".put()",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L104"
     },
     {
       "id": "src_product_forge_store_sqlite_store_put_chunks",
@@ -947,7 +1175,7 @@
       "file_type": "code",
       "norm_label": ".put_chunks()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L188"
+      "source_location": "L190"
     },
     {
       "id": "src_product_forge_store_sqlite_store_put_doc",
@@ -959,7 +1187,7 @@
       "file_type": "code",
       "norm_label": ".put_doc()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L126"
+      "source_location": "L128"
     },
     {
       "id": "src_product_forge_store_sqlite_store_search_fts",
@@ -971,7 +1199,7 @@
       "file_type": "code",
       "norm_label": ".search_fts()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L219"
+      "source_location": "L221"
     },
     {
       "id": "src_product_forge_cli_init_ag_create",
@@ -1334,18 +1562,6 @@
       "source_location": "L371"
     },
     {
-      "id": "src_product_forge_cli_init_q_validate",
-      "label": "q_validate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "__init__.py",
-      "file_type": "code",
-      "norm_label": "q_validate()",
-      "source_file": "src/product_forge/cli/__init__.py",
-      "source_location": "L353"
-    },
-    {
       "id": "src_product_forge_cli_init_src_register",
       "label": "src_register()",
       "_callable": true,
@@ -1440,6 +1656,18 @@
       "norm_label": "ws_list()",
       "source_file": "src/product_forge/cli/__init__.py",
       "source_location": "L153"
+    },
+    {
+      "id": "src_product_forge_planning_roadmap_build_roadmap",
+      "label": "build_roadmap()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "__init__.py",
+      "file_type": "code",
+      "norm_label": "build_roadmap()",
+      "source_file": "src/product_forge/planning/roadmap.py",
+      "source_location": "L18"
     },
     {
       "id": "src_product_forge_analytics_connectors_connector_execute",
@@ -1778,6 +2006,18 @@
       "source_location": "L12"
     },
     {
+      "id": "tests_test_cycle4_test_api_agent_flow",
+      "label": "test_api_agent_flow()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "run_agent",
+      "file_type": "code",
+      "norm_label": "test_api_agent_flow()",
+      "source_file": "tests/test_cycle4.py",
+      "source_location": "L86"
+    },
+    {
       "id": "tests_test_cycle4_test_cancel_run",
       "label": "test_cancel_run()",
       "_callable": true,
@@ -1958,6 +2198,18 @@
       "source_location": "L36"
     },
     {
+      "id": "src_product_forge_cli_init_q_validate",
+      "label": "q_validate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "engine.py",
+      "file_type": "code",
+      "norm_label": "q_validate()",
+      "source_file": "src/product_forge/cli/__init__.py",
+      "source_location": "L353"
+    },
+    {
       "id": "src_product_forge_dashboards_render_render_dashboard",
       "label": "render_dashboard()",
       "_callable": true,
@@ -2102,30 +2354,6 @@
       "source_location": "L26"
     },
     {
-      "id": "src_product_forge_security_redact",
-      "label": "redact()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "code",
-      "norm_label": "redact()",
-      "source_file": "src/product_forge/security.py",
-      "source_location": "L40"
-    },
-    {
-      "id": "src_product_forge_security_secretish",
-      "label": "_secretish()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "code",
-      "norm_label": "_secretish()",
-      "source_file": "src/product_forge/security.py",
-      "source_location": "L35"
-    },
-    {
       "id": "src_product_forge_security_tokenstore_check",
       "label": ".check()",
       "_callable": true,
@@ -2222,40 +2450,64 @@
       "source_location": "L94"
     },
     {
-      "id": "src_product_forge_store_sqlite_store_put",
-      "label": ".put()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "code",
-      "norm_label": ".put()",
-      "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L102"
-    },
-    {
       "id": "src_product_forge_planning_prd_generate_prd",
       "label": "generate_prd()",
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "generate_prd()",
       "source_file": "src/product_forge/planning/prd.py",
       "source_location": "L15"
     },
     {
-      "id": "tests_test_cycle3_home",
-      "label": "home()",
+      "id": "src_product_forge_planning_prioritize_score_initiative",
+      "label": "score_initiative()",
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
-      "norm_label": "home()",
-      "source_file": "tests/test_cycle3.py",
-      "source_location": "L7"
+      "norm_label": "score_initiative()",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L21"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_score_rice",
+      "label": "score_rice()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "score_rice()",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L8"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_score_wsjf",
+      "label": "score_wsjf()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "score_wsjf()",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L14"
+    },
+    {
+      "id": "tests_test_cycle1011_env",
+      "label": "env()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "env()",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L9"
     },
     {
       "id": "tests_test_cycle4_home",
@@ -2263,7 +2515,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "home()",
       "source_file": "tests/test_cycle4.py",
@@ -2275,7 +2527,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "dbfile()",
       "source_file": "tests/test_cycle5.py",
@@ -2287,7 +2539,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "home()",
       "source_file": "tests/test_cycle5.py",
@@ -2299,7 +2551,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "dbfile()",
       "source_file": "tests/test_cycle67.py",
@@ -2311,7 +2563,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "home()",
       "source_file": "tests/test_cycle67.py",
@@ -2323,7 +2575,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "_seed()",
       "source_file": "tests/test_cycle67.py",
@@ -2335,7 +2587,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "test_api_dashboard_planning()",
       "source_file": "tests/test_cycle67.py",
@@ -2347,7 +2599,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "test_dashboard_render_real_data()",
       "source_file": "tests/test_cycle67.py",
@@ -2359,11 +2611,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "test_prd_generation()",
       "source_file": "tests/test_cycle67.py",
       "source_location": "L76"
+    },
+    {
+      "id": "tests_test_cycle67_test_prioritize_and_roadmap",
+      "label": "test_prioritize_and_roadmap()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "test_prioritize_and_roadmap()",
+      "source_file": "tests/test_cycle67.py",
+      "source_location": "L57"
     },
     {
       "id": "src_product_forge_integrations_aws_athenaconnector_client",
@@ -2507,6 +2771,28 @@
       "source_location": ""
     },
     {
+      "id": "src_product_forge_agents_routing",
+      "label": "routing.py",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "routing.py",
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_agents_routing_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "src_product_forge_api_app",
       "label": "app.py",
       "_origin": "ast",
@@ -2540,18 +2826,18 @@
       "source_location": ""
     },
     {
-      "id": "src_product_forge_integrations_apispec",
-      "label": "apispec.py",
+      "id": "src_product_forge_operations_approvals",
+      "label": "approvals.py",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "apispec.py",
-      "source_file": "src/product_forge/integrations/apispec.py",
+      "norm_label": "approvals.py",
+      "source_file": "src/product_forge/operations/approvals.py",
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_integrations_apispec_py_any",
+      "id": "src_product_forge_operations_approvals_py_any",
       "label": "Any",
       "_origin": "ast",
       "community": 0,
@@ -2562,18 +2848,18 @@
       "source_location": ""
     },
     {
-      "id": "src_product_forge_integrations_datacontract",
-      "label": "datacontract.py",
+      "id": "src_product_forge_operations_watches",
+      "label": "watches.py",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "datacontract.py",
-      "source_file": "src/product_forge/integrations/datacontract.py",
+      "norm_label": "watches.py",
+      "source_file": "src/product_forge/operations/watches.py",
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_integrations_datacontract_py_any",
+      "id": "src_product_forge_operations_watches_py_any",
       "label": "Any",
       "_origin": "ast",
       "community": 0,
@@ -2584,15 +2870,37 @@
       "source_location": ""
     },
     {
-      "id": "tests_test_cycle89",
-      "label": "test_cycle89.py",
+      "id": "tests_test_cycle1011",
+      "label": "test_cycle1011.py",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "test_cycle89.py",
-      "source_file": "tests/test_cycle89.py",
+      "norm_label": "test_cycle1011.py",
+      "source_file": "tests/test_cycle1011.py",
       "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_agents_routing_rationale_1",
+      "label": "Model routing + cost ledger \u2014 gateway profiles and honest budgets. No provider\u2026",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "rationale",
+      "norm_label": "model routing + cost ledger \u2014 gateway profiles and honest budgets. no provider...",
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_agents_routing_rationale_38",
+      "label": "Append to the product's daily budget ledger (audit-safe).",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "rationale",
+      "norm_label": "append to the product's daily budget ledger (audit-safe).",
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L38"
     },
     {
       "id": "src_product_forge_api_app_rationale_1",
@@ -2639,92 +2947,48 @@
       "source_location": "L57"
     },
     {
-      "id": "src_product_forge_integrations_apispec_rationale_1",
-      "label": "OpenAPI/AsyncAPI parsing + breaking-change detection \u2014 real diffs.",
+      "id": "src_product_forge_operations_approvals_rationale_1",
+      "label": "Approvals \u2014 gate sensitive actions behind human review.",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "rationale",
-      "norm_label": "openapi/asyncapi parsing + breaking-change detection \u2014 real diffs.",
-      "source_file": "src/product_forge/integrations/apispec.py",
+      "norm_label": "approvals \u2014 gate sensitive actions behind human review.",
+      "source_file": "src/product_forge/operations/approvals.py",
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_integrations_apispec_rationale_20",
-      "label": "Extract the API surface: operations, params, schemas.",
+      "id": "src_product_forge_operations_approvals_rationale_37",
+      "label": "Look up the latest approval for (action, resource).",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "rationale",
-      "norm_label": "extract the api surface: operations, params, schemas.",
-      "source_file": "src/product_forge/integrations/apispec.py",
-      "source_location": "L20"
+      "norm_label": "look up the latest approval for (action, resource).",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L37"
     },
     {
-      "id": "src_product_forge_integrations_apispec_rationale_67",
-      "label": "Breaking-change detection between two parsed OpenAPI surfaces.",
+      "id": "src_product_forge_operations_watches_rationale_1",
+      "label": "Watches \u2014 scheduled metric checks over governed queries. A watch runs its\u2026",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "rationale",
-      "norm_label": "breaking-change detection between two parsed openapi surfaces.",
-      "source_file": "src/product_forge/integrations/apispec.py",
-      "source_location": "L67"
-    },
-    {
-      "id": "src_product_forge_integrations_datacontract_rationale_1",
-      "label": "Data contracts + impact analysis over the entity/relation graph.",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "rationale",
-      "norm_label": "data contracts + impact analysis over the entity/relation graph.",
-      "source_file": "src/product_forge/integrations/datacontract.py",
+      "norm_label": "watches \u2014 scheduled metric checks over governed queries. a watch runs its...",
+      "source_file": "src/product_forge/operations/watches.py",
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_integrations_datacontract_rationale_15",
-      "label": "contract: {fields:[{name,type,required}], quality:[{field,rule}]}",
+      "id": "tests_test_cycle1011_rationale_1",
+      "label": "Cycles 10-11: watches/alerts/approvals/reports + workflows/routing.",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "rationale",
-      "norm_label": "contract: {fields:[{name,type,required}], quality:[{field,rule}]}",
-      "source_file": "src/product_forge/integrations/datacontract.py",
-      "source_location": "L15"
-    },
-    {
-      "id": "src_product_forge_integrations_datacontract_rationale_47",
-      "label": "BFS over relations: what breaks if `entity_id` changes?",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "rationale",
-      "norm_label": "bfs over relations: what breaks if `entity_id` changes?",
-      "source_file": "src/product_forge/integrations/datacontract.py",
-      "source_location": "L47"
-    },
-    {
-      "id": "tests_test_cycle89_rationale_1",
-      "label": "Cycles 8-9: cloud honesty + api/data-product intelligence.",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "rationale",
-      "norm_label": "cycles 8-9: cloud honesty + api/data-product intelligence.",
-      "source_file": "tests/test_cycle89.py",
+      "norm_label": "cycles 10-11: watches/alerts/approvals/reports + workflows/routing.",
+      "source_file": "tests/test_cycle1011.py",
       "source_location": "L1"
-    },
-    {
-      "id": "tests_test_cycle89_rationale_116",
-      "label": "No boto3/creds \u2192 typed SourceUnavailableError, never fake data.",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "rationale",
-      "norm_label": "no boto3/creds \u2192 typed sourceunavailableerror, never fake data.",
-      "source_file": "tests/test_cycle89.py",
-      "source_location": "L116"
     },
     {
       "id": "knowledgeentity",
@@ -2815,11 +3079,33 @@
       "source_location": "L1"
     },
     {
+      "id": "src_product_forge_integrations_apispec",
+      "label": "apispec.py",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "apispec.py",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_integrations_apispec_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "src_product_forge_integrations_azure",
       "label": "azure.py",
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": "azure.py",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -2830,18 +3116,73 @@
       "label": "Any",
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "code",
       "norm_label": "any",
       "source_file": "",
       "source_location": ""
     },
     {
+      "id": "src_product_forge_integrations_datacontract_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "tests_test_cycle89",
+      "label": "test_cycle89.py",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "code",
+      "norm_label": "test_cycle89.py",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_integrations_apispec_rationale_1",
+      "label": "OpenAPI/AsyncAPI parsing + breaking-change detection \u2014 real diffs.",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "rationale",
+      "norm_label": "openapi/asyncapi parsing + breaking-change detection \u2014 real diffs.",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_integrations_apispec_rationale_20",
+      "label": "Extract the API surface: operations, params, schemas.",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "rationale",
+      "norm_label": "extract the api surface: operations, params, schemas.",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L20"
+    },
+    {
+      "id": "src_product_forge_integrations_apispec_rationale_67",
+      "label": "Breaking-change detection between two parsed OpenAPI surfaces.",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "rationale",
+      "norm_label": "breaking-change detection between two parsed openapi surfaces.",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L67"
+    },
+    {
       "id": "src_product_forge_integrations_azure_rationale_1",
       "label": "Azure intelligence \u2014 KQL (Log Analytics) + Fabric/Power BI inventory. Same\u2026",
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "rationale",
       "norm_label": "azure intelligence \u2014 kql (log analytics) + fabric/power bi inventory. same...",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -2852,7 +3193,7 @@
       "label": "Log Analytics KQL execution via azure-monitor-query.",
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "rationale",
       "norm_label": "log analytics kql execution via azure-monitor-query.",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -2863,7 +3204,7 @@
       "label": "Power BI REST inventory \u2014 workspaces + datasets. Token required.",
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "rationale",
       "norm_label": "power bi rest inventory \u2014 workspaces + datasets. token required.",
       "source_file": "src/product_forge/integrations/azure.py",
@@ -2874,99 +3215,66 @@
       "label": "Microsoft Fabric items inventory \u2014 token required.",
       "_origin": "ast",
       "community": 10,
-      "community_name": "azure.py",
+      "community_name": "test_cycle89.py",
       "file_type": "rationale",
       "norm_label": "microsoft fabric items inventory \u2014 token required.",
       "source_file": "src/product_forge/integrations/azure.py",
       "source_location": "L84"
     },
     {
-      "id": "src_product_forge_planning_prioritize",
-      "label": "prioritize.py",
+      "id": "src_product_forge_integrations_datacontract_rationale_15",
+      "label": "contract: {fields:[{name,type,required}], quality:[{field,rule}]}",
       "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
-      "file_type": "code",
-      "norm_label": "prioritize.py",
-      "source_file": "src/product_forge/planning/prioritize.py",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "rationale",
+      "norm_label": "contract: {fields:[{name,type,required}], quality:[{field,rule}]}",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L15"
+    },
+    {
+      "id": "src_product_forge_integrations_datacontract_rationale_47",
+      "label": "BFS over relations: what breaks if `entity_id` changes?",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "rationale",
+      "norm_label": "bfs over relations: what breaks if `entity_id` changes?",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L47"
+    },
+    {
+      "id": "tests_test_cycle89_rationale_1",
+      "label": "Cycles 8-9: cloud honesty + api/data-product intelligence.",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "rationale",
+      "norm_label": "cycles 8-9: cloud honesty + api/data-product intelligence.",
+      "source_file": "tests/test_cycle89.py",
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_planning_prioritize_py_any",
-      "label": "Any",
+      "id": "tests_test_cycle89_rationale_116",
+      "label": "No boto3/creds \u2192 typed SourceUnavailableError, never fake data.",
       "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
+      "community": 10,
+      "community_name": "test_cycle89.py",
+      "file_type": "rationale",
+      "norm_label": "no boto3/creds \u2192 typed sourceunavailableerror, never fake data.",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L116"
+    },
+    {
+      "id": "entity",
+      "label": "Entity",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
       "file_type": "code",
-      "norm_label": "any",
+      "norm_label": "entity",
       "source_file": "",
       "source_location": ""
-    },
-    {
-      "id": "src_product_forge_planning_roadmap",
-      "label": "roadmap.py",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
-      "file_type": "code",
-      "norm_label": "roadmap.py",
-      "source_file": "src/product_forge/planning/roadmap.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_product_forge_planning_roadmap_py_any",
-      "label": "Any",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
-      "file_type": "code",
-      "norm_label": "any",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "src_product_forge_planning_roadmap_py_store",
-      "label": "Store",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
-      "file_type": "code",
-      "norm_label": "store",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "src_product_forge_planning_prioritize_rationale_1",
-      "label": "Prioritization \u2014 RICE and WSJF scoring, deterministic and explainable.",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
-      "file_type": "rationale",
-      "norm_label": "prioritization \u2014 rice and wsjf scoring, deterministic and explainable.",
-      "source_file": "src/product_forge/planning/prioritize.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_product_forge_planning_prioritize_rationale_22",
-      "label": "factors may carry rice{reach,impact,confidence,effort} and/or\u2026",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
-      "file_type": "rationale",
-      "norm_label": "factors may carry rice{reach,impact,confidence,effort} and/or...",
-      "source_file": "src/product_forge/planning/prioritize.py",
-      "source_location": "L22"
-    },
-    {
-      "id": "src_product_forge_planning_roadmap_rationale_1",
-      "label": "Roadmap builder \u2014 now/next/later lanes from real initiatives.",
-      "_origin": "ast",
-      "community": 11,
-      "community_name": "score_initiative",
-      "file_type": "rationale",
-      "norm_label": "roadmap builder \u2014 now/next/later lanes from real initiatives.",
-      "source_file": "src/product_forge/planning/roadmap.py",
-      "source_location": "L1"
     },
     {
       "id": "src_product_forge_agents_tools",
@@ -2991,6 +3299,39 @@
       "source_location": ""
     },
     {
+      "id": "src_product_forge_agents_workflows",
+      "label": "workflows.py",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "workflows.py",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_agents_workflows_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_integrations_datacontract",
+      "label": "datacontract.py",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "datacontract.py",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L1"
+    },
+    {
       "id": "src_product_forge_knowledge_graph",
       "label": "graph.py",
       "_origin": "ast",
@@ -3011,6 +3352,50 @@
       "norm_label": "any",
       "source_file": "",
       "source_location": ""
+    },
+    {
+      "id": "src_product_forge_operations_reports",
+      "label": "reports.py",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "reports.py",
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_operations_reports_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_security",
+      "label": "security.py",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "security.py",
+      "source_file": "src/product_forge/security.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_store_sqlite",
+      "label": "sqlite.py",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "sqlite.py",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L1"
     },
     {
       "id": "src_product_forge_store_sqlite_py_any",
@@ -3035,6 +3420,17 @@
       "source_location": ""
     },
     {
+      "id": "t",
+      "label": "_T",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "code",
+      "norm_label": "_t",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "src_product_forge_agents_tools_rationale_1",
       "label": "Agent tool registry \u2014 every tool is a real store-backed function. Tools receive\u2026",
       "_origin": "ast",
@@ -3043,6 +3439,50 @@
       "file_type": "rationale",
       "norm_label": "agent tool registry \u2014 every tool is a real store-backed function. tools receive...",
       "source_file": "src/product_forge/agents/tools.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_agents_workflows_rationale_1",
+      "label": "Multi-agent workflows \u2014 deterministic DAG over agents and tools. Steps run in\u2026",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "rationale",
+      "norm_label": "multi-agent workflows \u2014 deterministic dag over agents and tools. steps run in...",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_agents_workflows_rationale_38",
+      "label": "spec: {name, steps:[{id, kind:agent|tool, agent_id|tool, input?}]}",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "rationale",
+      "norm_label": "spec: {name, steps:[{id, kind:agent|tool, agent_id|tool, input?}]}",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L38"
+    },
+    {
+      "id": "src_product_forge_agents_workflows_rationale_97",
+      "label": "Workflows are deterministic by construction: declared steps only.",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "rationale",
+      "norm_label": "workflows are deterministic by construction: declared steps only.",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L97"
+    },
+    {
+      "id": "src_product_forge_integrations_datacontract_rationale_1",
+      "label": "Data contracts + impact analysis over the entity/relation graph.",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "rationale",
+      "norm_label": "data contracts + impact analysis over the entity/relation graph.",
+      "source_file": "src/product_forge/integrations/datacontract.py",
       "source_location": "L1"
     },
     {
@@ -3057,7 +3497,51 @@
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_store_sqlite_rationale_128",
+      "id": "src_product_forge_operations_reports_rationale_1",
+      "label": "Executive reports \u2014 deterministic composition over real product data.",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "rationale",
+      "norm_label": "executive reports \u2014 deterministic composition over real product data.",
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_security_rationale_1",
+      "label": "Security primitives: secret redaction, path confinement, token store.\u2026",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "rationale",
+      "norm_label": "security primitives: secret redaction, path confinement, token store....",
+      "source_file": "src/product_forge/security.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_security_rationale_41",
+      "label": "Deep-scrub secret-shaped values before persistence or transport.",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "rationale",
+      "norm_label": "deep-scrub secret-shaped values before persistence or transport.",
+      "source_file": "src/product_forge/security.py",
+      "source_location": "L41"
+    },
+    {
+      "id": "src_product_forge_store_sqlite_rationale_1",
+      "label": "SQLite persistence \u2014 stdlib, schema-versioned, append-only audit. Entity rows\u2026",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Store",
+      "file_type": "rationale",
+      "norm_label": "sqlite persistence \u2014 stdlib, schema-versioned, append-only audit. entity rows...",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_store_sqlite_rationale_130",
       "label": "Persist a raw dict document (non-pydantic, e.g. run records).",
       "_origin": "ast",
       "community": 2,
@@ -3065,10 +3549,10 @@
       "file_type": "rationale",
       "norm_label": "persist a raw dict document (non-pydantic, e.g. run records).",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L128"
+      "source_location": "L130"
     },
     {
-      "id": "src_product_forge_store_sqlite_rationale_82",
+      "id": "src_product_forge_store_sqlite_rationale_84",
       "label": "Thread-safe JSON-document store over SQLite.",
       "_origin": "ast",
       "community": 2,
@@ -3076,7 +3560,7 @@
       "file_type": "rationale",
       "norm_label": "thread-safe json-document store over sqlite.",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L82"
+      "source_location": "L84"
     },
     {
       "id": "command",
@@ -3119,6 +3603,39 @@
       "community_name": "__init__.py",
       "file_type": "code",
       "norm_label": "path",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_planning_roadmap",
+      "label": "roadmap.py",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "__init__.py",
+      "file_type": "code",
+      "norm_label": "roadmap.py",
+      "source_file": "src/product_forge/planning/roadmap.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_planning_roadmap_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "__init__.py",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_planning_roadmap_py_store",
+      "label": "Store",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "__init__.py",
+      "file_type": "code",
+      "norm_label": "store",
       "source_file": "",
       "source_location": ""
     },
@@ -3233,17 +3750,6 @@
       "source_location": "L314"
     },
     {
-      "id": "src_product_forge_cli_init_rationale_354",
-      "label": "Validate a statement for read-only safety (sqlglot).",
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "__init__.py",
-      "file_type": "rationale",
-      "norm_label": "validate a statement for read-only safety (sqlglot).",
-      "source_file": "src/product_forge/cli/__init__.py",
-      "source_location": "L354"
-    },
-    {
       "id": "src_product_forge_cli_init_rationale_362",
       "label": "Validate + execute a read-only query against a registered source.",
       "_origin": "ast",
@@ -3319,6 +3825,17 @@
       "norm_label": "environment health diagnostics \u2014 read-only.",
       "source_file": "src/product_forge/cli/__init__.py",
       "source_location": "L85"
+    },
+    {
+      "id": "src_product_forge_planning_roadmap_rationale_1",
+      "label": "Roadmap builder \u2014 now/next/later lanes from real initiatives.",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "__init__.py",
+      "file_type": "rationale",
+      "norm_label": "roadmap builder \u2014 now/next/later lanes from real initiatives.",
+      "source_file": "src/product_forge/planning/roadmap.py",
+      "source_location": "L1"
     },
     {
       "id": "connection",
@@ -3607,17 +4124,6 @@
       "source_location": ""
     },
     {
-      "id": "src_product_forge_store_sqlite",
-      "label": "sqlite.py",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "engine.py",
-      "file_type": "code",
-      "norm_label": "sqlite.py",
-      "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L1"
-    },
-    {
       "id": "store",
       "label": "Store",
       "_origin": "ast",
@@ -3695,6 +4201,17 @@
       "source_location": "L104"
     },
     {
+      "id": "src_product_forge_cli_init_rationale_354",
+      "label": "Validate a statement for read-only safety (sqlglot).",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "engine.py",
+      "file_type": "rationale",
+      "norm_label": "validate a statement for read-only safety (sqlglot).",
+      "source_file": "src/product_forge/cli/__init__.py",
+      "source_location": "L354"
+    },
+    {
       "id": "src_product_forge_dashboards_render_rationale_1",
       "label": "Dashboard rendering \u2014 widgets bound to real query executions. A widget\u2026",
       "_origin": "ast",
@@ -3703,17 +4220,6 @@
       "file_type": "rationale",
       "norm_label": "dashboard rendering \u2014 widgets bound to real query executions. a widget...",
       "source_file": "src/product_forge/dashboards/render.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_product_forge_store_sqlite_rationale_1",
-      "label": "SQLite persistence \u2014 stdlib, schema-versioned, append-only audit. Entity rows\u2026",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "engine.py",
-      "file_type": "rationale",
-      "norm_label": "sqlite persistence \u2014 stdlib, schema-versioned, append-only audit. entity rows...",
-      "source_file": "src/product_forge/store/sqlite.py",
       "source_location": "L1"
     },
     {
@@ -3728,28 +4234,6 @@
       "source_location": "L1"
     },
     {
-      "id": "entity",
-      "label": "Entity",
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "code",
-      "norm_label": "entity",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "src_product_forge_security",
-      "label": "security.py",
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "code",
-      "norm_label": "security.py",
-      "source_file": "src/product_forge/security.py",
-      "source_location": "L1"
-    },
-    {
       "id": "src_product_forge_security_py_path",
       "label": "Path",
       "_origin": "ast",
@@ -3759,39 +4243,6 @@
       "norm_label": "path",
       "source_file": "",
       "source_location": ""
-    },
-    {
-      "id": "t",
-      "label": "_T",
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "code",
-      "norm_label": "_t",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "src_product_forge_security_rationale_1",
-      "label": "Security primitives: secret redaction, path confinement, token store.\u2026",
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "rationale",
-      "norm_label": "security primitives: secret redaction, path confinement, token store....",
-      "source_file": "src/product_forge/security.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_product_forge_security_rationale_41",
-      "label": "Deep-scrub secret-shaped values before persistence or transport.",
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "rationale",
-      "norm_label": "deep-scrub secret-shaped values before persistence or transport.",
-      "source_file": "src/product_forge/security.py",
-      "source_location": "L41"
     },
     {
       "id": "src_product_forge_security_rationale_70",
@@ -3809,7 +4260,7 @@
       "label": "fixture",
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "fixture",
       "source_file": "",
@@ -3820,7 +4271,7 @@
       "label": "prd.py",
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "prd.py",
       "source_file": "src/product_forge/planning/prd.py",
@@ -3831,7 +4282,7 @@
       "label": "Any",
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "any",
       "source_file": "",
@@ -3842,9 +4293,31 @@
       "label": "Store",
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "store",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_planning_prioritize",
+      "label": "prioritize.py",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "prioritize.py",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "any",
       "source_file": "",
       "source_location": ""
     },
@@ -3853,7 +4326,7 @@
       "label": "test_cycle67.py",
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "code",
       "norm_label": "test_cycle67.py",
       "source_file": "tests/test_cycle67.py",
@@ -3864,18 +4337,40 @@
       "label": "PRD + roadmap generators \u2014 deterministic templates over real data. PRD pulls\u2026",
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "rationale",
       "norm_label": "prd + roadmap generators \u2014 deterministic templates over real data. prd pulls...",
       "source_file": "src/product_forge/planning/prd.py",
       "source_location": "L1"
     },
     {
+      "id": "src_product_forge_planning_prioritize_rationale_1",
+      "label": "Prioritization \u2014 RICE and WSJF scoring, deterministic and explainable.",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "score_initiative",
+      "file_type": "rationale",
+      "norm_label": "prioritization \u2014 rice and wsjf scoring, deterministic and explainable.",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_rationale_22",
+      "label": "factors may carry rice{reach,impact,confidence,effort} and/or\u2026",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "score_initiative",
+      "file_type": "rationale",
+      "norm_label": "factors may carry rice{reach,impact,confidence,effort} and/or...",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L22"
+    },
+    {
       "id": "tests_test_cycle67_rationale_1",
       "label": "Cycles 6-7: dashboard rendering + planning (prioritize, PRD, roadmap).",
       "_origin": "ast",
       "community": 8,
-      "community_name": "test_cycle67.py",
+      "community_name": "score_initiative",
       "file_type": "rationale",
       "norm_label": "cycles 6-7: dashboard rendering + planning (prioritize, prd, roadmap).",
       "source_file": "tests/test_cycle67.py",
@@ -4102,6 +4597,42 @@
       "context": "call",
       "source_file": "src/product_forge/agents/runtime.py",
       "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows_run_workflow",
+      "target": "src_product_forge_agents_workflows_interpolate",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows_run_workflow",
+      "target": "src_product_forge_agents_runtime_run_agent",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows_run_workflow",
+      "target": "src_product_forge_agents_tools_toolctx",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -4394,74 +4925,98 @@
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_integrations_apispec_load_spec",
+      "target": "src_product_forge_operations_watches_create_watch",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L687",
+      "source_location": "L771",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_integrations_apispec_parse_openapi",
+      "target": "src_product_forge_operations_watches_evaluate_watch",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L689",
+      "source_location": "L788",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_integrations_apispec_parse_asyncapi",
+      "target": "src_product_forge_operations_watches_run_due",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L691",
+      "source_location": "L797",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_integrations_apispec_diff_openapi",
+      "target": "src_product_forge_operations_reports_generate_executive",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L731",
+      "source_location": "L826",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_integrations_datacontract_validate_payload",
+      "target": "src_product_forge_operations_approvals_request_approval",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L755",
+      "source_location": "L841",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_integrations_datacontract_impact_analysis",
+      "target": "src_product_forge_operations_approvals_decide",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L762",
+      "source_location": "L854",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app_create_app",
+      "target": "src_product_forge_agents_workflows_run_workflow",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L870",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app_create_app",
+      "target": "src_product_forge_agents_routing_route",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L884",
       "weight": 1.0
     },
     {
@@ -5557,6 +6112,66 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_operations_reports_generate_executive",
+      "target": "src_product_forge_knowledge_graph_knowledge_health",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_evaluate_watch",
+      "target": "src_product_forge_analytics_engine_execute_query",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_evaluate_watch",
+      "target": "src_product_forge_operations_watches_touch",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_run_due",
+      "target": "src_product_forge_operations_watches_ts",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_run_due",
+      "target": "src_product_forge_operations_watches_evaluate_watch",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L84",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_planning_prioritize_score_initiative",
       "target": "src_product_forge_planning_prioritize_score_rice",
       "relation": "calls",
@@ -5661,7 +6276,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L237",
+      "source_location": "L239",
       "weight": 1.0
     },
     {
@@ -5673,7 +6288,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L106",
+      "source_location": "L108",
       "weight": 1.0
     },
     {
@@ -5685,7 +6300,79 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L132",
+      "source_location": "L134",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_approvals_gate",
+      "target": "tests_test_cycle1011_store",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_executive_report",
+      "target": "tests_test_cycle1011_store",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_routing_and_budget",
+      "target": "tests_test_cycle1011_store",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L128",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_watch_breach_opens_alert",
+      "target": "tests_test_cycle1011_store",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_workflow_halts_on_cross_product",
+      "target": "tests_test_cycle1011_store",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L114",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_workflow_multi_agent",
+      "target": "tests_test_cycle1011_store",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L91",
       "weight": 1.0
     },
     {
@@ -6205,6 +6892,18 @@
       "weight": 1.0
     },
     {
+      "source": "tests_test_cycle1011_env",
+      "target": "fixture",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "decorator",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
       "source": "tests_test_cycle3_home",
       "target": "fixture",
       "relation": "references",
@@ -6457,6 +7156,30 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_agents_routing_record_usage",
+      "target": "src_product_forge_agents_routing_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_routing_route",
+      "target": "src_product_forge_agents_routing_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_agents_runtime_cancel_run",
       "target": "src_product_forge_agents_runtime_py_any",
       "relation": "references",
@@ -6598,6 +7321,42 @@
       "context": "generic_arg",
       "source_file": "src/product_forge/agents/tools.py",
       "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows_interpolate",
+      "target": "src_product_forge_agents_workflows_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows_plan_is_deterministic",
+      "target": "src_product_forge_agents_workflows_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L96",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows_run_workflow",
+      "target": "src_product_forge_agents_workflows_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -7033,6 +7792,102 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_operations_approvals_check_gate",
+      "target": "src_product_forge_operations_approvals_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_approvals_decide",
+      "target": "src_product_forge_operations_approvals_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_approvals_request_approval",
+      "target": "src_product_forge_operations_approvals_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_reports_generate_executive",
+      "target": "src_product_forge_operations_reports_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_create_watch",
+      "target": "src_product_forge_operations_watches_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_evaluate_watch",
+      "target": "src_product_forge_operations_watches_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_run_due",
+      "target": "src_product_forge_operations_watches_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_touch",
+      "target": "src_product_forge_operations_watches_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_planning_prd_generate_prd",
       "target": "src_product_forge_planning_prd_py_any",
       "relation": "references",
@@ -7077,7 +7932,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L236",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -7089,7 +7944,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L145",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -7101,7 +7956,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L163",
+      "source_location": "L165",
       "weight": 1.0
     },
     {
@@ -7113,7 +7968,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L203",
+      "source_location": "L205",
       "weight": 1.0
     },
     {
@@ -7125,7 +7980,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L126",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -7137,7 +7992,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L219",
+      "source_location": "L221",
       "weight": 1.0
     },
     {
@@ -7201,6 +8056,18 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_agents_workflows",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_analytics_connectors",
       "target": "src_product_forge_security_safe_path",
       "relation": "imports",
@@ -7250,74 +8117,98 @@
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_integrations_apispec_load_spec",
+      "target": "src_product_forge_operations_watches_create_watch",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L683",
+      "source_location": "L768",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_integrations_apispec_parse_asyncapi",
+      "target": "src_product_forge_operations_watches_evaluate_watch",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L683",
+      "source_location": "L782",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_integrations_apispec_parse_openapi",
+      "target": "src_product_forge_operations_watches_run_due",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L683",
+      "source_location": "L794",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_integrations_apispec_diff_openapi",
+      "target": "src_product_forge_operations_reports_generate_executive",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L718",
+      "source_location": "L823",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_integrations_datacontract_validate_payload",
+      "target": "src_product_forge_operations_approvals_request_approval",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L749",
+      "source_location": "L837",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_integrations_datacontract_impact_analysis",
+      "target": "src_product_forge_operations_approvals_decide",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L759",
+      "source_location": "L848",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app",
+      "target": "src_product_forge_agents_workflows_run_workflow",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L867",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app",
+      "target": "src_product_forge_agents_routing_route",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L881",
       "weight": 1.0
     },
     {
@@ -7405,6 +8296,42 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_operations_approvals",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_reports",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_agents_evals",
       "target": "src_product_forge_store_sqlite",
       "relation": "imports_from",
@@ -7462,6 +8389,42 @@
       "context": "import",
       "source_file": "src/product_forge/agents/tools.py",
       "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows",
+      "target": "src_product_forge_store_sqlite",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows",
+      "target": "src_product_forge_agents_runtime",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows",
+      "target": "src_product_forge_agents_tools",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -7582,6 +8545,66 @@
       "context": "import",
       "source_file": "src/product_forge/knowledge/graph.py",
       "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_approvals",
+      "target": "src_product_forge_store_sqlite",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_reports",
+      "target": "src_product_forge_knowledge_graph",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_reports",
+      "target": "src_product_forge_store_sqlite",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches",
+      "target": "src_product_forge_analytics_engine",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches",
+      "target": "src_product_forge_store_sqlite",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -7885,6 +8908,18 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_agents_workflows_run_workflow",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_analytics_connectors_connector_execute",
       "target": "event",
       "relation": "references",
@@ -8125,6 +9160,102 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_operations_approvals_check_gate",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_approvals_decide",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_approvals_request_approval",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_reports_generate_executive",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_create_watch",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_evaluate_watch",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_run_due",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_touch",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_planning_prd_generate_prd",
       "target": "src_product_forge_planning_prd_py_store",
       "relation": "references",
@@ -8169,7 +9300,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L84",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -8301,7 +9432,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L102",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -8416,6 +9547,28 @@
       "confidence_score": 1.0,
       "source_file": "src/product_forge/agents/policy.py",
       "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_routing",
+      "target": "src_product_forge_agents_routing_route",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_routing",
+      "target": "src_product_forge_agents_routing_record_usage",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -8570,6 +9723,39 @@
       "confidence_score": 1.0,
       "source_file": "src/product_forge/agents/tools.py",
       "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows",
+      "target": "src_product_forge_agents_workflows_interpolate",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows",
+      "target": "src_product_forge_agents_workflows_run_workflow",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows",
+      "target": "src_product_forge_agents_workflows_plan_is_deterministic",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -9596,6 +10782,105 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_operations_approvals",
+      "target": "src_product_forge_operations_approvals_request_approval",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_approvals",
+      "target": "src_product_forge_operations_approvals_decide",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_approvals",
+      "target": "src_product_forge_operations_approvals_check_gate",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_reports",
+      "target": "src_product_forge_operations_reports_generate_executive",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches",
+      "target": "src_product_forge_operations_watches_create_watch",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches",
+      "target": "src_product_forge_operations_watches_evaluate_watch",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches",
+      "target": "src_product_forge_operations_watches_run_due",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches",
+      "target": "src_product_forge_operations_watches_ts",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L89",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches",
+      "target": "src_product_forge_operations_watches_touch",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_planning_prd",
       "target": "src_product_forge_planning_prd_generate_prd",
       "relation": "contains",
@@ -9702,7 +10987,95 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L81",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011",
+      "target": "tests_test_cycle1011_test_workflow_halts_on_cross_product",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L109",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011",
+      "target": "tests_test_cycle1011_test_routing_and_budget",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L122",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011",
+      "target": "tests_test_cycle1011_store",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011",
+      "target": "tests_test_cycle1011_test_watch_breach_opens_alert",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011",
+      "target": "tests_test_cycle1011_test_approvals_gate",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011",
+      "target": "tests_test_cycle1011_test_executive_report",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L65",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011",
+      "target": "tests_test_cycle1011_test_workflow_multi_agent",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L79",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011",
+      "target": "tests_test_cycle1011_env",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -10582,7 +11955,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L102",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -10593,7 +11966,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L126",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -10604,7 +11977,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L145",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -10615,7 +11988,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L154",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -10626,7 +11999,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L163",
+      "source_location": "L165",
       "weight": 1.0
     },
     {
@@ -10637,7 +12010,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L188",
+      "source_location": "L190",
       "weight": 1.0
     },
     {
@@ -10648,7 +12021,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L203",
+      "source_location": "L205",
       "weight": 1.0
     },
     {
@@ -10659,7 +12032,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L212",
+      "source_location": "L214",
       "weight": 1.0
     },
     {
@@ -10670,7 +12043,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L219",
+      "source_location": "L221",
       "weight": 1.0
     },
     {
@@ -10681,7 +12054,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L236",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -10692,7 +12065,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L84",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -10703,7 +12076,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L96",
+      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -10729,6 +12102,28 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_agents_routing_rationale_1",
+      "target": "src_product_forge_agents_routing",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_routing_rationale_38",
+      "target": "src_product_forge_agents_routing_record_usage",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/routing.py",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_agents_runtime_rationale_1",
       "target": "src_product_forge_agents_runtime",
       "relation": "rationale_for",
@@ -10748,6 +12143,39 @@
       "confidence_score": 1.0,
       "source_file": "src/product_forge/agents/tools.py",
       "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows_rationale_1",
+      "target": "src_product_forge_agents_workflows",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows_rationale_38",
+      "target": "src_product_forge_agents_workflows_run_workflow",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_agents_workflows_rationale_97",
+      "target": "src_product_forge_agents_workflows_plan_is_deterministic",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/agents/workflows.py",
+      "source_location": "L97",
       "weight": 1.0
     },
     {
@@ -11279,6 +12707,50 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_operations_approvals_rationale_1",
+      "target": "src_product_forge_operations_approvals",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_approvals_rationale_37",
+      "target": "src_product_forge_operations_approvals_check_gate",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/approvals.py",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_reports_rationale_1",
+      "target": "src_product_forge_operations_reports",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/reports.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_operations_watches_rationale_1",
+      "target": "src_product_forge_operations_watches",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/operations/watches.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_planning_prd_rationale_1",
       "target": "src_product_forge_planning_prd",
       "relation": "rationale_for",
@@ -11378,25 +12850,36 @@
       "weight": 1.0
     },
     {
-      "source": "src_product_forge_store_sqlite_rationale_128",
+      "source": "src_product_forge_store_sqlite_rationale_130",
       "target": "src_product_forge_store_sqlite_store_put_doc",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L128",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
-      "source": "src_product_forge_store_sqlite_rationale_82",
+      "source": "src_product_forge_store_sqlite_rationale_84",
       "target": "src_product_forge_store_sqlite_store",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L82",
+      "source_location": "L84",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_rationale_1",
+      "target": "tests_test_cycle1011",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L1",
       "weight": 1.0
     },
     {
@@ -11619,6 +13102,138 @@
       "context": "call",
       "source_file": "src/product_forge/cli/__init__.py",
       "source_location": "L417",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_approvals_gate",
+      "target": "src_product_forge_operations_approvals_request_approval",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L53",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_approvals_gate",
+      "target": "src_product_forge_operations_approvals_check_gate",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_approvals_gate",
+      "target": "src_product_forge_operations_approvals_decide",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_executive_report",
+      "target": "src_product_forge_operations_reports_generate_executive",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L73",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_routing_and_budget",
+      "target": "src_product_forge_agents_routing_route",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L126",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_routing_and_budget",
+      "target": "src_product_forge_agents_routing_record_usage",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L129",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_watch_breach_opens_alert",
+      "target": "src_product_forge_operations_watches_create_watch",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_watch_breach_opens_alert",
+      "target": "src_product_forge_operations_watches_evaluate_watch",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_watch_breach_opens_alert",
+      "target": "src_product_forge_operations_watches_run_due",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_workflow_halts_on_cross_product",
+      "target": "src_product_forge_agents_workflows_run_workflow",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L116",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle1011_test_workflow_multi_agent",
+      "target": "src_product_forge_agents_workflows_run_workflow",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -12074,7 +13689,7 @@
       "confidence_score": 0.85,
       "context": "getattr",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L117",
+      "source_location": "L119",
       "weight": 1.0
     },
     {
@@ -12086,6 +13701,17 @@
       "confidence_score": 0.95,
       "source_file": "src/product_forge/analytics/engine.py",
       "source_location": "L65",
+      "weight": 0.8
+    },
+    {
+      "source": "tests_test_cycle1011_store",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "uses",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_cycle1011.py",
+      "source_location": "L24",
       "weight": 0.8
     },
     {
@@ -12145,5 +13771,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b784a626e9e622333033df9b7f06cfbe591ef9fa"
+  "built_at_commit": "e144f881d21b06703a77b59d1a9fc402f394dd78"
 }

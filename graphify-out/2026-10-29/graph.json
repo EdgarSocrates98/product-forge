@@ -27,7 +27,7 @@
       "file_type": "code",
       "norm_label": "ctx",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L107"
+      "source_location": "L122"
     },
     {
       "id": "src_product_forge_api_app_executein",
@@ -134,6 +134,19 @@
       "source_location": "L62"
     },
     {
+      "id": "src_product_forge_integrations_azure_kqlconnector",
+      "label": "KQLConnector",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "azure.py",
+      "file_type": "code",
+      "norm_label": "kqlconnector",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L27"
+    },
+    {
       "id": "src_product_forge_agents_tools_tool",
       "label": "Tool",
       "_callable": true,
@@ -170,7 +183,7 @@
       "file_type": "code",
       "norm_label": "store",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L79"
+      "source_location": "L81"
     },
     {
       "id": "src_product_forge_analytics_connectors_connector",
@@ -264,6 +277,19 @@
       "source_location": "L69"
     },
     {
+      "id": "src_product_forge_integrations_aws_athenaconnector",
+      "label": "AthenaConnector",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": "athenaconnector",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L33"
+    },
+    {
       "id": "src_product_forge_api_app_cid",
       "label": "_cid()",
       "_callable": true,
@@ -285,7 +311,7 @@
       "file_type": "code",
       "norm_label": "create_app()",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L145"
+      "source_location": "L160"
     },
     {
       "id": "src_product_forge_api_app_ctx_audit",
@@ -297,7 +323,7 @@
       "file_type": "code",
       "norm_label": ".audit()",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L129"
+      "source_location": "L144"
     },
     {
       "id": "src_product_forge_api_app_ctx_init",
@@ -309,7 +335,7 @@
       "file_type": "code",
       "norm_label": ".__init__()",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L110"
+      "source_location": "L125"
     },
     {
       "id": "src_product_forge_api_app_ctx_rate_ok",
@@ -321,7 +347,7 @@
       "file_type": "code",
       "norm_label": ".rate_ok()",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L119"
+      "source_location": "L134"
     },
     {
       "id": "src_product_forge_api_app_envelope",
@@ -336,64 +362,88 @@
       "source_location": "L47"
     },
     {
-      "id": "src_product_forge_planning_prd_generate_prd",
-      "label": "generate_prd()",
+      "id": "src_product_forge_api_app_surface_to_paths",
+      "label": "_surface_to_paths()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "generate_prd()",
-      "source_file": "src/product_forge/planning/prd.py",
-      "source_location": "L15"
+      "norm_label": "_surface_to_paths()",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L107"
     },
     {
-      "id": "src_product_forge_planning_prioritize_score_initiative",
-      "label": "score_initiative()",
+      "id": "src_product_forge_integrations_apispec_diff_openapi",
+      "label": "diff_openapi()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "score_initiative()",
-      "source_file": "src/product_forge/planning/prioritize.py",
-      "source_location": "L21"
+      "norm_label": "diff_openapi()",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L66"
     },
     {
-      "id": "src_product_forge_planning_prioritize_score_rice",
-      "label": "score_rice()",
+      "id": "src_product_forge_integrations_apispec_load_spec",
+      "label": "load_spec()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "score_rice()",
-      "source_file": "src/product_forge/planning/prioritize.py",
-      "source_location": "L8"
+      "norm_label": "load_spec()",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L12"
     },
     {
-      "id": "src_product_forge_planning_prioritize_score_wsjf",
-      "label": "score_wsjf()",
+      "id": "src_product_forge_integrations_apispec_parse_asyncapi",
+      "label": "parse_asyncapi()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "score_wsjf()",
-      "source_file": "src/product_forge/planning/prioritize.py",
+      "norm_label": "parse_asyncapi()",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L51"
+    },
+    {
+      "id": "src_product_forge_integrations_apispec_parse_openapi",
+      "label": "parse_openapi()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "parse_openapi()",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L19"
+    },
+    {
+      "id": "src_product_forge_integrations_datacontract_impact_analysis",
+      "label": "impact_analysis()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "impact_analysis()",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L45"
+    },
+    {
+      "id": "src_product_forge_integrations_datacontract_validate_payload",
+      "label": "validate_payload()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "validate_payload()",
+      "source_file": "src/product_forge/integrations/datacontract.py",
       "source_location": "L14"
-    },
-    {
-      "id": "src_product_forge_planning_roadmap_build_roadmap",
-      "label": "build_roadmap()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "code",
-      "norm_label": "build_roadmap()",
-      "source_file": "src/product_forge/planning/roadmap.py",
-      "source_location": "L18"
     },
     {
       "id": "tests_test_cycle4_test_api_agent_flow",
@@ -408,40 +458,76 @@
       "source_location": "L86"
     },
     {
-      "id": "tests_test_cycle5_test_api_analytics",
-      "label": "test_api_analytics()",
+      "id": "tests_test_cycle89_test_api_import_and_diff_endpoint",
+      "label": "test_api_import_and_diff_endpoint()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "test_api_analytics()",
-      "source_file": "tests/test_cycle5.py",
-      "source_location": "L122"
+      "norm_label": "test_api_import_and_diff_endpoint()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L133"
     },
     {
-      "id": "tests_test_cycle67_test_prd_generation",
-      "label": "test_prd_generation()",
+      "id": "tests_test_cycle89_test_breaking_change_diff",
+      "label": "test_breaking_change_diff()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "test_prd_generation()",
-      "source_file": "tests/test_cycle67.py",
-      "source_location": "L76"
+      "norm_label": "test_breaking_change_diff()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L61"
     },
     {
-      "id": "tests_test_cycle67_test_prioritize_and_roadmap",
-      "label": "test_prioritize_and_roadmap()",
+      "id": "tests_test_cycle89_test_cloud_honest_unavailable",
+      "label": "test_cloud_honest_unavailable()",
       "_callable": true,
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "test_prioritize_and_roadmap()",
-      "source_file": "tests/test_cycle67.py",
-      "source_location": "L57"
+      "norm_label": "test_cloud_honest_unavailable()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L115"
+    },
+    {
+      "id": "tests_test_cycle89_test_contract_validation",
+      "label": "test_contract_validation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "test_contract_validation()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L75"
+    },
+    {
+      "id": "tests_test_cycle89_test_impact_analysis",
+      "label": "test_impact_analysis()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "test_impact_analysis()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L89"
+    },
+    {
+      "id": "tests_test_cycle89_test_openapi_parse",
+      "label": "test_openapi_parse()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "code",
+      "norm_label": "test_openapi_parse()",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L52"
     },
     {
       "id": "src_product_forge_knowledge_extract_build_relations",
@@ -449,7 +535,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "build_relations()",
       "source_file": "src/product_forge/knowledge/extract.py",
@@ -461,23 +547,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "extract_entities()",
       "source_file": "src/product_forge/knowledge/extract.py",
       "source_location": "L29"
-    },
-    {
-      "id": "tests_test_cycle3_home",
-      "label": "home()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
-      "file_type": "code",
-      "norm_label": "home()",
-      "source_file": "tests/test_cycle3.py",
-      "source_location": "L7"
     },
     {
       "id": "tests_test_cycle3_seed",
@@ -485,7 +559,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "_seed()",
       "source_file": "tests/test_cycle3.py",
@@ -497,7 +571,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "test_api_knowledge_flow()",
       "source_file": "tests/test_cycle3.py",
@@ -509,7 +583,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "test_extract_and_graph()",
       "source_file": "tests/test_cycle3.py",
@@ -521,107 +595,155 @@
       "_callable": true,
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "test_knowledge_health()",
       "source_file": "tests/test_cycle3.py",
       "source_location": "L50"
     },
     {
-      "id": "tests_test_cycle4_home",
-      "label": "home()",
+      "id": "src_product_forge_integrations_azure_credential",
+      "label": "_credential()",
       "_callable": true,
       "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
+      "community": 10,
+      "community_name": "azure.py",
       "file_type": "code",
-      "norm_label": "home()",
-      "source_file": "tests/test_cycle4.py",
-      "source_location": "L7"
+      "norm_label": "_credential()",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L13"
     },
     {
-      "id": "tests_test_cycle5_dbfile",
-      "label": "dbfile()",
+      "id": "src_product_forge_integrations_azure_fabric_inventory",
+      "label": "fabric_inventory()",
       "_callable": true,
       "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
+      "community": 10,
+      "community_name": "azure.py",
       "file_type": "code",
-      "norm_label": "dbfile()",
-      "source_file": "tests/test_cycle5.py",
-      "source_location": "L15"
+      "norm_label": "fabric_inventory()",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L83"
     },
     {
-      "id": "tests_test_cycle5_home",
-      "label": "home()",
+      "id": "src_product_forge_integrations_azure_kqlconnector_client",
+      "label": "._client()",
       "_callable": true,
       "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
+      "community": 10,
+      "community_name": "azure.py",
       "file_type": "code",
-      "norm_label": "home()",
-      "source_file": "tests/test_cycle5.py",
-      "source_location": "L9"
+      "norm_label": "._client()",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L33"
     },
     {
-      "id": "tests_test_cycle67_dbfile",
-      "label": "dbfile()",
+      "id": "src_product_forge_integrations_azure_kqlconnector_execute",
+      "label": ".execute()",
       "_callable": true,
       "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
+      "community": 10,
+      "community_name": "azure.py",
       "file_type": "code",
-      "norm_label": "dbfile()",
+      "norm_label": ".execute()",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L45"
+    },
+    {
+      "id": "src_product_forge_integrations_azure_kqlconnector_init",
+      "label": ".__init__()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "azure.py",
+      "file_type": "code",
+      "norm_label": ".__init__()",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L30"
+    },
+    {
+      "id": "src_product_forge_integrations_azure_kqlconnector_verify",
+      "label": ".verify()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "azure.py",
+      "file_type": "code",
+      "norm_label": ".verify()",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L41"
+    },
+    {
+      "id": "src_product_forge_integrations_azure_powerbi_inventory",
+      "label": "powerbi_inventory()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "azure.py",
+      "file_type": "code",
+      "norm_label": "powerbi_inventory()",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L64"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_score_initiative",
+      "label": "score_initiative()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "score_initiative()",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L21"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_score_rice",
+      "label": "score_rice()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "score_rice()",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L8"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_score_wsjf",
+      "label": "score_wsjf()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "score_wsjf()",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L14"
+    },
+    {
+      "id": "src_product_forge_planning_roadmap_build_roadmap",
+      "label": "build_roadmap()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "build_roadmap()",
+      "source_file": "src/product_forge/planning/roadmap.py",
+      "source_location": "L18"
+    },
+    {
+      "id": "tests_test_cycle67_test_prioritize_and_roadmap",
+      "label": "test_prioritize_and_roadmap()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "test_prioritize_and_roadmap()",
       "source_file": "tests/test_cycle67.py",
-      "source_location": "L15"
-    },
-    {
-      "id": "tests_test_cycle67_home",
-      "label": "home()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
-      "file_type": "code",
-      "norm_label": "home()",
-      "source_file": "tests/test_cycle67.py",
-      "source_location": "L9"
-    },
-    {
-      "id": "tests_test_cycle67_seed",
-      "label": "_seed()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
-      "file_type": "code",
-      "norm_label": "_seed()",
-      "source_file": "tests/test_cycle67.py",
-      "source_location": "L26"
-    },
-    {
-      "id": "tests_test_cycle67_test_api_dashboard_planning",
-      "label": "test_api_dashboard_planning()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
-      "file_type": "code",
-      "norm_label": "test_api_dashboard_planning()",
-      "source_file": "tests/test_cycle67.py",
-      "source_location": "L93"
-    },
-    {
-      "id": "tests_test_cycle67_test_dashboard_render_real_data",
-      "label": "test_dashboard_render_real_data()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
-      "file_type": "code",
-      "norm_label": "test_dashboard_render_real_data()",
-      "source_file": "tests/test_cycle67.py",
-      "source_location": "L37"
+      "source_location": "L57"
     },
     {
       "id": "src_product_forge_agents_tools_context_package",
@@ -729,7 +851,7 @@
       "file_type": "code",
       "norm_label": ".audit()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L234"
+      "source_location": "L236"
     },
     {
       "id": "src_product_forge_store_sqlite_store_close",
@@ -741,7 +863,7 @@
       "file_type": "code",
       "norm_label": ".close()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L94"
+      "source_location": "L96"
     },
     {
       "id": "src_product_forge_store_sqlite_store_delete",
@@ -753,7 +875,7 @@
       "file_type": "code",
       "norm_label": ".delete()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L152"
+      "source_location": "L154"
     },
     {
       "id": "src_product_forge_store_sqlite_store_doc_title",
@@ -765,7 +887,7 @@
       "file_type": "code",
       "norm_label": ".doc_title()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L210"
+      "source_location": "L212"
     },
     {
       "id": "src_product_forge_store_sqlite_store_get",
@@ -777,7 +899,7 @@
       "file_type": "code",
       "norm_label": ".get()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L143"
+      "source_location": "L145"
     },
     {
       "id": "src_product_forge_store_sqlite_store_init",
@@ -789,7 +911,7 @@
       "file_type": "code",
       "norm_label": ".__init__()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L82"
+      "source_location": "L84"
     },
     {
       "id": "src_product_forge_store_sqlite_store_list",
@@ -801,7 +923,7 @@
       "file_type": "code",
       "norm_label": ".list()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L161"
+      "source_location": "L163"
     },
     {
       "id": "src_product_forge_store_sqlite_store_list_chunks",
@@ -813,19 +935,7 @@
       "file_type": "code",
       "norm_label": ".list_chunks()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L201"
-    },
-    {
-      "id": "src_product_forge_store_sqlite_store_put",
-      "label": ".put()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "Store",
-      "file_type": "code",
-      "norm_label": ".put()",
-      "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L100"
+      "source_location": "L203"
     },
     {
       "id": "src_product_forge_store_sqlite_store_put_chunks",
@@ -837,7 +947,7 @@
       "file_type": "code",
       "norm_label": ".put_chunks()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L186"
+      "source_location": "L188"
     },
     {
       "id": "src_product_forge_store_sqlite_store_put_doc",
@@ -849,7 +959,7 @@
       "file_type": "code",
       "norm_label": ".put_doc()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L124"
+      "source_location": "L126"
     },
     {
       "id": "src_product_forge_store_sqlite_store_search_fts",
@@ -861,7 +971,7 @@
       "file_type": "code",
       "norm_label": ".search_fts()",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L217"
+      "source_location": "L219"
     },
     {
       "id": "src_product_forge_cli_init_ag_create",
@@ -1512,6 +1622,18 @@
       "source_location": "L59"
     },
     {
+      "id": "src_product_forge_security_safe_path",
+      "label": "safe_path()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "connectors.py",
+      "file_type": "code",
+      "norm_label": "safe_path()",
+      "source_file": "src/product_forge/security.py",
+      "source_location": "L55"
+    },
+    {
       "id": "src_product_forge_agents_evals_json_str",
       "label": "json_str()",
       "_callable": true,
@@ -1884,6 +2006,18 @@
       "source_location": "L87"
     },
     {
+      "id": "tests_test_cycle5_test_api_analytics",
+      "label": "test_api_analytics()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "engine.py",
+      "file_type": "code",
+      "norm_label": "test_api_analytics()",
+      "source_file": "tests/test_cycle5.py",
+      "source_location": "L122"
+    },
+    {
       "id": "tests_test_cycle5_test_compile_spec_and_nl",
       "label": "test_compile_spec_and_nl()",
       "_callable": true,
@@ -1978,18 +2112,6 @@
       "norm_label": "redact()",
       "source_file": "src/product_forge/security.py",
       "source_location": "L40"
-    },
-    {
-      "id": "src_product_forge_security_safe_path",
-      "label": "safe_path()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "code",
-      "norm_label": "safe_path()",
-      "source_file": "src/product_forge/security.py",
-      "source_location": "L55"
     },
     {
       "id": "src_product_forge_security_secretish",
@@ -2100,6 +2222,258 @@
       "source_location": "L94"
     },
     {
+      "id": "src_product_forge_store_sqlite_store_put",
+      "label": ".put()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "TokenStore",
+      "file_type": "code",
+      "norm_label": ".put()",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L102"
+    },
+    {
+      "id": "src_product_forge_planning_prd_generate_prd",
+      "label": "generate_prd()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "generate_prd()",
+      "source_file": "src/product_forge/planning/prd.py",
+      "source_location": "L15"
+    },
+    {
+      "id": "tests_test_cycle3_home",
+      "label": "home()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "home()",
+      "source_file": "tests/test_cycle3.py",
+      "source_location": "L7"
+    },
+    {
+      "id": "tests_test_cycle4_home",
+      "label": "home()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "home()",
+      "source_file": "tests/test_cycle4.py",
+      "source_location": "L7"
+    },
+    {
+      "id": "tests_test_cycle5_dbfile",
+      "label": "dbfile()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "dbfile()",
+      "source_file": "tests/test_cycle5.py",
+      "source_location": "L15"
+    },
+    {
+      "id": "tests_test_cycle5_home",
+      "label": "home()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "home()",
+      "source_file": "tests/test_cycle5.py",
+      "source_location": "L9"
+    },
+    {
+      "id": "tests_test_cycle67_dbfile",
+      "label": "dbfile()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "dbfile()",
+      "source_file": "tests/test_cycle67.py",
+      "source_location": "L15"
+    },
+    {
+      "id": "tests_test_cycle67_home",
+      "label": "home()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "home()",
+      "source_file": "tests/test_cycle67.py",
+      "source_location": "L9"
+    },
+    {
+      "id": "tests_test_cycle67_seed",
+      "label": "_seed()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "_seed()",
+      "source_file": "tests/test_cycle67.py",
+      "source_location": "L26"
+    },
+    {
+      "id": "tests_test_cycle67_test_api_dashboard_planning",
+      "label": "test_api_dashboard_planning()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "test_api_dashboard_planning()",
+      "source_file": "tests/test_cycle67.py",
+      "source_location": "L93"
+    },
+    {
+      "id": "tests_test_cycle67_test_dashboard_render_real_data",
+      "label": "test_dashboard_render_real_data()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "test_dashboard_render_real_data()",
+      "source_file": "tests/test_cycle67.py",
+      "source_location": "L37"
+    },
+    {
+      "id": "tests_test_cycle67_test_prd_generation",
+      "label": "test_prd_generation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "test_prd_generation()",
+      "source_file": "tests/test_cycle67.py",
+      "source_location": "L76"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_athenaconnector_client",
+      "label": "._client()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": "._client()",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L41"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_athenaconnector_execute",
+      "label": ".execute()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": ".execute()",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L54"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_athenaconnector_init",
+      "label": ".__init__()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": ".__init__()",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L36"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_athenaconnector_verify",
+      "label": ".verify()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": ".verify()",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L46"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_boto3",
+      "label": "_boto3()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": "_boto3()",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L16"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_cost_summary",
+      "label": "cost_summary()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": "cost_summary()",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L132"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_glue_catalog",
+      "label": "glue_catalog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": "glue_catalog()",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L97"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_quicksight_inventory",
+      "label": "quicksight_inventory()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": "quicksight_inventory()",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L117"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_session_ok",
+      "label": "_session_ok()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": "_session_ok()",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L26"
+    },
+    {
       "id": "basemodel",
       "label": "BaseModel",
       "_origin": "ast",
@@ -2166,18 +2540,18 @@
       "source_location": ""
     },
     {
-      "id": "src_product_forge_planning_prd",
-      "label": "prd.py",
+      "id": "src_product_forge_integrations_apispec",
+      "label": "apispec.py",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "prd.py",
-      "source_file": "src/product_forge/planning/prd.py",
+      "norm_label": "apispec.py",
+      "source_file": "src/product_forge/integrations/apispec.py",
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_planning_prd_py_any",
+      "id": "src_product_forge_integrations_apispec_py_any",
       "label": "Any",
       "_origin": "ast",
       "community": 0,
@@ -2188,29 +2562,18 @@
       "source_location": ""
     },
     {
-      "id": "src_product_forge_planning_prd_py_store",
-      "label": "Store",
+      "id": "src_product_forge_integrations_datacontract",
+      "label": "datacontract.py",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "store",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "src_product_forge_planning_prioritize",
-      "label": "prioritize.py",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "code",
-      "norm_label": "prioritize.py",
-      "source_file": "src/product_forge/planning/prioritize.py",
+      "norm_label": "datacontract.py",
+      "source_file": "src/product_forge/integrations/datacontract.py",
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_planning_prioritize_py_any",
+      "id": "src_product_forge_integrations_datacontract_py_any",
       "label": "Any",
       "_origin": "ast",
       "community": 0,
@@ -2221,37 +2584,15 @@
       "source_location": ""
     },
     {
-      "id": "src_product_forge_planning_roadmap",
-      "label": "roadmap.py",
+      "id": "tests_test_cycle89",
+      "label": "test_cycle89.py",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "code",
-      "norm_label": "roadmap.py",
-      "source_file": "src/product_forge/planning/roadmap.py",
+      "norm_label": "test_cycle89.py",
+      "source_file": "tests/test_cycle89.py",
       "source_location": "L1"
-    },
-    {
-      "id": "src_product_forge_planning_roadmap_py_any",
-      "label": "Any",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "code",
-      "norm_label": "any",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "src_product_forge_planning_roadmap_py_store",
-      "label": "Store",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "app.py",
-      "file_type": "code",
-      "norm_label": "store",
-      "source_file": "",
-      "source_location": ""
     },
     {
       "id": "src_product_forge_api_app_rationale_1",
@@ -2266,6 +2607,17 @@
     },
     {
       "id": "src_product_forge_api_app_rationale_108",
+      "label": "Rebuild an OpenAPI paths dict from a stored parsed surface.",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "rationale",
+      "norm_label": "rebuild an openapi paths dict from a stored parsed surface.",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L108"
+    },
+    {
+      "id": "src_product_forge_api_app_rationale_123",
       "label": "Shared runtime: home, config, store, token, rate buckets, audit.",
       "_origin": "ast",
       "community": 0,
@@ -2273,7 +2625,7 @@
       "file_type": "rationale",
       "norm_label": "shared runtime: home, config, store, token, rate buckets, audit.",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L108"
+      "source_location": "L123"
     },
     {
       "id": "src_product_forge_api_app_rationale_57",
@@ -2287,66 +2639,99 @@
       "source_location": "L57"
     },
     {
-      "id": "src_product_forge_planning_prd_rationale_1",
-      "label": "PRD + roadmap generators \u2014 deterministic templates over real data. PRD pulls\u2026",
+      "id": "src_product_forge_integrations_apispec_rationale_1",
+      "label": "OpenAPI/AsyncAPI parsing + breaking-change detection \u2014 real diffs.",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "rationale",
-      "norm_label": "prd + roadmap generators \u2014 deterministic templates over real data. prd pulls...",
-      "source_file": "src/product_forge/planning/prd.py",
+      "norm_label": "openapi/asyncapi parsing + breaking-change detection \u2014 real diffs.",
+      "source_file": "src/product_forge/integrations/apispec.py",
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_planning_prioritize_rationale_1",
-      "label": "Prioritization \u2014 RICE and WSJF scoring, deterministic and explainable.",
+      "id": "src_product_forge_integrations_apispec_rationale_20",
+      "label": "Extract the API surface: operations, params, schemas.",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "rationale",
-      "norm_label": "prioritization \u2014 rice and wsjf scoring, deterministic and explainable.",
-      "source_file": "src/product_forge/planning/prioritize.py",
+      "norm_label": "extract the api surface: operations, params, schemas.",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L20"
+    },
+    {
+      "id": "src_product_forge_integrations_apispec_rationale_67",
+      "label": "Breaking-change detection between two parsed OpenAPI surfaces.",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "rationale",
+      "norm_label": "breaking-change detection between two parsed openapi surfaces.",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L67"
+    },
+    {
+      "id": "src_product_forge_integrations_datacontract_rationale_1",
+      "label": "Data contracts + impact analysis over the entity/relation graph.",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "rationale",
+      "norm_label": "data contracts + impact analysis over the entity/relation graph.",
+      "source_file": "src/product_forge/integrations/datacontract.py",
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_planning_prioritize_rationale_22",
-      "label": "factors may carry rice{reach,impact,confidence,effort} and/or\u2026",
+      "id": "src_product_forge_integrations_datacontract_rationale_15",
+      "label": "contract: {fields:[{name,type,required}], quality:[{field,rule}]}",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "rationale",
-      "norm_label": "factors may carry rice{reach,impact,confidence,effort} and/or...",
-      "source_file": "src/product_forge/planning/prioritize.py",
-      "source_location": "L22"
+      "norm_label": "contract: {fields:[{name,type,required}], quality:[{field,rule}]}",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L15"
     },
     {
-      "id": "src_product_forge_planning_roadmap_rationale_1",
-      "label": "Roadmap builder \u2014 now/next/later lanes from real initiatives.",
+      "id": "src_product_forge_integrations_datacontract_rationale_47",
+      "label": "BFS over relations: what breaks if `entity_id` changes?",
       "_origin": "ast",
       "community": 0,
       "community_name": "app.py",
       "file_type": "rationale",
-      "norm_label": "roadmap builder \u2014 now/next/later lanes from real initiatives.",
-      "source_file": "src/product_forge/planning/roadmap.py",
+      "norm_label": "bfs over relations: what breaks if `entity_id` changes?",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L47"
+    },
+    {
+      "id": "tests_test_cycle89_rationale_1",
+      "label": "Cycles 8-9: cloud honesty + api/data-product intelligence.",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "rationale",
+      "norm_label": "cycles 8-9: cloud honesty + api/data-product intelligence.",
+      "source_file": "tests/test_cycle89.py",
       "source_location": "L1"
     },
     {
-      "id": "fixture",
-      "label": "fixture",
+      "id": "tests_test_cycle89_rationale_116",
+      "label": "No boto3/creds \u2192 typed SourceUnavailableError, never fake data.",
       "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
-      "file_type": "code",
-      "norm_label": "fixture",
-      "source_file": "",
-      "source_location": ""
+      "community": 0,
+      "community_name": "app.py",
+      "file_type": "rationale",
+      "norm_label": "no boto3/creds \u2192 typed sourceunavailableerror, never fake data.",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L116"
     },
     {
       "id": "knowledgeentity",
       "label": "KnowledgeEntity",
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "knowledgeentity",
       "source_file": "",
@@ -2357,7 +2742,7 @@
       "label": "Relation",
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "relation",
       "source_file": "",
@@ -2368,7 +2753,7 @@
       "label": "extract.py",
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "extract.py",
       "source_file": "src/product_forge/knowledge/extract.py",
@@ -2379,21 +2764,10 @@
       "label": "test_cycle3.py",
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "code",
       "norm_label": "test_cycle3.py",
       "source_file": "tests/test_cycle3.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "tests_test_cycle67",
-      "label": "test_cycle67.py",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
-      "file_type": "code",
-      "norm_label": "test_cycle67.py",
-      "source_file": "tests/test_cycle67.py",
       "source_location": "L1"
     },
     {
@@ -2401,7 +2775,7 @@
       "label": "Deterministic entity extraction \u2014 no LLM required. Heuristics over chunk text\u2026",
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "rationale",
       "norm_label": "deterministic entity extraction \u2014 no llm required. heuristics over chunk text...",
       "source_file": "src/product_forge/knowledge/extract.py",
@@ -2412,7 +2786,7 @@
       "label": "chunks: [{id, text}] \u2192 dedup'd provisional entities with evidence.",
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "rationale",
       "norm_label": "chunks: [{id, text}] \u2192 dedup'd provisional entities with evidence.",
       "source_file": "src/product_forge/knowledge/extract.py",
@@ -2423,7 +2797,7 @@
       "label": "documented_in(entity\u2192doc chunk) + co-occurrence related_to.",
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "rationale",
       "norm_label": "documented_in(entity\u2192doc chunk) + co-occurrence related_to.",
       "source_file": "src/product_forge/knowledge/extract.py",
@@ -2434,33 +2808,165 @@
       "label": "Cycle 3: extraction, graph, knowledge health.",
       "_origin": "ast",
       "community": 1,
-      "community_name": "test_cycle67.py",
+      "community_name": "build_relations",
       "file_type": "rationale",
       "norm_label": "cycle 3: extraction, graph, knowledge health.",
       "source_file": "tests/test_cycle3.py",
       "source_location": "L1"
     },
     {
-      "id": "tests_test_cycle67_rationale_1",
-      "label": "Cycles 6-7: dashboard rendering + planning (prioritize, PRD, roadmap).",
+      "id": "src_product_forge_integrations_azure",
+      "label": "azure.py",
       "_origin": "ast",
-      "community": 1,
-      "community_name": "test_cycle67.py",
-      "file_type": "rationale",
-      "norm_label": "cycles 6-7: dashboard rendering + planning (prioritize, prd, roadmap).",
-      "source_file": "tests/test_cycle67.py",
+      "community": 10,
+      "community_name": "azure.py",
+      "file_type": "code",
+      "norm_label": "azure.py",
+      "source_file": "src/product_forge/integrations/azure.py",
       "source_location": "L1"
     },
     {
-      "id": "entity",
-      "label": "Entity",
+      "id": "src_product_forge_integrations_azure_py_any",
+      "label": "Any",
       "_origin": "ast",
-      "community": 2,
-      "community_name": "Store",
+      "community": 10,
+      "community_name": "azure.py",
       "file_type": "code",
-      "norm_label": "entity",
+      "norm_label": "any",
       "source_file": "",
       "source_location": ""
+    },
+    {
+      "id": "src_product_forge_integrations_azure_rationale_1",
+      "label": "Azure intelligence \u2014 KQL (Log Analytics) + Fabric/Power BI inventory. Same\u2026",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "azure.py",
+      "file_type": "rationale",
+      "norm_label": "azure intelligence \u2014 kql (log analytics) + fabric/power bi inventory. same...",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_integrations_azure_rationale_28",
+      "label": "Log Analytics KQL execution via azure-monitor-query.",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "azure.py",
+      "file_type": "rationale",
+      "norm_label": "log analytics kql execution via azure-monitor-query.",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L28"
+    },
+    {
+      "id": "src_product_forge_integrations_azure_rationale_65",
+      "label": "Power BI REST inventory \u2014 workspaces + datasets. Token required.",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "azure.py",
+      "file_type": "rationale",
+      "norm_label": "power bi rest inventory \u2014 workspaces + datasets. token required.",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L65"
+    },
+    {
+      "id": "src_product_forge_integrations_azure_rationale_84",
+      "label": "Microsoft Fabric items inventory \u2014 token required.",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "azure.py",
+      "file_type": "rationale",
+      "norm_label": "microsoft fabric items inventory \u2014 token required.",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L84"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize",
+      "label": "prioritize.py",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "prioritize.py",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_planning_roadmap",
+      "label": "roadmap.py",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "roadmap.py",
+      "source_file": "src/product_forge/planning/roadmap.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_planning_roadmap_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_planning_roadmap_py_store",
+      "label": "Store",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "code",
+      "norm_label": "store",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_rationale_1",
+      "label": "Prioritization \u2014 RICE and WSJF scoring, deterministic and explainable.",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "rationale",
+      "norm_label": "prioritization \u2014 rice and wsjf scoring, deterministic and explainable.",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_planning_prioritize_rationale_22",
+      "label": "factors may carry rice{reach,impact,confidence,effort} and/or\u2026",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "rationale",
+      "norm_label": "factors may carry rice{reach,impact,confidence,effort} and/or...",
+      "source_file": "src/product_forge/planning/prioritize.py",
+      "source_location": "L22"
+    },
+    {
+      "id": "src_product_forge_planning_roadmap_rationale_1",
+      "label": "Roadmap builder \u2014 now/next/later lanes from real initiatives.",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "score_initiative",
+      "file_type": "rationale",
+      "norm_label": "roadmap builder \u2014 now/next/later lanes from real initiatives.",
+      "source_file": "src/product_forge/planning/roadmap.py",
+      "source_location": "L1"
     },
     {
       "id": "src_product_forge_agents_tools",
@@ -2507,17 +3013,6 @@
       "source_location": ""
     },
     {
-      "id": "src_product_forge_store_sqlite",
-      "label": "sqlite.py",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "Store",
-      "file_type": "code",
-      "norm_label": "sqlite.py",
-      "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L1"
-    },
-    {
       "id": "src_product_forge_store_sqlite_py_any",
       "label": "Any",
       "_origin": "ast",
@@ -2562,18 +3057,7 @@
       "source_location": "L1"
     },
     {
-      "id": "src_product_forge_store_sqlite_rationale_1",
-      "label": "SQLite persistence \u2014 stdlib, schema-versioned, append-only audit. Entity rows\u2026",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "Store",
-      "file_type": "rationale",
-      "norm_label": "sqlite persistence \u2014 stdlib, schema-versioned, append-only audit. entity rows...",
-      "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_product_forge_store_sqlite_rationale_126",
+      "id": "src_product_forge_store_sqlite_rationale_128",
       "label": "Persist a raw dict document (non-pydantic, e.g. run records).",
       "_origin": "ast",
       "community": 2,
@@ -2581,10 +3065,10 @@
       "file_type": "rationale",
       "norm_label": "persist a raw dict document (non-pydantic, e.g. run records).",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L126"
+      "source_location": "L128"
     },
     {
-      "id": "src_product_forge_store_sqlite_rationale_80",
+      "id": "src_product_forge_store_sqlite_rationale_82",
       "label": "Thread-safe JSON-document store over SQLite.",
       "_origin": "ast",
       "community": 2,
@@ -2592,7 +3076,7 @@
       "file_type": "rationale",
       "norm_label": "thread-safe json-document store over sqlite.",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L80"
+      "source_location": "L82"
     },
     {
       "id": "command",
@@ -2914,6 +3398,17 @@
       "source_location": "L1"
     },
     {
+      "id": "src_product_forge_security_rationale_56",
+      "label": "Resolve ``raw`` and require it to live inside one of ``roots``.",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "connectors.py",
+      "file_type": "rationale",
+      "norm_label": "resolve ``raw`` and require it to live inside one of ``roots``.",
+      "source_file": "src/product_forge/security.py",
+      "source_location": "L56"
+    },
+    {
       "id": "agentdefinition",
       "label": "AgentDefinition",
       "_origin": "ast",
@@ -3112,6 +3607,17 @@
       "source_location": ""
     },
     {
+      "id": "src_product_forge_store_sqlite",
+      "label": "sqlite.py",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "engine.py",
+      "file_type": "code",
+      "norm_label": "sqlite.py",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L1"
+    },
+    {
       "id": "store",
       "label": "Store",
       "_origin": "ast",
@@ -3200,6 +3706,17 @@
       "source_location": "L1"
     },
     {
+      "id": "src_product_forge_store_sqlite_rationale_1",
+      "label": "SQLite persistence \u2014 stdlib, schema-versioned, append-only audit. Entity rows\u2026",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "engine.py",
+      "file_type": "rationale",
+      "norm_label": "sqlite persistence \u2014 stdlib, schema-versioned, append-only audit. entity rows...",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L1"
+    },
+    {
       "id": "tests_test_cycle5_rationale_1",
       "label": "Cycle 5: SQL validation, connectors, execution, spec compile, NL\u2192SQL.",
       "_origin": "ast",
@@ -3209,6 +3726,17 @@
       "norm_label": "cycle 5: sql validation, connectors, execution, spec compile, nl\u2192sql.",
       "source_file": "tests/test_cycle5.py",
       "source_location": "L1"
+    },
+    {
+      "id": "entity",
+      "label": "Entity",
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "TokenStore",
+      "file_type": "code",
+      "norm_label": "entity",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "src_product_forge_security",
@@ -3266,17 +3794,6 @@
       "source_location": "L41"
     },
     {
-      "id": "src_product_forge_security_rationale_56",
-      "label": "Resolve ``raw`` and require it to live inside one of ``roots``.",
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TokenStore",
-      "file_type": "rationale",
-      "norm_label": "resolve ``raw`` and require it to live inside one of ``roots``.",
-      "source_file": "src/product_forge/security.py",
-      "source_location": "L56"
-    },
-    {
       "id": "src_product_forge_security_rationale_70",
       "label": "Local API bearer token \u2014 generated on first use, file 0600.",
       "_origin": "ast",
@@ -3286,6 +3803,160 @@
       "norm_label": "local api bearer token \u2014 generated on first use, file 0600.",
       "source_file": "src/product_forge/security.py",
       "source_location": "L70"
+    },
+    {
+      "id": "fixture",
+      "label": "fixture",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "fixture",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_planning_prd",
+      "label": "prd.py",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "prd.py",
+      "source_file": "src/product_forge/planning/prd.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_planning_prd_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_planning_prd_py_store",
+      "label": "Store",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "store",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "tests_test_cycle67",
+      "label": "test_cycle67.py",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "code",
+      "norm_label": "test_cycle67.py",
+      "source_file": "tests/test_cycle67.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_planning_prd_rationale_1",
+      "label": "PRD + roadmap generators \u2014 deterministic templates over real data. PRD pulls\u2026",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "rationale",
+      "norm_label": "prd + roadmap generators \u2014 deterministic templates over real data. prd pulls...",
+      "source_file": "src/product_forge/planning/prd.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "tests_test_cycle67_rationale_1",
+      "label": "Cycles 6-7: dashboard rendering + planning (prioritize, PRD, roadmap).",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "test_cycle67.py",
+      "file_type": "rationale",
+      "norm_label": "cycles 6-7: dashboard rendering + planning (prioritize, prd, roadmap).",
+      "source_file": "tests/test_cycle67.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_integrations_aws",
+      "label": "aws.py",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": "aws.py",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_py_any",
+      "label": "Any",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "code",
+      "norm_label": "any",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "src_product_forge_integrations_aws_rationale_1",
+      "label": "AWS intelligence \u2014 real boto3 connectors; honest unavailability. Every\u2026",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "rationale",
+      "norm_label": "aws intelligence \u2014 real boto3 connectors; honest unavailability. every...",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_rationale_118",
+      "label": "QuickSight dashboards/datasets inventory (read-only).",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "rationale",
+      "norm_label": "quicksight dashboards/datasets inventory (read-only).",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L118"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_rationale_133",
+      "label": "Cost Explorer grouped usage \u2014 real spend, honest errors.",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "rationale",
+      "norm_label": "cost explorer grouped usage \u2014 real spend, honest errors.",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L133"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_rationale_34",
+      "label": "Real Athena query execution: start \u2192 poll \u2192 fetch results.",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "rationale",
+      "norm_label": "real athena query execution: start \u2192 poll \u2192 fetch results.",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L34"
+    },
+    {
+      "id": "src_product_forge_integrations_aws_rationale_98",
+      "label": "Glue Data Catalog inventory \u2014 real list of databases/tables.",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "aws.py",
+      "file_type": "rationale",
+      "norm_label": "glue data catalog inventory \u2014 real list of databases/tables.",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L98"
     }
   ],
   "links": [
@@ -3706,7 +4377,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L146",
+      "source_location": "L161",
       "weight": 1.0
     },
     {
@@ -3718,55 +4389,79 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L147",
+      "source_location": "L162",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_dashboards_render_render_dashboard",
+      "target": "src_product_forge_integrations_apispec_load_spec",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L587",
+      "source_location": "L687",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_planning_prioritize_score_initiative",
+      "target": "src_product_forge_integrations_apispec_parse_openapi",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L602",
+      "source_location": "L689",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_planning_prd_generate_prd",
+      "target": "src_product_forge_integrations_apispec_parse_asyncapi",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L620",
+      "source_location": "L691",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app_create_app",
-      "target": "src_product_forge_planning_roadmap_build_roadmap",
+      "target": "src_product_forge_integrations_apispec_diff_openapi",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L629",
+      "source_location": "L731",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app_create_app",
+      "target": "src_product_forge_integrations_datacontract_validate_payload",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L755",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app_create_app",
+      "target": "src_product_forge_integrations_datacontract_impact_analysis",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L762",
       "weight": 1.0
     },
     {
@@ -3778,7 +4473,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L113",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -3790,7 +4485,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L114",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -4670,6 +5365,186 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_integrations_apispec_diff_openapi",
+      "target": "src_product_forge_integrations_apispec_load_spec",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec_diff_openapi",
+      "target": "src_product_forge_integrations_apispec_parse_openapi",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector_client",
+      "target": "src_product_forge_integrations_aws_boto3",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector_client",
+      "target": "src_product_forge_integrations_aws_session_ok",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector_execute",
+      "target": "src_product_forge_integrations_aws_athenaconnector_client",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector_verify",
+      "target": "src_product_forge_integrations_aws_athenaconnector_client",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_cost_summary",
+      "target": "src_product_forge_integrations_aws_boto3",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L134",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_cost_summary",
+      "target": "src_product_forge_integrations_aws_session_ok",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L135",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_glue_catalog",
+      "target": "src_product_forge_integrations_aws_session_ok",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L100",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_glue_catalog",
+      "target": "src_product_forge_integrations_aws_boto3",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L99",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_quicksight_inventory",
+      "target": "src_product_forge_integrations_aws_boto3",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_quicksight_inventory",
+      "target": "src_product_forge_integrations_aws_session_ok",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L120",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector_client",
+      "target": "src_product_forge_integrations_azure_credential",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector_execute",
+      "target": "src_product_forge_integrations_azure_kqlconnector_client",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector_verify",
+      "target": "src_product_forge_integrations_azure_kqlconnector_client",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_knowledge_extract_build_relations",
       "target": "relation",
       "relation": "calls",
@@ -4775,6 +5650,42 @@
       "context": "call",
       "source_file": "src/product_forge/security.py",
       "source_location": "L97",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_store_sqlite_store_audit",
+      "target": "src_product_forge_security_redact",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L237",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_store_sqlite_store_put",
+      "target": "src_product_forge_security_redact",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L106",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_store_sqlite_store_put_doc",
+      "target": "src_product_forge_security_redact",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -5846,6 +6757,18 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_api_app_surface_to_paths",
+      "target": "src_product_forge_api_app_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L107",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_dashboards_render_render_dashboard",
       "target": "src_product_forge_dashboards_render_py_any",
       "relation": "references",
@@ -5879,6 +6802,186 @@
       "context": "generic_arg",
       "source_file": "src/product_forge/dashboards/render.py",
       "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec_diff_openapi",
+      "target": "src_product_forge_integrations_apispec_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec_load_spec",
+      "target": "src_product_forge_integrations_apispec_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec_parse_asyncapi",
+      "target": "src_product_forge_integrations_apispec_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec_parse_openapi",
+      "target": "src_product_forge_integrations_apispec_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector_execute",
+      "target": "src_product_forge_integrations_aws_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector_verify",
+      "target": "src_product_forge_integrations_aws_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_cost_summary",
+      "target": "src_product_forge_integrations_aws_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L132",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_glue_catalog",
+      "target": "src_product_forge_integrations_aws_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L97",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_quicksight_inventory",
+      "target": "src_product_forge_integrations_aws_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L117",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_fabric_inventory",
+      "target": "src_product_forge_integrations_azure_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector_execute",
+      "target": "src_product_forge_integrations_azure_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector_verify",
+      "target": "src_product_forge_integrations_azure_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_powerbi_inventory",
+      "target": "src_product_forge_integrations_azure_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_datacontract_impact_analysis",
+      "target": "src_product_forge_integrations_datacontract_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_datacontract_validate_payload",
+      "target": "src_product_forge_integrations_datacontract_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -5974,7 +7077,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L234",
+      "source_location": "L236",
       "weight": 1.0
     },
     {
@@ -5986,7 +7089,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L143",
+      "source_location": "L145",
       "weight": 1.0
     },
     {
@@ -5998,7 +7101,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L161",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -6010,7 +7113,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L201",
+      "source_location": "L203",
       "weight": 1.0
     },
     {
@@ -6022,7 +7125,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L124",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -6034,7 +7137,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L217",
+      "source_location": "L219",
       "weight": 1.0
     },
     {
@@ -6135,50 +7238,86 @@
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_dashboards_render_render_dashboard",
+      "target": "src_product_forge_store_sqlite_store",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L581",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_planning_prioritize_score_initiative",
+      "target": "src_product_forge_integrations_apispec_load_spec",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L595",
+      "source_location": "L683",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_planning_prd_generate_prd",
+      "target": "src_product_forge_integrations_apispec_parse_asyncapi",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L614",
+      "source_location": "L683",
       "weight": 1.0
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_planning_roadmap_build_roadmap",
+      "target": "src_product_forge_integrations_apispec_parse_openapi",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L626",
+      "source_location": "L683",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app",
+      "target": "src_product_forge_integrations_apispec_diff_openapi",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L718",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app",
+      "target": "src_product_forge_integrations_datacontract_validate_payload",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L749",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app",
+      "target": "src_product_forge_integrations_datacontract_impact_analysis",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L759",
       "weight": 1.0
     },
     {
@@ -6239,6 +7378,18 @@
       "context": "import",
       "source_file": "src/product_forge/cli/__init__.py",
       "source_location": "L485",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_datacontract",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -6410,6 +7561,18 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_integrations_datacontract",
+      "target": "src_product_forge_store_sqlite",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_knowledge_graph",
       "target": "src_product_forge_store_sqlite",
       "relation": "imports_from",
@@ -6443,6 +7606,18 @@
       "context": "import",
       "source_file": "src/product_forge/planning/roadmap.py",
       "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_store_sqlite",
+      "target": "src_product_forge_security",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/product_forge/store/sqlite.py",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -6790,7 +7965,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L145",
+      "source_location": "L160",
       "weight": 1.0
     },
     {
@@ -6802,7 +7977,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L129",
+      "source_location": "L144",
       "weight": 1.0
     },
     {
@@ -6814,7 +7989,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L129",
+      "source_location": "L144",
       "weight": 1.0
     },
     {
@@ -6826,7 +8001,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L110",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -6902,6 +8077,30 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_integrations_aws_session_ok",
+      "target": "src_product_forge_integrations_aws_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_datacontract_impact_analysis",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_knowledge_graph_knowledge_health",
       "target": "src_product_forge_store_sqlite_store",
       "relation": "references",
@@ -6970,7 +8169,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L82",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -7046,6 +8245,42 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_integrations_aws_athenaconnector_client",
+      "target": "src_product_forge_integrations_aws_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_credential",
+      "target": "src_product_forge_integrations_azure_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector_client",
+      "target": "src_product_forge_integrations_azure_py_any",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_security_redact",
       "target": "t",
       "relation": "references",
@@ -7066,7 +8301,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L100",
+      "source_location": "L102",
       "weight": 1.0
     },
     {
@@ -7091,6 +8326,30 @@
       "context": "submodule_import",
       "source_file": "src/product_forge/analytics/engine.py",
       "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app",
+      "target": "src_product_forge_integrations_aws",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "submodule_import",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L655",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app",
+      "target": "src_product_forge_integrations_azure",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "submodule_import",
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L661",
       "weight": 1.0
     },
     {
@@ -7513,7 +8772,7 @@
     },
     {
       "source": "src_product_forge_api_app",
-      "target": "src_product_forge_api_app_ctx",
+      "target": "src_product_forge_api_app_surface_to_paths",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -7524,13 +8783,24 @@
     },
     {
       "source": "src_product_forge_api_app",
+      "target": "src_product_forge_api_app_ctx",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L122",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app",
       "target": "src_product_forge_api_app_create_app",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L145",
+      "source_location": "L160",
       "weight": 1.0
     },
     {
@@ -8106,6 +9376,182 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_integrations_apispec",
+      "target": "src_product_forge_integrations_apispec_load_spec",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec",
+      "target": "src_product_forge_integrations_apispec_parse_openapi",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec",
+      "target": "src_product_forge_integrations_apispec_parse_asyncapi",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec",
+      "target": "src_product_forge_integrations_apispec_diff_openapi",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws",
+      "target": "src_product_forge_integrations_aws_quicksight_inventory",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L117",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws",
+      "target": "src_product_forge_integrations_aws_cost_summary",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L132",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws",
+      "target": "src_product_forge_integrations_aws_boto3",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws",
+      "target": "src_product_forge_integrations_aws_session_ok",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws",
+      "target": "src_product_forge_integrations_aws_athenaconnector",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws",
+      "target": "src_product_forge_integrations_aws_glue_catalog",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L97",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure",
+      "target": "src_product_forge_integrations_azure_credential",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure",
+      "target": "src_product_forge_integrations_azure_kqlconnector",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure",
+      "target": "src_product_forge_integrations_azure_powerbi_inventory",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure",
+      "target": "src_product_forge_integrations_azure_fabric_inventory",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_datacontract",
+      "target": "src_product_forge_integrations_datacontract_validate_payload",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_datacontract",
+      "target": "src_product_forge_integrations_datacontract_impact_analysis",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_knowledge_extract",
       "target": "src_product_forge_knowledge_extract_extract_entities",
       "relation": "contains",
@@ -8256,7 +9702,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L79",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -8601,6 +10047,72 @@
       "weight": 1.0
     },
     {
+      "source": "tests_test_cycle89",
+      "target": "tests_test_cycle89_test_cloud_honest_unavailable",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L115",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89",
+      "target": "tests_test_cycle89_test_api_import_and_diff_endpoint",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L133",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89",
+      "target": "tests_test_cycle89_test_openapi_parse",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89",
+      "target": "tests_test_cycle89_test_breaking_change_diff",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89",
+      "target": "tests_test_cycle89_test_contract_validation",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89",
+      "target": "tests_test_cycle89_test_impact_analysis",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L89",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_analytics_connectors_connector",
       "target": "protocol",
       "relation": "inherits",
@@ -8861,7 +10373,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L110",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -8872,7 +10384,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L119",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -8883,7 +10395,95 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/api/app.py",
-      "source_location": "L129",
+      "source_location": "L144",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector",
+      "target": "src_product_forge_integrations_aws_athenaconnector_init",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector",
+      "target": "src_product_forge_integrations_aws_athenaconnector_client",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector",
+      "target": "src_product_forge_integrations_aws_athenaconnector_verify",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_athenaconnector",
+      "target": "src_product_forge_integrations_aws_athenaconnector_execute",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector",
+      "target": "src_product_forge_integrations_azure_kqlconnector_init",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector",
+      "target": "src_product_forge_integrations_azure_kqlconnector_client",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector",
+      "target": "src_product_forge_integrations_azure_kqlconnector_verify",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_kqlconnector",
+      "target": "src_product_forge_integrations_azure_kqlconnector_execute",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -8982,7 +10582,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L100",
+      "source_location": "L102",
       "weight": 1.0
     },
     {
@@ -8993,7 +10593,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L124",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -9004,7 +10604,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L143",
+      "source_location": "L145",
       "weight": 1.0
     },
     {
@@ -9015,7 +10615,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L152",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
@@ -9026,7 +10626,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L161",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -9037,7 +10637,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L186",
+      "source_location": "L188",
       "weight": 1.0
     },
     {
@@ -9048,7 +10648,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L201",
+      "source_location": "L203",
       "weight": 1.0
     },
     {
@@ -9059,7 +10659,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L210",
+      "source_location": "L212",
       "weight": 1.0
     },
     {
@@ -9070,7 +10670,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L217",
+      "source_location": "L219",
       "weight": 1.0
     },
     {
@@ -9081,7 +10681,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L234",
+      "source_location": "L236",
       "weight": 1.0
     },
     {
@@ -9092,7 +10692,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L82",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -9103,7 +10703,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L94",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -9229,13 +10829,24 @@
     },
     {
       "source": "src_product_forge_api_app_rationale_108",
-      "target": "src_product_forge_api_app_ctx",
+      "target": "src_product_forge_api_app_surface_to_paths",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/api/app.py",
       "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_api_app_rationale_123",
+      "target": "src_product_forge_api_app_ctx",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/api/app.py",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -9459,6 +11070,171 @@
       "weight": 1.0
     },
     {
+      "source": "src_product_forge_integrations_apispec_rationale_1",
+      "target": "src_product_forge_integrations_apispec",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec_rationale_20",
+      "target": "src_product_forge_integrations_apispec_parse_openapi",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_apispec_rationale_67",
+      "target": "src_product_forge_integrations_apispec_diff_openapi",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/apispec.py",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_rationale_1",
+      "target": "src_product_forge_integrations_aws",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_rationale_118",
+      "target": "src_product_forge_integrations_aws_quicksight_inventory",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L118",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_rationale_133",
+      "target": "src_product_forge_integrations_aws_cost_summary",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L133",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_rationale_34",
+      "target": "src_product_forge_integrations_aws_athenaconnector",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_aws_rationale_98",
+      "target": "src_product_forge_integrations_aws_glue_catalog",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/aws.py",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_rationale_1",
+      "target": "src_product_forge_integrations_azure",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_rationale_28",
+      "target": "src_product_forge_integrations_azure_kqlconnector",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_rationale_65",
+      "target": "src_product_forge_integrations_azure_powerbi_inventory",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L65",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_azure_rationale_84",
+      "target": "src_product_forge_integrations_azure_fabric_inventory",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/azure.py",
+      "source_location": "L84",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_datacontract_rationale_1",
+      "target": "src_product_forge_integrations_datacontract",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_datacontract_rationale_15",
+      "target": "src_product_forge_integrations_datacontract_validate_payload",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_product_forge_integrations_datacontract_rationale_47",
+      "target": "src_product_forge_integrations_datacontract_impact_analysis",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/product_forge/integrations/datacontract.py",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_knowledge_extract_rationale_1",
       "target": "src_product_forge_knowledge_extract",
       "relation": "rationale_for",
@@ -9602,25 +11378,25 @@
       "weight": 1.0
     },
     {
-      "source": "src_product_forge_store_sqlite_rationale_126",
+      "source": "src_product_forge_store_sqlite_rationale_128",
       "target": "src_product_forge_store_sqlite_store_put_doc",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L126",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
-      "source": "src_product_forge_store_sqlite_rationale_80",
+      "source": "src_product_forge_store_sqlite_rationale_82",
       "target": "src_product_forge_store_sqlite_store",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L80",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -9665,6 +11441,28 @@
       "confidence_score": 1.0,
       "source_file": "tests/test_cycle67.py",
       "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_rationale_1",
+      "target": "tests_test_cycle89",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_rationale_116",
+      "target": "tests_test_cycle89_test_cloud_honest_unavailable",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -10160,6 +11958,114 @@
       "weight": 1.0
     },
     {
+      "source": "tests_test_cycle89_test_api_import_and_diff_endpoint",
+      "target": "src_product_forge_security_tokenstore",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L146",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_test_api_import_and_diff_endpoint",
+      "target": "src_product_forge_api_app_create_app",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L148",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_test_breaking_change_diff",
+      "target": "src_product_forge_integrations_apispec_diff_openapi",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_test_cloud_honest_unavailable",
+      "target": "src_product_forge_integrations_aws_glue_catalog",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L122",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_test_cloud_honest_unavailable",
+      "target": "src_product_forge_integrations_azure_powerbi_inventory",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L128",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_test_contract_validation",
+      "target": "src_product_forge_integrations_datacontract_validate_payload",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_test_impact_analysis",
+      "target": "src_product_forge_integrations_datacontract_impact_analysis",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L110",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_test_openapi_parse",
+      "target": "src_product_forge_integrations_apispec_load_spec",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_test_cycle89_test_openapi_parse",
+      "target": "src_product_forge_integrations_apispec_parse_openapi",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "call",
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
       "source": "src_product_forge_store_sqlite_store_put",
       "target": "src_product_forge_cli_init_status",
       "relation": "indirect_call",
@@ -10168,7 +12074,7 @@
       "confidence_score": 0.85,
       "context": "getattr",
       "source_file": "src/product_forge/store/sqlite.py",
-      "source_location": "L115",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -10225,8 +12131,19 @@
       "source_file": "tests/test_cycle5.py",
       "source_location": "L117",
       "weight": 0.8
+    },
+    {
+      "source": "tests_test_cycle89_test_impact_analysis",
+      "target": "src_product_forge_store_sqlite_store",
+      "relation": "uses",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_cycle89.py",
+      "source_location": "L99",
+      "weight": 0.8
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7b3a447798c236815296e84dc413b5502d14397f"
+  "built_at_commit": "b784a626e9e622333033df9b7f06cfbe591ef9fa"
 }
