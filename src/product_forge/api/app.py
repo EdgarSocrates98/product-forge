@@ -10,6 +10,7 @@ import threading
 import time
 import uuid
 from collections import deque
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -119,6 +120,16 @@ class CompileIn(BaseModel):
 class NlIn(BaseModel):
     question: str = Field(min_length=1)
     source_id: str | None = None
+
+
+class ContextAuthorizeIn(BaseModel):
+    principal: str = ""
+    product_id: str = Field(min_length=1)
+    workspace_id: str | None = None
+    session_id: str = ""
+    provider: str = ""
+    agent_profile: str = "default"
+    ttl_s: int = Field(default=3600, ge=60, le=86400)
 
 
 def _surface_to_paths(surface: dict[str, Any]) -> dict[str, Any]:
@@ -425,6 +436,99 @@ def create_app(home: Path | None = None) -> FastAPI:
             "generated_at": utcnow(),
         }
         return envelope(ctx_pkg)
+
+    # -- session context authorization (forge/ProductAgentSessionContext/v2) --
+
+    def _context_state(rec: dict[str, Any]) -> str:
+        if rec.get("status") == "revoked":
+            return "revoked"
+        exp = rec.get("expires_at_ts")
+        if exp is not None and exp <= time.time():
+            return "expired"
+        return "active"
+
+    @app.post(f"{API_PREFIX}/context/authorize", status_code=201)
+    def context_authorize(body: ContextAuthorizeIn, req: Request) -> dict:
+        """Issue a server-validated ProductAgentSessionContext/v2.
+
+        Validates that the product exists, the workspace exists and
+        matches, the workspace is in the caller's principal scope, and
+        resolves permissions server-side — client-supplied ids are never
+        trusted on their own."""
+        from ..errors import NotFoundError, PermissionDeniedError, ValidationError
+        p = ctx.store.get("products", body.product_id)  # 404 if missing
+        ws = str(p.get("workspace_id") or "")
+        if body.workspace_id and body.workspace_id != ws:
+            raise ValidationError(
+                "workspace_id does not match product workspace")
+        try:
+            ctx.store.get("workspaces", ws)  # exists?
+        except Exception as exc:
+            raise NotFoundError(f"workspace {ws} not found") from exc
+        token = req.headers.get("authorization", "") \
+            .removeprefix("Bearer ").strip()
+        if not _principal_allows(ctx.cfg, token, ws):
+            raise PermissionDeniedError("workspace not in principal scope")
+        if p.get("status") not in (None, "active"):
+            raise ValidationError(f"product status {p.get('status')!r} "
+                                  "cannot be authorized")
+        now = time.time()
+        cid = new_id("ctx")
+        issued = utcnow()
+        exp_ts = now + body.ttl_s
+        rec: dict[str, Any] = {
+            "id": cid,
+            "schema": "forge/ProductAgentSessionContext/v2",
+            "principal": body.principal,
+            "workspace_id": ws,
+            "product_id": body.product_id,
+            "provider": body.provider,
+            "session_id": body.session_id,
+            "agent_profile": body.agent_profile,
+            # permissions resolved server-side from product policy;
+            # products without explicit grants get the safe defaults —
+            # never a client-supplied allowlist.
+            "allowed_knowledge": list(p.get("allowed_knowledge") or []),
+            "allowed_datasets": list(p.get("allowed_datasets") or []),
+            "allowed_metrics": list(p.get("allowed_metrics") or []),
+            "allowed_apis": list(p.get("allowed_apis") or []),
+            "allowed_tools": list(p.get("allowed_tools") or ["chat"]),
+            "policy_version": "forge/PolicyBundle/1",
+            "context_version": 1,
+            "issued_at": issued,
+            "issued_at_ts": now,
+            "expires_at": utcnow(),
+            "expires_at_ts": exp_ts,
+            "revocation_ref": cid,
+            "status": "active",
+        }
+        from datetime import datetime
+        rec["expires_at"] = datetime.fromtimestamp(
+            exp_ts, tz=UTC).isoformat()
+        ctx.store.put_doc("session_contexts", rec)
+        ctx.audit(req, "context.authorize", "session_context", cid,
+                  product_id=body.product_id, workspace_id=ws,
+                  actor_name=body.principal)
+        out = dict(rec)
+        out["state"] = "active"
+        return envelope(out)
+
+    @app.get(f"{API_PREFIX}/context/{{cid}}")
+    def context_get(cid: str) -> dict:
+        rec = dict(ctx.store.get("session_contexts", cid))  # 404
+        rec["state"] = _context_state(rec)
+        return envelope(rec)
+
+    @app.post(f"{API_PREFIX}/context/{{cid}}/revoke")
+    def context_revoke(cid: str, req: Request) -> dict:
+        rec = dict(ctx.store.get("session_contexts", cid))
+        rec["status"] = "revoked"
+        rec["revoked_at"] = utcnow()
+        ctx.store.put_doc("session_contexts", rec)
+        ctx.audit(req, "context.revoke", "session_context", cid,
+                  product_id=rec.get("product_id") or "")
+        rec["state"] = "revoked"
+        return envelope(rec)
 
     # -- generic collection factory -------------------------------------------
 

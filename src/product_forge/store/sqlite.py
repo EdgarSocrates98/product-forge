@@ -45,6 +45,7 @@ COLLECTIONS = (
     "experiments",
     "meetings",
     "notebooks",
+    "session_contexts",
     "audit_events",
 )
 
