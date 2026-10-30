@@ -536,7 +536,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         from ..agents.runtime import run_agent
 
         agent = _agent(pid, aid)
-        run = run_agent(ctx.store, agent, body.input)
+        run = run_agent(ctx.store, agent, body.input, cfg=ctx.cfg)
         ctx.audit(req, "agent.run", "agent_runs", run["id"], product_id=pid)
         return envelope(run)
 

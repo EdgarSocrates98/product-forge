@@ -28,7 +28,8 @@ def _run_doc(agent: Any, run_id: str, user_input: str) -> dict[str, Any]:
             "output": None, "created_at": utcnow(), "updated_at": utcnow()}
 
 
-def run_agent(store: Store, agent: Any, user_input: str, *, actor: str = "api") -> dict[str, Any]:
+def run_agent(store: Store, agent: Any, user_input: str, *, actor: str = "api",
+              cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     run_id = new_id("run")
     run = _run_doc(agent, run_id, user_input)
 
@@ -42,6 +43,16 @@ def run_agent(store: Store, agent: Any, user_input: str, *, actor: str = "api") 
         return run
 
     effective = inp.sanitized_input or user_input
+    # Cycle 15: real LLM loop when a gateway provider is configured;
+    # deterministic template path remains the honest fallback.
+    if cfg is not None:
+        from .llm_runtime import try_llm_run
+        llm_run = try_llm_run(store, agent, effective, run, cfg)
+        if llm_run is not None:
+            llm_run["updated_at"] = utcnow()
+            _persist(store, llm_run)
+            return llm_run
+
     template = TEMPLATES.get(agent.template, TEMPLATES["custom"])
     steps = [s for s in agent.policies.get("steps", [])] or template["steps"]
     ctx = ToolCtx(product_id=agent.product_id, actor=actor, run_id=run_id)
