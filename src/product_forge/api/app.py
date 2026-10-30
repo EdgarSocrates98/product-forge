@@ -78,6 +78,10 @@ class QueryIn(BaseModel):
     limit: int = Field(default=5, ge=1, le=50)
 
 
+class RunIn(BaseModel):
+    input: str = Field(min_length=1)
+
+
 class Ctx:
     """Shared runtime: home, config, store, token, rate buckets, audit."""
 
@@ -368,6 +372,88 @@ def create_app(home: Path | None = None) -> FastAPI:
     def list_docs(pid: str) -> dict:
         ctx.store.get("products", pid)
         return envelope({"items": ctx.store.list("documents", product_id=pid)})
+
+    # -- agents runtime (Cycle 4) ---------------------------------------------
+
+    def _agent(pid: str, aid: str) -> AgentDefinition:
+        doc = ctx.store.get("agents", aid)
+        if doc.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"agent {aid} not in product {pid}")
+        return AgentDefinition.model_validate(doc)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}/run")
+    def agent_run(pid: str, aid: str, body: RunIn, req: Request) -> dict:
+        from ..agents.runtime import run_agent
+
+        agent = _agent(pid, aid)
+        run = run_agent(ctx.store, agent, body.input)
+        ctx.audit(req, "agent.run", "agent_runs", run["id"], product_id=pid)
+        return envelope(run)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}/runs")
+    def agent_runs(pid: str, aid: str) -> dict:
+        _agent(pid, aid)
+        runs = [r for r in ctx.store.list("agent_runs", product_id=pid)
+                if r.get("agent_id") == aid]
+        return envelope({"items": runs})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}/runs/{{rid}}/cancel")
+    def agent_run_cancel(pid: str, aid: str, rid: str, req: Request) -> dict:
+        from ..agents.runtime import cancel_run
+
+        _agent(pid, aid)
+        run = cancel_run(ctx.store, rid)
+        ctx.audit(req, "agent.run.cancel", "agent_runs", rid, product_id=pid)
+        return envelope(run)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}/eval")
+    def agent_eval(pid: str, aid: str, req: Request, body: ScopedIn | None = None) -> dict:
+        from ..agents.evals import run_evals
+
+        agent = _agent(pid, aid)
+        cases = (body.model_dump().get("cases") if body else None)
+        report = run_evals(ctx.store, agent, cases)
+        agent.eval_summary = {"score": report["score"], "passed": report["passed"],
+                              "total": report["total"], "at": utcnow()}
+        ctx.store.put("agents", agent)
+        ctx.audit(req, "agent.eval", "agents", aid, product_id=pid)
+        return envelope(report)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}/publish")
+    def agent_publish(pid: str, aid: str, req: Request) -> dict:
+        from ..errors import UnsafeOperationError
+
+        agent = _agent(pid, aid)
+        score = (agent.eval_summary or {}).get("score", 0)
+        if not agent.tools_allowed:
+            raise UnsafeOperationError("agent has no tools_allowed — configure permissions first")
+        if score < 0.5:
+            raise UnsafeOperationError(f"eval score {score} below publish gate 0.5")
+        agent.status = agent.status.PUBLISHED
+        agent.version += 1
+        ctx.store.put("agents", agent)
+        ctx.audit(req, "agent.publish", "agents", aid, product_id=pid)
+        return envelope(agent.model_dump(mode="json", by_alias=True))
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}/archive")
+    def agent_archive(pid: str, aid: str, req: Request) -> dict:
+        agent = _agent(pid, aid)
+        agent.status = agent.status.ARCHIVED
+        ctx.store.put("agents", agent)
+        ctx.audit(req, "agent.archive", "agents", aid, product_id=pid)
+        return envelope(agent.model_dump(mode="json", by_alias=True))
+
+    @app.patch(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}")
+    def agent_patch(pid: str, aid: str, body: ScopedIn, req: Request) -> dict:
+        agent = _agent(pid, aid)
+        data = body.model_dump(exclude_unset=True)
+        for k in ("mission", "tools_allowed", "knowledge_scope", "policies", "name"):
+            if k in data:
+                setattr(agent, k, data[k])
+        ctx.store.put("agents", agent)
+        ctx.audit(req, "agent.update", "agents", aid, product_id=pid)
+        return envelope(agent.model_dump(mode="json", by_alias=True))
 
     @app.get(f"{API_PREFIX}/audit")
     def audit_log(product_id: str | None = None, limit: int = 100) -> dict:

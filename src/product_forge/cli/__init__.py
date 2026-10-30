@@ -11,6 +11,7 @@ import typer
 
 from .. import FORGE_ID, __version__
 from ..config import db_path, home_dir, load_config, save_config
+from ..domain.models import utcnow
 from ..security import TokenStore
 from ..store.sqlite import Store
 
@@ -289,6 +290,54 @@ def ag_create(product_id: str, name: str, mission: str = "", template: str = "cu
 def ag_list(product_id: str) -> None:
     st = _store()
     _out(st.list("agents", product_id=product_id))
+    st.close()
+
+
+def _load_agent(st: Store, agent_id: str) -> Any:
+    from ..domain.models import AgentDefinition
+
+    return AgentDefinition.model_validate(st.get("agents", agent_id))
+
+
+@ag_app.command("run")
+def ag_run(agent_id: str, text: str) -> None:
+    """Execute an agent run (deterministic template + policy checks)."""
+    from ..agents.runtime import run_agent
+
+    st = _store()
+    _out(run_agent(st, _load_agent(st, agent_id), text, actor="cli"))
+    st.close()
+
+
+@ag_app.command("eval")
+def ag_eval(agent_id: str) -> None:
+    """Run the default eval suite and persist the score."""
+    from ..agents.evals import run_evals
+
+    st = _store()
+    agent = _load_agent(st, agent_id)
+    rep = run_evals(st, agent)
+    agent.eval_summary = {"score": rep["score"], "passed": rep["passed"],
+                          "total": rep["total"], "at": utcnow()}
+    st.put("agents", agent)
+    _out(rep)
+    st.close()
+
+
+@ag_app.command("publish")
+def ag_publish(agent_id: str) -> None:
+    from ..errors import UnsafeOperationError
+
+    st = _store()
+    agent = _load_agent(st, agent_id)
+    score = (agent.eval_summary or {}).get("score", 0)
+    if not agent.tools_allowed or score < 0.5:
+        st.close()
+        raise UnsafeOperationError("publish gate: tools_allowed set + eval score >= 0.5 required")
+    agent.status = agent.status.PUBLISHED
+    agent.version += 1
+    st.put("agents", agent)
+    _out(agent.model_dump(mode="json", by_alias=True))
     st.close()
 
 

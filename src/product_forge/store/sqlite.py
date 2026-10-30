@@ -32,6 +32,11 @@ COLLECTIONS = (
     "dashboards",
     "initiatives",
     "decisions",
+    "agent_runs",
+    "watches",
+    "alerts",
+    "reports",
+    "approvals",
     "audit_events",
 )
 
@@ -116,6 +121,25 @@ class Store:
             self._conn.commit()
         return entity
 
+    def put_doc(self, collection: str, doc: dict[str, Any], *,
+                status: str | None = None, name: str | None = None) -> dict[str, Any]:
+        """Persist a raw dict document (non-pydantic, e.g. run records)."""
+        if collection not in COLLECTIONS:
+            raise ValueError(f"unknown collection: {collection}")
+        doc["updated_at"] = utcnow()
+        blob = json.dumps(redact(doc), ensure_ascii=False)
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO entities"
+                "(collection,id,product_id,workspace_id,status,name,doc,updated_at)"
+                " VALUES(?,?,?,?,?,?,?,?)",
+                (collection, doc["id"], doc.get("product_id"), doc.get("workspace_id"),
+                 status or doc.get("status"), name or doc.get("name"),
+                 blob, doc["updated_at"]),
+            )
+            self._conn.commit()
+        return doc
+
     def get(self, collection: str, entity_id: str) -> dict[str, Any]:
         with self._lock:
             row = self._conn.execute(
@@ -191,13 +215,19 @@ class Store:
         return json.loads(row["doc"]).get("title", document_id) if row else document_id
 
     def search_fts(self, product_id: str, query: str, limit: int = 20) -> list[dict[str, Any]]:
+        import re
+
+        terms = re.findall(r"[\w]+", query.lower())
+        if not terms:
+            return []
+        match = " OR ".join(f'"{t}"' for t in terms[:12])
         with self._lock:
             rows = self._conn.execute(
                 "SELECT c.id, c.document_id, c.seq, snippet(chunks_fts,0,'','','…',12) AS snip,"
                 " bm25(chunks_fts) AS score FROM chunks_fts"
                 " JOIN chunks c ON c.rowid=chunks_fts.rowid"
                 " WHERE chunks_fts MATCH ? AND c.product_id=? LIMIT ?",
-                (query, product_id, limit),
+                (match, product_id, limit),
             ).fetchall()
         return [dict(r) for r in rows]
 
