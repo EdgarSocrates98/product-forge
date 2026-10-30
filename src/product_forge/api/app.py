@@ -82,6 +82,13 @@ class RunIn(BaseModel):
     input: str = Field(min_length=1)
 
 
+class DelegateCallIn(BaseModel):
+    workflow: str = Field(min_length=1)
+    args: list[str] | None = None
+    product_id: str | None = None
+    timeout_s: int = Field(default=60, le=300)
+
+
 class ValidateIn(BaseModel):
     statement: str = Field(min_length=1)
     dialect: str = "sql"
@@ -212,6 +219,22 @@ def create_app(home: Path | None = None) -> FastAPI:
     def health() -> dict:
         return envelope({"forge_id": FORGE_ID, "version": __version__,
                          "status": "healthy", "uptime_s": round(time.time() - ctx.started, 2)})
+
+    @app.get(f"{API_PREFIX}/delegates")
+    def delegates_list() -> dict:
+        from ..delegates.catalog import catalog
+        return envelope({"delegates": catalog(ctx.cfg)})
+
+    @app.post(f"{API_PREFIX}/delegates/{{did}}/call")
+    def delegate_call(did: str, body: DelegateCallIn, req: Request) -> dict:
+        from ..agents.routing import record_usage
+        from ..delegates.runner import call
+        result = call(ctx.cfg, ctx.store, body.product_id, did,
+                      body.workflow, body.args or [])
+        ctx.audit(req, "delegate.call", "delegate", did,
+                  product_id=body.product_id or "", workflow=body.workflow)
+        record_usage(ctx.store, body.product_id or "global", {"tool_calls": 1})
+        return envelope(result)
 
     @app.get(f"{API_PREFIX}/agent-templates")
     def agent_templates() -> dict:

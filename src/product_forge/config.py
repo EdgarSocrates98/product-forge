@@ -26,6 +26,9 @@ DEFAULTS: dict[str, Any] = {
     # speaking productforge/SynthesisRequest|Result — never an SDK import,
     # never credentials in this file. None = synthesis honestly unavailable.
     "gateway": {"provider_cmd": None, "timeout_s": 30},
+    # Sibling-forge delegates (subprocess+JSON): operator allowlist, e.g.
+    # [{"id": "data-sentinel", "cli": "data-sentinel", "workflows": ["inventory"]}]
+    "delegates": [],
     "install_profile": "recommended",  # minimal | recommended | full
 }
 

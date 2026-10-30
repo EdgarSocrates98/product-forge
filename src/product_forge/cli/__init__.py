@@ -411,6 +411,27 @@ def ag_templates() -> None:
     _out({"items": list_templates()})
 
 
+@app.command("delegates")
+def delegates_cmd(
+    call: str | None = typer.Option(None, "--call", help="delegate:workflow to invoke"),
+    args: list[str] | None = typer.Option(None, "--arg", help="workflow args"),
+) -> None:
+    """List sibling-forge delegates (or call one, audited)."""
+    from ..delegates.catalog import catalog
+    from ..delegates.runner import call as delegate_call
+
+    home = home_dir()
+    cfg = load_config(home)
+    if call is None:
+        _out({"delegates": catalog(cfg)})
+        return
+    st = Store(db_path(home, cfg))
+    did, _, wf = call.partition(":")
+    result = delegate_call(cfg, st, None, did, wf, args or [])
+    st.close()
+    _out(result)
+
+
 # -- analytics -------------------------------------------------------------
 
 q_app = typer.Typer(help="Analytics: validate, compile, execute queries")
