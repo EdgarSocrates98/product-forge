@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Analytics"
+  short_description: "Schema exploration and assisted queries"
+  default_prompt: "Use the pf-analytics skill on this Product Forge product"

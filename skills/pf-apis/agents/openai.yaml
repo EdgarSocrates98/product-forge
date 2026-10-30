@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Apis"
+  short_description: "OpenAPI/AsyncAPI import, diff, breaking changes"
+  default_prompt: "Use the pf-apis skill on this Product Forge product"

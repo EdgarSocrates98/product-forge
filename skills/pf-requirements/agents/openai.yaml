@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Requirements"
+  short_description: "PRD and requirements grounded in knowledge"
+  default_prompt: "Use the pf-requirements skill on this Product Forge product"

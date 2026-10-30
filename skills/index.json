@@ -1,0 +1,70 @@
+{
+  "schema": "productforge/SkillIndex/v1",
+  "version": "1.0.0",
+  "skills": [
+    {
+      "name": "pf-product-strategy",
+      "path": "pf-product-strategy/SKILL.md"
+    },
+    {
+      "name": "pf-product-discovery",
+      "path": "pf-product-discovery/SKILL.md"
+    },
+    {
+      "name": "pf-prioritization",
+      "path": "pf-prioritization/SKILL.md"
+    },
+    {
+      "name": "pf-requirements",
+      "path": "pf-requirements/SKILL.md"
+    },
+    {
+      "name": "pf-sql",
+      "path": "pf-sql/SKILL.md"
+    },
+    {
+      "name": "pf-analytics",
+      "path": "pf-analytics/SKILL.md"
+    },
+    {
+      "name": "pf-dashboards",
+      "path": "pf-dashboards/SKILL.md"
+    },
+    {
+      "name": "pf-aws",
+      "path": "pf-aws/SKILL.md"
+    },
+    {
+      "name": "pf-azure",
+      "path": "pf-azure/SKILL.md"
+    },
+    {
+      "name": "pf-apis",
+      "path": "pf-apis/SKILL.md"
+    },
+    {
+      "name": "pf-data-products",
+      "path": "pf-data-products/SKILL.md"
+    },
+    {
+      "name": "pf-governance",
+      "path": "pf-governance/SKILL.md"
+    },
+    {
+      "name": "pf-finops",
+      "path": "pf-finops/SKILL.md"
+    },
+    {
+      "name": "pf-reporting",
+      "path": "pf-reporting/SKILL.md"
+    },
+    {
+      "name": "pf-knowledge",
+      "path": "pf-knowledge/SKILL.md"
+    },
+    {
+      "name": "pf-agent-factory",
+      "path": "pf-agent-factory/SKILL.md"
+    }
+  ]
+}

@@ -45,6 +45,10 @@ productforge mcp serve            # MCP tools for agent hosts
 - Vendored `_forge_portal.py` (byte-parity with `forge-portal/portal_core/forge_portal.py`) + `ProductForgePortal` adapter.
 - Read-only by default; mutations need the local bearer token (`productforge api token --show`).
 
+## Skills
+
+`skills/` ships 16 domain skills (§15.3: strategy, discovery, prioritization, requirements, SQL, analytics, dashboards, AWS, Azure, APIs, data products, governance, FinOps, reporting, knowledge, agent factory) — each validated with `skill-creator` (`agents/openai.yaml` + `quick_validate` clean). Index: `skills/index.json`.
+
 ## Status
 
-Alpha — Cycle 1–2 foundation (see `docs/audit/` for the ecosystem audit, architecture ADRs and the implementation gap matrix).
+Beta — Cycles 1–12 complete: foundation → knowledge/graph → agent runtime → analytics → dashboards → planning → cloud/API/data-product intelligence → operations → advanced agentic → homologation. The Payments Product Intelligence scenario runs end-to-end (`tests/test_homologation.py`, 30 steps) plus a negative-scenario suite. See `docs/audit/` for the ecosystem audit, ADRs and the final implementation gap matrix; deferred items are listed there explicitly.

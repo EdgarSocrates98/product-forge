@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Product Discovery"
+  short_description: "Continuous discovery: opportunities to initiatives"
+  default_prompt: "Use the pf-product-discovery skill on this Product Forge product"

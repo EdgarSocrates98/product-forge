@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Sql"
+  short_description: "Safe read-only SQL validation and execution"
+  default_prompt: "Use the pf-sql skill on this Product Forge product"

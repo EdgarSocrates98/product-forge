@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Dashboards"
+  short_description: "Dashboards rendered from real query runs"
+  default_prompt: "Use the pf-dashboards skill on this Product Forge product"
