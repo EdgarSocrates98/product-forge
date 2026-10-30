@@ -211,7 +211,22 @@ def create_app(home: Path | None = None) -> FastAPI:
 
     @app.exception_handler(HTTPException)
     async def _http_err(_req: Request, exc: HTTPException) -> JSONResponse:
-        err = {"code": f"HTTP-{exc.status_code}", "message": str(exc.detail),
+        code = ("PF-NOT-FOUND" if exc.status_code == 404
+                else f"PF-HTTP-{exc.status_code}")
+        err = {"code": code, "message": str(exc.detail),
+               "severity": "error", "retryable": exc.status_code >= 500}
+        return JSONResponse(status_code=exc.status_code, content=envelope(error=err))
+
+    from starlette.exceptions import HTTPException as _StarletteHTTPException
+
+    @app.exception_handler(_StarletteHTTPException)
+    async def _starlette_http_err(
+            _req: Request, exc: _StarletteHTTPException) -> JSONResponse:
+        # route-miss (404) and method-miss raise the starlette base class —
+        # without this they leak {"detail": ...} outside the envelope.
+        code = ("PF-NOT-FOUND" if exc.status_code == 404
+                else f"PF-HTTP-{exc.status_code}")
+        err = {"code": code, "message": str(exc.detail),
                "severity": "error", "retryable": exc.status_code >= 500}
         return JSONResponse(status_code=exc.status_code, content=envelope(error=err))
 
