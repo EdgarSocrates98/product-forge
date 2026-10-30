@@ -114,3 +114,20 @@ def test_api_agent_flow(home):
     c.post(f"/api/v1/products/{pid}/agents/{aid}/eval", headers=h)
     r = c.post(f"/api/v1/products/{pid}/agents/{aid}/publish", headers=h)
     assert r.status_code in (200, 400)  # depends on eval score
+
+
+def test_risk_tiered_publish_gates() -> None:
+    """F1: publish gate scales with tool-allowlist risk (§25)."""
+    from product_forge.agents.policy import publish_gate, risk_tier
+    from product_forge.domain.models import AgentDefinition
+
+    low = AgentDefinition(id="a1", product_id="p", name="l", mission="m",
+                          tools_allowed=["knowledge_query"])
+    assert risk_tier(low) == "low"
+    assert publish_gate(low)["eval_gate"] == 0.50
+
+    unknown = AgentDefinition(id="a2", product_id="p", name="u", mission="m",
+                              tools_allowed=["nonexistent_tool"])
+    assert risk_tier(unknown) == "high"          # conservative
+    assert publish_gate(unknown)["eval_gate"] == 0.80
+    assert publish_gate(unknown)["approval_required"] is True

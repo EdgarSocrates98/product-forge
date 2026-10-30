@@ -30,6 +30,39 @@ class PolicyReport:
 MAX_STEPS = 8
 MAX_TOOL_CALLS = 12
 
+# Risk-tiered publish gates (F1): the eval bar an agent must clear before
+# publish scales with the blast radius of its tool allowlist.
+#   low    — read-only tools only                    → gate 0.50
+#   medium — any tool with a non-read permission     → gate 0.65
+#   high   — any destructive or unknown tool         → gate 0.80 + approval
+PUBLISH_GATES = {"low": 0.50, "medium": 0.65, "high": 0.80}
+RISK_ORDER = ("low", "medium", "high")
+
+
+def risk_tier(agent: AgentDefinition) -> str:
+    """Highest risk tier implied by the agent's tool allowlist.
+
+    Unknown tools are treated as `high` — conservative by construction.
+    """
+    from .tools import REGISTRY
+
+    tier = "low"
+    for name in agent.tools_allowed or []:
+        tool = REGISTRY.get(name)
+        if tool is None or tool.destructive:
+            return "high"
+        if not tool.permission.endswith(".read"):
+            tier = "medium"
+    return tier
+
+
+def publish_gate(agent: AgentDefinition) -> dict[str, object]:
+    """Publish requirements for this agent: eval gate + approval flag."""
+    tier = risk_tier(agent)
+    return {"tier": tier, "eval_gate": PUBLISH_GATES[tier],
+            "approval_required": tier == "high",
+            "allow_destructive_required": tier == "high"}
+
 
 def check_input(agent: AgentDefinition, user_input: str) -> PolicyReport:
     rep = PolicyReport(allowed=True, sanitized_input=user_input)

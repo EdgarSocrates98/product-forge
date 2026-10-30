@@ -704,14 +704,22 @@ def create_app(home: Path | None = None) -> FastAPI:
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}/publish")
     def agent_publish(pid: str, aid: str, req: Request) -> dict:
+        from ..agents.policy import publish_gate
         from ..errors import UnsafeOperationError
 
         agent = _agent(pid, aid)
+        gate = publish_gate(agent)
         score = (agent.eval_summary or {}).get("score", 0)
         if not agent.tools_allowed:
             raise UnsafeOperationError("agent has no tools_allowed — configure permissions first")
-        if score < 0.5:
-            raise UnsafeOperationError(f"eval score {score} below publish gate 0.5")
+        if score < float(gate["eval_gate"]):
+            raise UnsafeOperationError(
+                f"eval score {score} below publish gate {gate['eval_gate']} "
+                f"(risk tier {gate['tier']})")
+        if gate["approval_required"] and not agent.policies.get("allow_destructive"):
+            raise UnsafeOperationError(
+                "high-risk agent (destructive/unknown tools) requires "
+                "policies.allow_destructive=true before publish")
         agent.status = agent.status.PUBLISHED
         agent.version += 1
         ctx.store.put("agents", agent)
