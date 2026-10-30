@@ -32,6 +32,25 @@ def tool_specs() -> list[dict[str, Any]]:
                          "required": ["product_id", "question"]}},
         {"name": "agent_list", "description": "List agent definitions for a product",
          "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}},  # noqa: E501
+        {"name": "product_graph", "description": "Entity/relation graph projection for a product",
+         "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}},  # noqa: E501
+        {"name": "knowledge_health", "description": "Knowledge coverage/citation health for a product",
+         "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}},  # noqa: E501
+        {"name": "query_validate", "description": "Validate a read-only SQL statement (sqlglot)",
+         "inputSchema": {"type": "object", "properties": {"statement": {"type": "string"}}, "required": ["statement"]}},  # noqa: E501
+        {"name": "dashboard_list", "description": "List dashboards for a product",
+         "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}},  # noqa: E501
+        {"name": "roadmap", "description": "Now/next/later roadmap lanes for a product",
+         "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}},  # noqa: E501
+        {"name": "alerts_list", "description": "List open/acked alerts for a product",
+         "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}},  # noqa: E501
+        {"name": "audit_list", "description": "Audit events (optionally filtered by product_id)",
+         "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}}},  # noqa: E501
+        {"name": "agent_run", "description": "Run a product agent (policy-checked, audited)",
+         "inputSchema": {"type": "object", "properties": {"agent_id": {"type": "string"}, "input": {"type": "string"}},  # noqa: E501
+                         "required": ["agent_id", "input"]}},
+        {"name": "agent_eval", "description": "Run the default eval suite for an agent and persist the score",
+         "inputSchema": {"type": "object", "properties": {"agent_id": {"type": "string"}}, "required": ["agent_id"]}},  # noqa: E501
     ]
 
 
@@ -56,6 +75,40 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                 {"chunk_id": h["id"], "document_id": h["document_id"], "snippet": h["snip"]} for h in hits]}
         if name == "agent_list":
             return {"items": st.list("agents", product_id=args["product_id"])}
+        if name == "product_graph":
+            from ..knowledge.graph import product_graph
+            return product_graph(st, args["product_id"])
+        if name == "knowledge_health":
+            from ..knowledge.graph import knowledge_health
+            return knowledge_health(st, args["product_id"])
+        if name == "query_validate":
+            from dataclasses import asdict
+
+            from ..analytics.sqlvalidate import validate
+            return asdict(validate(args["statement"]))
+        if name == "dashboard_list":
+            return {"items": st.list("dashboards", product_id=args["product_id"])}
+        if name == "roadmap":
+            from ..planning.roadmap import build_roadmap
+            return build_roadmap(st, args["product_id"])
+        if name == "alerts_list":
+            return {"items": st.list("alerts", product_id=args["product_id"])}
+        if name == "audit_list":
+            pid = args.get("product_id")
+            items = st.list("audit_events", limit=100)
+            if pid:
+                items = [a for a in items if a.get("product_id") == pid]
+            return {"items": items}
+        if name == "agent_run":
+            from ..agents.runtime import run_agent
+            from ..domain.models import AgentDefinition
+            agent = AgentDefinition.model_validate(st.get("agents", args["agent_id"]))
+            return run_agent(st, agent, args["input"], actor="mcp")
+        if name == "agent_eval":
+            from ..agents.evals import run_evals
+            from ..domain.models import AgentDefinition
+            agent = AgentDefinition.model_validate(st.get("agents", args["agent_id"]))
+            return run_evals(st, agent)
         return {"error": f"unknown tool: {name}"}
     finally:
         st.close()

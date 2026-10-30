@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Aws"
+  short_description: "AWS product intelligence with honest states"
+  default_prompt: "Use the pf-aws skill on this Product Forge product"

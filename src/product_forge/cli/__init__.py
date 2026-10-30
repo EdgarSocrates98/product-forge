@@ -10,7 +10,7 @@ from typing import Any
 import typer
 
 from .. import FORGE_ID, __version__
-from ..config import db_path, home_dir, load_config, save_config
+from ..config import db_path, home_dir, load_config
 from ..domain.models import utcnow
 from ..security import TokenStore
 from ..store.sqlite import Store
@@ -47,18 +47,80 @@ def version() -> None:
 
 
 @app.command()
-def install(yes: bool = typer.Option(False, "--yes"), scope: str = typer.Option("user", "--scope")) -> None:
-    """Initialize Product Forge home, config and database."""
-    home = home_dir(scope if scope in ("user", "project") else "user")  # type: ignore[arg-type]
-    home.mkdir(parents=True, exist_ok=True)
-    (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
-    cfg = load_config(home)
-    save_config(cfg, home)
-    st = _store()
-    st.close()
-    tok = TokenStore(home / str(cfg["api"]["token_file"]))
-    _out({"installed": True, "home": str(home), "version": __version__,
-          "api_token_preview": tok.preview})
+def install(yes: bool = typer.Option(False, "--yes"),
+            scope: str = typer.Option("user", "--scope",
+                                      help="user | project"),
+            profile: str = typer.Option("recommended", "--profile",
+                                        help="minimal | recommended | full"),
+            host: str = typer.Option("all", "--host",
+                                     help="claude,devin,codex,copilot | all | none"),
+            root: str = typer.Option(None, "--root"),
+            components: str = typer.Option(None, "--components",
+                                           help="csv: skills,agents,mcp,tui,graph-studio"),
+            dry_run: bool = typer.Option(False, "--dry-run")) -> None:
+    """Install Product Forge — governed by the forge installkit.
+
+    Same engine as spark-forge-aws: profile-gated assets, ledger-tracked
+    ownership, AGENTS.md marker block, .mcp.json registration. ``--dry-run``
+    prints the plan; real writes need ``--yes``.
+    """
+    from ..install import lifecycle
+
+    hosts = () if host in ("none", "") else (
+        ("all",) if host == "all" else tuple(h.strip() for h in host.split(",")))
+    comps = tuple(c.strip() for c in components.split(",")) if components else None
+    try:
+        doc = lifecycle.install(
+            scope=scope, profile=profile, hosts=hosts,
+            root=Path(root) if root else None, components=comps,
+            dry_run=dry_run, yes=yes)
+    except Exception as e:
+        code = getattr(e, "code", "PF-INSTALL")
+        _out({"installed": False, "error": {"code": code, "message": str(e)}})
+        raise typer.Exit(1) from e
+    _out(doc)
+
+
+@app.command()
+def repair(scope: str = typer.Option("project", "--scope"),
+           root: str = typer.Option(None, "--root"),
+           dry_run: bool = typer.Option(False, "--dry-run")) -> None:
+    """Re-assert drifted managed files (missing/modified ledger entries)."""
+    from ..install import lifecycle
+
+    _out(lifecycle.repair(scope=scope, root=Path(root) if root else None,
+                          dry_run=dry_run))
+
+
+@app.command()
+def update(yes: bool = typer.Option(False, "--yes"),
+           scope: str = typer.Option("project", "--scope"),
+           profile: str = typer.Option("recommended", "--profile"),
+           host: str = typer.Option("all", "--host"),
+           root: str = typer.Option(None, "--root"),
+           dry_run: bool = typer.Option(False, "--dry-run")) -> None:
+    """Re-apply the install (idempotent — unchanged assets untouched)."""
+    from ..install import lifecycle
+
+    hosts = ("all",) if host == "all" else tuple(h.strip() for h in host.split(","))
+    try:
+        _out(lifecycle.update(scope=scope, profile=profile, hosts=hosts,
+                              root=Path(root) if root else None,
+                              yes=yes, dry_run=dry_run))
+    except Exception as e:
+        _out({"updated": False, "error": str(e)})
+        raise typer.Exit(1) from e
+
+
+@app.command()
+def uninstall(scope: str = typer.Option("project", "--scope"),
+              root: str = typer.Option(None, "--root"),
+              purge_state: bool = typer.Option(False, "--purge-state")) -> None:
+    """Remove only ledger-owned files; user/adopted files survive."""
+    from ..install import lifecycle
+
+    _out(lifecycle.uninstall(scope=scope, root=Path(root) if root else None,
+                             purge_state=purge_state))
 
 
 @app.command()

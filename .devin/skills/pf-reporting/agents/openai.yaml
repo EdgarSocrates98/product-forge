@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Reporting"
+  short_description: "Executive reports from real product state"
+  default_prompt: "Use the pf-reporting skill on this Product Forge product"

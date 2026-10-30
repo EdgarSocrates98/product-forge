@@ -76,6 +76,12 @@ Legend: ✅ done+tested · 🟡 partial · 🔲 deferred (documented, not silent
 - Portal adapter expanded (knowledge query, graph, health, query exec w/ confirm, agent run w/ confirm, roadmap, alerts): ✅
 - 56 tests green, ruff clean.
 
+## Post-Cycle 12 — Installkit parity + MCP expansion ✅
+- Vendored `src/product_forge/_installkit.py` (canonical the-forge/scripts/installkit): `install --profile minimal|recommended|full --host <hosts> --scope user|project`, plan/dry-run, ledger ownership, AGENTS.md markers, `.mcp.json`, drift → `repair`, `update`, `uninstall`. Same engine as spark-forge-aws: ✅ `install/lifecycle.py`, `tests/test_install.py`
+- MCP expanded 5 → 14 tools (graph, knowledge health, query validate, dashboards, roadmap, alerts, audit, agent run/eval): ✅ `mcp/server.py`
+- Skills shipped in wheel via `force-include` → installed into host skills dirs: ✅
+- 61 tests green, ruff clean.
+
 ## Deferred (explicitly, not silently)
 - Angular module inside forge-portal repo (cross-repo PR required)
 - LLM-backed synthesis (returns `unavailable:no-llm-provider` until gateway configured)

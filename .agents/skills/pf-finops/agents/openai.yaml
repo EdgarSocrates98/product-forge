@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Finops"
+  short_description: "Agent budgets and honest cloud cost states"
+  default_prompt: "Use the pf-finops skill on this Product Forge product"

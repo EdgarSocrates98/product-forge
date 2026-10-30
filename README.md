@@ -21,9 +21,14 @@ Surfaces: **CLI** (`productforge`), **HTTP API** (`/api/v1`, `forge/PortalApi/1`
 ```bash
 uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
 # or: pip install -e ".[api,mcp,analytics]"
-productforge install --yes
+productforge install --yes                        # user scope (runtime home + hosts)
+productforge install --scope project --yes        # into a repo: skills + .mcp.json + AGENTS.md
+productforge install --dry-run                    # plan only, zero writes
+productforge repair / update / uninstall          # lifecycle verbs (ledger-governed)
 productforge status
 ```
+
+Install is governed by the **vendored forge installkit** (`src/product_forge/_installkit.py`, canonical `the-forge/scripts/installkit`) — the same engine spark-forge-aws uses: profile-gated assets (`minimal|recommended|full`), ledger-tracked ownership (uninstall removes only owned files), AGENTS.md marker blocks, `.mcp.json` registration, drift detection and repair. The 16 `pf-*` skills are shipped inside the wheel (`force-include`) and placed into each selected host's skills dir (`.devin/skills`, `.agents/skills`, `.claude/skills`, `.codex`, …).
 
 ## Quickstart
 
@@ -48,6 +53,10 @@ productforge mcp serve            # MCP tools for agent hosts
 ## Skills
 
 `skills/` ships 16 domain skills (§15.3: strategy, discovery, prioritization, requirements, SQL, analytics, dashboards, AWS, Azure, APIs, data products, governance, FinOps, reporting, knowledge, agent factory) — each validated with `skill-creator` (`agents/openai.yaml` + `quick_validate` clean). Index: `skills/index.json`.
+
+## MCP
+
+`productforge mcp serve` — stdio JSON-RPC server exposing 14 tools: `productforge_status`, `product_list`, `product_context`, `knowledge_query`, `agent_list`, `product_graph`, `knowledge_health`, `query_validate`, `dashboard_list`, `roadmap`, `alerts_list`, `audit_list`, `agent_run`, `agent_eval`. `install --scope project` registers it in `.mcp.json` for host auto-discovery.
 
 ## Status
 

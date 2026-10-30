@@ -222,9 +222,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1793321462.5519633,
-    "seen": 1793321848.3738487,
-    "ast_hash": "ae2a05323b8db7535363d595fb5282fa",
+    "mtime": 1793322710.0952303,
+    "seen": 1793322727.2440598,
+    "ast_hash": "cdc095542db200cd2296ae1b7946d455",
     "semantic_hash": ""
   },
   "docs/adr/ADR-001-architecture-and-persistence.md": {
@@ -429,6 +429,204 @@
     "mtime": 1793322488.680212,
     "seen": 1793322567.7682352,
     "ast_hash": "92f9c1c7f7ef1b7284ce6ee9af353594",
+    "semantic_hash": ""
+  },
+  "skills/index.json": {
+    "mtime": 1793322676.6766813,
+    "seen": 1793322727.243965,
+    "ast_hash": "26ceadacf5f859016d2bf89c598c6eca",
+    "semantic_hash": ""
+  },
+  "skills/pf-agent-factory/SKILL.md": {
+    "mtime": 1793322695.7500184,
+    "seen": 1793322727.2440715,
+    "ast_hash": "7eb04666ed606c02223fb3a2a3ca267c",
+    "semantic_hash": ""
+  },
+  "skills/pf-agent-factory/agents/openai.yaml": {
+    "mtime": 1793322691.5557005,
+    "seen": 1793322727.2440727,
+    "ast_hash": "be75251a1b2f327a91f064eaae180a83",
+    "semantic_hash": ""
+  },
+  "skills/pf-analytics/SKILL.md": {
+    "mtime": 1793322695.7538762,
+    "seen": 1793322727.2440736,
+    "ast_hash": "694c8e96f64f5d31178d712f53457784",
+    "semantic_hash": ""
+  },
+  "skills/pf-analytics/agents/openai.yaml": {
+    "mtime": 1793322691.6041722,
+    "seen": 1793322727.2440748,
+    "ast_hash": "9e35746f1639837099d08113cbe7362d",
+    "semantic_hash": ""
+  },
+  "skills/pf-apis/SKILL.md": {
+    "mtime": 1793322695.753961,
+    "seen": 1793322727.2440758,
+    "ast_hash": "b205ee2660f9045902f22e7956cb9031",
+    "semantic_hash": ""
+  },
+  "skills/pf-apis/agents/openai.yaml": {
+    "mtime": 1793322691.6499877,
+    "seen": 1793322727.2440767,
+    "ast_hash": "03c08dcf32f8e5f958ea31e410605722",
+    "semantic_hash": ""
+  },
+  "skills/pf-aws/SKILL.md": {
+    "mtime": 1793322695.749743,
+    "seen": 1793322727.244078,
+    "ast_hash": "da458cfddbcf70e31081bf8e779f041b",
+    "semantic_hash": ""
+  },
+  "skills/pf-aws/agents/openai.yaml": {
+    "mtime": 1793322691.6955278,
+    "seen": 1793322727.2440789,
+    "ast_hash": "71ebeaed18739c5bb23a2cc490da073d",
+    "semantic_hash": ""
+  },
+  "skills/pf-azure/SKILL.md": {
+    "mtime": 1793322695.7499478,
+    "seen": 1793322727.2440798,
+    "ast_hash": "0415f515574e9b05e3a1007225b1316a",
+    "semantic_hash": ""
+  },
+  "skills/pf-azure/agents/openai.yaml": {
+    "mtime": 1793322691.742109,
+    "seen": 1793322727.2440808,
+    "ast_hash": "23f27acfdcf007239d3b291310df8923",
+    "semantic_hash": ""
+  },
+  "skills/pf-dashboards/SKILL.md": {
+    "mtime": 1793322695.7535977,
+    "seen": 1793322727.2440817,
+    "ast_hash": "2f278444698a8d6bd7e42cef3b60f271",
+    "semantic_hash": ""
+  },
+  "skills/pf-dashboards/agents/openai.yaml": {
+    "mtime": 1793322691.7926974,
+    "seen": 1793322727.2440827,
+    "ast_hash": "68b2451e0e81e4afade9aca3da80d71e",
+    "semantic_hash": ""
+  },
+  "skills/pf-data-products/SKILL.md": {
+    "mtime": 1793322695.7498832,
+    "seen": 1793322727.2440836,
+    "ast_hash": "7b852c8a65674ff36a4b0ae9ebb7accf",
+    "semantic_hash": ""
+  },
+  "skills/pf-data-products/agents/openai.yaml": {
+    "mtime": 1793322691.840876,
+    "seen": 1793322727.2440865,
+    "ast_hash": "4493d8927b97aebceab82a6e11935eab",
+    "semantic_hash": ""
+  },
+  "skills/pf-finops/SKILL.md": {
+    "mtime": 1793322695.754051,
+    "seen": 1793322727.2440875,
+    "ast_hash": "0b55aeb24d327ac91463145cde5743b0",
+    "semantic_hash": ""
+  },
+  "skills/pf-finops/agents/openai.yaml": {
+    "mtime": 1793322691.8868341,
+    "seen": 1793322727.2440886,
+    "ast_hash": "df0dc7ca816751fe872ca96c6b754651",
+    "semantic_hash": ""
+  },
+  "skills/pf-governance/SKILL.md": {
+    "mtime": 1793322695.749669,
+    "seen": 1793322727.2440898,
+    "ast_hash": "d9ea4298778f4cfbc1e281a7f7e9866b",
+    "semantic_hash": ""
+  },
+  "skills/pf-governance/agents/openai.yaml": {
+    "mtime": 1793322691.9341047,
+    "seen": 1793322727.2440906,
+    "ast_hash": "f1c1d15f012bcb6cb7cfdb491f237034",
+    "semantic_hash": ""
+  },
+  "skills/pf-knowledge/SKILL.md": {
+    "mtime": 1793322695.7537026,
+    "seen": 1793322727.2440917,
+    "ast_hash": "d875dd2f3ed59151d2a3f4b5572828d6",
+    "semantic_hash": ""
+  },
+  "skills/pf-knowledge/agents/openai.yaml": {
+    "mtime": 1793322691.9813883,
+    "seen": 1793322727.2440927,
+    "ast_hash": "2bc2240407092488e419c328564a9bda",
+    "semantic_hash": ""
+  },
+  "skills/pf-prioritization/SKILL.md": {
+    "mtime": 1793322695.749814,
+    "seen": 1793322727.2440937,
+    "ast_hash": "a210886513f3bb25c6d699f1be059e17",
+    "semantic_hash": ""
+  },
+  "skills/pf-prioritization/agents/openai.yaml": {
+    "mtime": 1793322692.0273924,
+    "seen": 1793322727.2440946,
+    "ast_hash": "f668550a39708669c1267e59e432128c",
+    "semantic_hash": ""
+  },
+  "skills/pf-product-discovery/SKILL.md": {
+    "mtime": 1793322695.749604,
+    "seen": 1793322727.2440956,
+    "ast_hash": "55b7629c097c84e24af04c62c0329fb1",
+    "semantic_hash": ""
+  },
+  "skills/pf-product-discovery/agents/openai.yaml": {
+    "mtime": 1793322692.0740108,
+    "seen": 1793322727.2440965,
+    "ast_hash": "b23ea43cc54a2228ca6feef7b851f8d5",
+    "semantic_hash": ""
+  },
+  "skills/pf-product-strategy/SKILL.md": {
+    "mtime": 1793322695.7488453,
+    "seen": 1793322727.2440975,
+    "ast_hash": "84a83486c75d366a15d4fdf8cbb9c8bc",
+    "semantic_hash": ""
+  },
+  "skills/pf-product-strategy/agents/openai.yaml": {
+    "mtime": 1793322692.1213944,
+    "seen": 1793322727.2440987,
+    "ast_hash": "f0882fbe8bae396f3f5f5d5efd11ab9f",
+    "semantic_hash": ""
+  },
+  "skills/pf-reporting/SKILL.md": {
+    "mtime": 1793322695.749536,
+    "seen": 1793322727.2440996,
+    "ast_hash": "022abfe8ebcee994561f44e8df65dc88",
+    "semantic_hash": ""
+  },
+  "skills/pf-reporting/agents/openai.yaml": {
+    "mtime": 1793322692.1686974,
+    "seen": 1793322727.2441003,
+    "ast_hash": "5d0ca85ae2006ceeed431912079189ae",
+    "semantic_hash": ""
+  },
+  "skills/pf-requirements/SKILL.md": {
+    "mtime": 1793322695.7541354,
+    "seen": 1793322727.2441013,
+    "ast_hash": "8f7afe6fefb8f9a7fcfaeeefd6a5b5a1",
+    "semantic_hash": ""
+  },
+  "skills/pf-requirements/agents/openai.yaml": {
+    "mtime": 1793322692.216154,
+    "seen": 1793322727.2441025,
+    "ast_hash": "696dfec5ae01dafa2271fd6c42f29d49",
+    "semantic_hash": ""
+  },
+  "skills/pf-sql/SKILL.md": {
+    "mtime": 1793322695.7537906,
+    "seen": 1793322727.2441032,
+    "ast_hash": "708fcb1976f0262e1a84464b2c50aefc",
+    "semantic_hash": ""
+  },
+  "skills/pf-sql/agents/openai.yaml": {
+    "mtime": 1793322692.2630115,
+    "seen": 1793322727.2441044,
+    "ast_hash": "8697a7ca9074ee8346ebf88ad65c692b",
     "semantic_hash": ""
   }
 }

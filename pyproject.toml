@@ -75,6 +75,11 @@ path = "src/product_forge/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/product_forge"]
 
+[tool.hatch.build.targets.wheel.force-include]
+# Ship the domain skills inside the wheel so `productforge install` can
+# place them under each host's skills dir without a repo checkout.
+"skills" = "product_forge/skills"
+
 [tool.hatch.build.targets.sdist]
 include = ["src", "tests", "schemas", "knowledge", "docs", "README.md", "CHANGELOG.md", "LICENSE", "forge.json", "forge.agentic.json"]
 
@@ -89,7 +94,10 @@ markers = [
 target-version = "py311"
 line-length = 110
 src = ["src", "tests"]
-exclude = ["src/product_forge/_forge_portal.py"]  # vendored byte-parity — never edit
+exclude = [
+    "src/product_forge/_forge_portal.py",  # vendored byte-parity — never edit
+    "src/product_forge/_installkit.py",    # vendored forge installkit — never edit
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "W"]

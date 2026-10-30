@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Data Products"
+  short_description: "Data contracts, validation and impact"
+  default_prompt: "Use the pf-data-products skill on this Product Forge product"

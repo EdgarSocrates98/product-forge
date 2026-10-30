@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Knowledge"
+  short_description: "Doc import, cited search, entity graph"
+  default_prompt: "Use the pf-knowledge skill on this Product Forge product"

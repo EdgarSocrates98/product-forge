@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Product Strategy"
+  short_description: "Product strategy grounded in the context package"
+  default_prompt: "Use the pf-product-strategy skill on this Product Forge product"

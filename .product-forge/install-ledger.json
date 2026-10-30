@@ -1,0 +1,467 @@
+{
+  "entries": {
+    ".agents/skills/pf-agent-factory/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "1966a0b4cb9cae7e48280c393742245d2f0341af89a3cd78331cfe26c1960feb",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-agent-factory/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "b88a194f2684a73c9e282b151a88348ea6b4f941ee1b5ef6fec27e78e80ccd95",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-analytics/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "14810629b785554c8859d7ca5dcc0e0b9315290a74e996c0834614135cc9c528",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-analytics/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "a62e9c41b206d07cb97c08658477f193c56507c083250935ea2d9adf72b1ccf8",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-apis/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "77b4620760c9242deef59ee7fc8d20e7721b4365f270b8dcfcbbf06d86079f6c",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-apis/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "c6494a26f4d14bc061a150ce2083a8e53e24021bf01ed47738c8342fd3817c29",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-aws/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "6a2200ea0efb60d1c207daa95919ca8f3a11960f1a2216a07c522cbc355b0ccc",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-aws/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "3cc2ceba6405c71d934f46d7c679e9069f74681ff507499f9c8fe47770ac634d",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-azure/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "578a480e6b521d2ce071988d5f4d392736db556363c5738bd461b0308f7b84be",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-azure/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "0a0314ea40b4135abec7b1374928849d2b6b4e61cf9e2485d84ae884a26680b1",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-dashboards/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "1671494767f01a26444b1dcc84607e0f722e3090d9e3eaff9c6991705f936f86",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-dashboards/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "0935775307e25db55e4cca9d0f121008fcfae6cac5e4584a2059a2a2dac3352f",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-data-products/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "d42ba3ec7ee2c0fbea43a7f2bec1b7117f4c027d425d02c251aec8db3cf81d5a",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-data-products/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "7a9d13f8586f2d62d44baab2545e83d8cb0045bbc27a085350811781e9c6b2e7",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-finops/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "b4525a814761ee47a553d9a11124a79042ebdabaacf8fa1da4c68bf1dda2a397",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-finops/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "425bd8df667d6aabec61cfdeb1edd37667469e7621fd2dc88e4622f66be07095",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-governance/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "915add1e759097c3a42d86cf8640a374727d0a0beece8d9c8444d01417451576",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-governance/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "560ad584f47596f22994e53b760893070c3163aa4a0fd1086ce66cc0fe7d0d16",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-knowledge/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "4ca853afa4b95e4fb592286255ad46c5ef61cb12e1546f266e5517f0c2c2a3eb",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-knowledge/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "e01b4da386e59b7376258c9cb481e6d77c5be95a8adc2fad1386385ea7584eb1",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-prioritization/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "28c1bfb44c4e8c4ce420d4038caf0f5f1a03084f174eae7220b2a80ae36161dd",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-prioritization/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "cb25e3c7c199cecaca74a95776a04bbbd509970aacec3e897dd2dc1ede9080d9",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-product-discovery/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "5724949933aee45efb9f0949186728691bac08a87c898da1c209566d09701074",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-product-discovery/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "3bd2fba2fd8730ae9937906cd600ab69076a9199fb1da40a59b61f0de52a3997",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-product-strategy/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "8a5b618aaf963a092a3f186a05a6fcdd287470b423c02fa2f3e8b11ead1956d8",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-product-strategy/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "f23642dc20fb533f18f78e43d250516d9923b6951161d8f4be665bd1741a03a1",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-reporting/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "c3a4bf02c826783436fce9afd0137336fb4df21cdabc1732dd732c0c1326ee52",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-reporting/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "7d4254ba3da092813c7d52e95d6307eac60db5166151ff96e7726757138bf808",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-requirements/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "9d5cc64e255f9311761e749ce931db160c50ba172ff169cfff07e86c0c3cd450",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-requirements/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "d33062389d634b20c850f4d71d2f736fdeb86679b62f3e9f1afa66453734df46",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-sql/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "7c67b1d3e5ca51b88a9f6b1aa00fdad2fab680976ca438aeb412f8c7cd53205e",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".agents/skills/pf-sql/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "be20988205603e203be37cc142dcc6b13c6a3a33efcdf9765d9450da61c54309",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-agent-factory/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "1966a0b4cb9cae7e48280c393742245d2f0341af89a3cd78331cfe26c1960feb",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-agent-factory/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "b88a194f2684a73c9e282b151a88348ea6b4f941ee1b5ef6fec27e78e80ccd95",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-analytics/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "14810629b785554c8859d7ca5dcc0e0b9315290a74e996c0834614135cc9c528",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-analytics/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "a62e9c41b206d07cb97c08658477f193c56507c083250935ea2d9adf72b1ccf8",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-apis/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "77b4620760c9242deef59ee7fc8d20e7721b4365f270b8dcfcbbf06d86079f6c",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-apis/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "c6494a26f4d14bc061a150ce2083a8e53e24021bf01ed47738c8342fd3817c29",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-aws/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "6a2200ea0efb60d1c207daa95919ca8f3a11960f1a2216a07c522cbc355b0ccc",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-aws/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "3cc2ceba6405c71d934f46d7c679e9069f74681ff507499f9c8fe47770ac634d",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-azure/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "578a480e6b521d2ce071988d5f4d392736db556363c5738bd461b0308f7b84be",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-azure/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "0a0314ea40b4135abec7b1374928849d2b6b4e61cf9e2485d84ae884a26680b1",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-dashboards/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "1671494767f01a26444b1dcc84607e0f722e3090d9e3eaff9c6991705f936f86",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-dashboards/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "0935775307e25db55e4cca9d0f121008fcfae6cac5e4584a2059a2a2dac3352f",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-data-products/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "d42ba3ec7ee2c0fbea43a7f2bec1b7117f4c027d425d02c251aec8db3cf81d5a",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-data-products/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "7a9d13f8586f2d62d44baab2545e83d8cb0045bbc27a085350811781e9c6b2e7",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-finops/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "b4525a814761ee47a553d9a11124a79042ebdabaacf8fa1da4c68bf1dda2a397",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-finops/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "425bd8df667d6aabec61cfdeb1edd37667469e7621fd2dc88e4622f66be07095",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-governance/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "915add1e759097c3a42d86cf8640a374727d0a0beece8d9c8444d01417451576",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-governance/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "560ad584f47596f22994e53b760893070c3163aa4a0fd1086ce66cc0fe7d0d16",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-knowledge/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "4ca853afa4b95e4fb592286255ad46c5ef61cb12e1546f266e5517f0c2c2a3eb",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-knowledge/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "e01b4da386e59b7376258c9cb481e6d77c5be95a8adc2fad1386385ea7584eb1",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-prioritization/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "28c1bfb44c4e8c4ce420d4038caf0f5f1a03084f174eae7220b2a80ae36161dd",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-prioritization/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "cb25e3c7c199cecaca74a95776a04bbbd509970aacec3e897dd2dc1ede9080d9",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-product-discovery/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "5724949933aee45efb9f0949186728691bac08a87c898da1c209566d09701074",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-product-discovery/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "3bd2fba2fd8730ae9937906cd600ab69076a9199fb1da40a59b61f0de52a3997",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-product-strategy/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "8a5b618aaf963a092a3f186a05a6fcdd287470b423c02fa2f3e8b11ead1956d8",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-product-strategy/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "f23642dc20fb533f18f78e43d250516d9923b6951161d8f4be665bd1741a03a1",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-reporting/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "c3a4bf02c826783436fce9afd0137336fb4df21cdabc1732dd732c0c1326ee52",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-reporting/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "7d4254ba3da092813c7d52e95d6307eac60db5166151ff96e7726757138bf808",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-requirements/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "9d5cc64e255f9311761e749ce931db160c50ba172ff169cfff07e86c0c3cd450",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-requirements/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "d33062389d634b20c850f4d71d2f736fdeb86679b62f3e9f1afa66453734df46",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-sql/SKILL.md": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "7c67b1d3e5ca51b88a9f6b1aa00fdad2fab680976ca438aeb412f8c7cd53205e",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".devin/skills/pf-sql/agents/openai.yaml": {
+      "action": "unchanged",
+      "kind": "skill",
+      "managed": true,
+      "sha256": "be20988205603e203be37cc142dcc6b13c6a3a33efcdf9765d9450da61c54309",
+      "updated_at": "2026-10-30T01:19:36Z"
+    },
+    ".mcp.json": {
+      "action": "created",
+      "kind": "mcp",
+      "managed": true,
+      "sha256": "cd81f6b80028019e6261c05e4818d32ff98b32adfe8ba3da6f5d1e95a5e81644",
+      "updated_at": "2026-10-30T01:18:27Z"
+    },
+    "AGENTS.md": {
+      "action": "created",
+      "kind": "marker",
+      "managed": true,
+      "sha256": "dfcd92571a00e81cbc129d3652877e4bf76d0ead51fbcf73f59c120b72d03df7",
+      "updated_at": "2026-10-30T01:18:27Z"
+    }
+  },
+  "schema": "forge/InstallLedger/v1"
+}

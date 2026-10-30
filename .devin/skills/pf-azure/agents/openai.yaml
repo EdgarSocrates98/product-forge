@@ -1,0 +1,4 @@
+interface:
+  display_name: "PF Azure"
+  short_description: "Azure/Fabric/PowerBI intelligence, honest states"
+  default_prompt: "Use the pf-azure skill on this Product Forge product"

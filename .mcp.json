@@ -1,0 +1,16 @@
+{
+  "_forge_managed": {
+    "product-forge": [
+      "mcpServers.product-forge"
+    ]
+  },
+  "mcpServers": {
+    "product-forge": {
+      "args": [
+        "mcp",
+        "serve"
+      ],
+      "command": "productforge"
+    }
+  }
+}

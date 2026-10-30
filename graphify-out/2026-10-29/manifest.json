@@ -54,9 +54,9 @@
     "semantic_hash": ""
   },
   "src/product_forge/api/app.py": {
-    "mtime": 1793322376.5676076,
-    "seen": 1793322433.4036999,
-    "ast_hash": "3a34e2989f0df6ecf503d2c08da1bbfb",
+    "mtime": 1793322470.5681224,
+    "seen": 1793322567.7681823,
+    "ast_hash": "e67a82d4321c173a565e62eb8b1c3cd2",
     "semantic_hash": ""
   },
   "src/product_forge/cli/__init__.py": {
@@ -156,9 +156,9 @@
     "semantic_hash": ""
   },
   "src/product_forge/portal/adapter.py": {
-    "mtime": 1793321580.020903,
-    "seen": 1793321848.3738382,
-    "ast_hash": "53611e1fb23b25ae480a1f19122e46b7",
+    "mtime": 1793322496.5919683,
+    "seen": 1793322567.7682178,
+    "ast_hash": "99b821cea8a8f8a4e8c538c2354ff32b",
     "semantic_hash": ""
   },
   "src/product_forge/reports/__init__.py": {
@@ -246,9 +246,9 @@
     "semantic_hash": ""
   },
   "docs/audit/IMPLEMENTATION_GAP_MATRIX.md": {
-    "mtime": 1793321571.9041746,
-    "seen": 1793321848.3738523,
-    "ast_hash": "dcfca7e9775e2a18db4d94f3bd8b3f30",
+    "mtime": 1793322561.9222004,
+    "seen": 1793322567.7682445,
+    "ast_hash": "e2664c3fbc220f967b33ca8f698dc828",
     "semantic_hash": ""
   },
   "docs/audit/INTEGRATION_CONTRACTS.md": {
@@ -417,6 +417,18 @@
     "mtime": 1793322406.288468,
     "seen": 1793322433.4037814,
     "ast_hash": "b59087861621c7ba32e1a09f3441af08",
+    "semantic_hash": ""
+  },
+  "tests/test_homologation.py": {
+    "mtime": 1793322528.9785008,
+    "seen": 1793322567.7682343,
+    "ast_hash": "36920dfde59724ae20139b0b0cf3dce3",
+    "semantic_hash": ""
+  },
+  "tests/test_negative.py": {
+    "mtime": 1793322488.680212,
+    "seen": 1793322567.7682352,
+    "ast_hash": "92f9c1c7f7ef1b7284ce6ee9af353594",
     "semantic_hash": ""
   }
 }
