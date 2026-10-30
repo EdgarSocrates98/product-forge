@@ -16,9 +16,12 @@ Let a PM/PA answer data questions via schema explorer + compiled/NL queries.
 
 ## Instruções
 1. Verify connectivity: `POST /data-sources/{sid}/verify`.
-2. Browse schema: `GET /data-sources/{sid}/schema` → tables/columns/types.
-3. Ask in NL: `POST /queries/nl` — deterministic scaffold → review → execute.
-4. Persist useful runs — every execution stores a query run with provenance.
+2. Check the metric catalog first: `GET /products/{pid}/metrics` — reuse
+   governed metrics instead of re-deriving KPIs.
+3. Browse schema: `GET /data-sources/{sid}/schema` → tables/columns/types.
+4. Ask in NL: `POST /queries/nl` — `via: semantic-catalog` (metric match) or
+   `deterministic-nl` fallback → review → execute.
+5. Persist useful runs — every execution stores a query run with provenance.
 
 ## Ferramentas
 - `productforge source list|add|verify|schema`

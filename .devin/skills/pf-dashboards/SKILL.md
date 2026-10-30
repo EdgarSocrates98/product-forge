@@ -15,9 +15,11 @@ Compose KPI/chart widgets bound to executed query runs — rendered data is real
 - ≥1 completed query run for the product
 
 ## Instruções
-1. Create: `POST /products/{pid}/dashboards` with widgets [{type,title,query_run_id,config}].
-2. Render: `POST /dashboards/{did}/render` → each widget resolved against its stored run.
-3. Types: `kpi`, `line`, `bar`, `table`; filters in config.
+1. Prefer catalog metrics for KPIs — `GET /products/{pid}/metrics` gives
+   governed names + SQL; never invent a KPI formula when a catalog metric exists.
+2. Create: `POST /products/{pid}/dashboards` with widgets [{type,title,query_run_id,config}].
+3. Render: `POST /dashboards/{did}/render` → each widget resolved against its stored run.
+4. Types: `kpi`, `line`, `bar`, `table`; filters in config.
 
 ## Ferramentas
 - `productforge dashboard create|list`

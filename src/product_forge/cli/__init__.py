@@ -49,7 +49,7 @@ def version() -> None:
 @app.command()
 def install(yes: bool = typer.Option(False, "--yes"),
             scope: str = typer.Option("user", "--scope",
-                                      help="user | project"),
+                                      help="user | project | workspace"),
             profile: str = typer.Option("recommended", "--profile",
                                         help="minimal | recommended | full"),
             host: str = typer.Option("all", "--host",
@@ -57,22 +57,23 @@ def install(yes: bool = typer.Option(False, "--yes"),
             root: str = typer.Option(None, "--root"),
             components: str = typer.Option(None, "--components",
                                            help="csv: skills,agents,mcp,tui,graph-studio"),
+            gateway_profile: str = typer.Option(None, "--gateway-profile",
+                                                help="economy | balanced | deep"),
             dry_run: bool = typer.Option(False, "--dry-run")) -> None:
     """Install Product Forge — governed by the forge installkit.
 
+    Bare `productforge install` on a TTY opens the guided wizard (scope,
+    install profile, execution profile, components, hosts, plan review).
     Same engine as spark-forge-aws: profile-gated assets, ledger-tracked
     ownership, AGENTS.md marker block, .mcp.json registration. ``--dry-run``
     prints the plan; real writes need ``--yes``.
     """
-    from ..install import lifecycle
+    from ..install.cli import run_flag_install
 
-    hosts = () if host in ("none", "") else (
-        ("all",) if host == "all" else tuple(h.strip() for h in host.split(",")))
-    comps = tuple(c.strip() for c in components.split(",")) if components else None
     try:
-        doc = lifecycle.install(
-            scope=scope, profile=profile, hosts=hosts,
-            root=Path(root) if root else None, components=comps,
+        doc = run_flag_install(
+            scope=scope, profile=profile, host=host, root=root,
+            components=components, gateway_profile=gateway_profile,
             dry_run=dry_run, yes=yes)
     except Exception as e:
         code = getattr(e, "code", "PF-INSTALL")
@@ -614,6 +615,12 @@ def portal(port: int = typer.Option(0), no_open: bool = typer.Option(False, "--n
 
 
 def main() -> None:
+    # Bare `productforge install` on a TTY → guided wizard (same contract as
+    # `sparkforge-aws install`); flags/pipes keep the JSON flag path.
+    if sys.argv[1:] == ["install"]:
+        from .install.cli import guided_install_available, run_guided_install
+        if guided_install_available():
+            raise SystemExit(run_guided_install())
     app()
 
 

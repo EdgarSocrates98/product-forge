@@ -14,9 +14,10 @@ from typing import Any
 from .. import __version__
 from .. import _installkit as kit
 
-SCOPES = ("project", "user")
+SCOPES = ("project", "workspace", "user")
 PROFILES = kit.PROFILES
 HOSTS = kit.HOSTS
+GATEWAY_PROFILES = ("economy", "balanced", "deep")
 
 MARKER_BODY = """## Product Forge
 
@@ -82,9 +83,22 @@ def _agents_root() -> Path | None:
     return repo if repo.is_dir() and any(repo.rglob("*.md")) else None
 
 
+def _bundled_dir(name: str) -> Path | None:
+    """`rules`/`evals`/`knowledge` are *content* bundles at the checkout
+    root — never package code (a same-named package under
+    ``src/product_forge`` is the runtime module, not a bundle)."""
+    pkg = Path(__file__).resolve().parent.parent / name
+    if pkg.is_dir() and not (pkg / "__init__.py").exists():
+        return pkg
+    repo = Path(__file__).resolve().parents[3] / name
+    return repo if repo.is_dir() else None
+
+
 def _render_assets(ctx: kit.InstallContext) -> dict[str, bytes]:
     """Ship pf-* skills into host skills dirs and agent profiles into host
-    agents dirs — the installkit's `skill`/`agent` asset kinds gate both."""
+    agents dirs — the installkit's `skill`/`agent` asset kinds gate both.
+    Reference bundles (rules/evals/knowledge) land under
+    ``<state_dir>/bundle/`` so installs stay self-contained."""
     assets: dict[str, bytes] = {}
     skills_root = _skills_root()
     skill_files = _bundle_files(skills_root, "pf-*/") if skills_root else {}
@@ -100,6 +114,22 @@ def _render_assets(ctx: kit.InstallContext) -> dict[str, bytes]:
             elif rel_dir.endswith("agents"):
                 for rel, data in agent_files.items():
                     assets[f"{rel_dir}/{rel}"] = data
+    # Forge reference bundles — carried with every install (rules catalog,
+    # evals, knowledge seeds); runtime resolves them under the state dir.
+    try:
+        bundle_rel = ctx.state_dir.relative_to(ctx.root).as_posix()
+    except ValueError:
+        bundle_rel = ctx.spec.state_dir
+    for name in ("rules", "evals", "knowledge"):
+        root = _bundled_dir(name)
+        if not root:
+            continue
+        for f in root.rglob("*"):
+            if not f.is_file() or f.suffix in (".pyc", ".pyo") \
+                    or "__pycache__" in f.parts:
+                continue
+            rel = f.relative_to(root).as_posix()
+            assets[f"{bundle_rel}/bundle/{name}/{rel}"] = f.read_bytes()
     return assets
 
 
@@ -143,16 +173,38 @@ def _register(spec: kit.ForgeSpec, root: Path) -> None:
 def install(*, scope: str = "user", profile: str = "recommended",
             hosts: tuple[str, ...] = ("all",), root: Path | None = None,
             components: tuple[str, ...] | None = None,
+            gateway_profile: str | None = None,
             dry_run: bool = False, yes: bool = False) -> dict[str, Any]:
+    if gateway_profile is not None and gateway_profile not in GATEWAY_PROFILES:
+        raise kit.InstallError(
+            kit.E_PROFILE,
+            f"gateway_profile {gateway_profile!r}; {GATEWAY_PROFILES}")
     selected = tuple(HOSTS) if hosts == ("all",) else hosts
     ctx = _ctx(scope, profile, selected, root, dry_run, components)
     if ctx.dry_run:
         return kit.plan(ctx)
     with kit.acquire_lock(ctx.state_dir):
         result = kit.apply_install(ctx, approved=yes)
+    _persist_components(ctx, gateway_profile)
     _register(ctx.spec, ctx.root)
-    result["app_home"] = _init_app_home()
+    result["app_home"] = _init_app_home(gateway_profile)
     return result
+
+
+def _persist_components(ctx: kit.InstallContext,
+                        gateway_profile: str | None) -> None:
+    """Wizard/CLI component + execution-profile selection — the runtime
+    reads ``components.json`` under the state dir (same contract as
+    spark-forge-aws)."""
+    import json
+
+    doc = dict(ctx.options)
+    if gateway_profile:
+        doc["gateway_profile"] = gateway_profile
+    doc["profile"] = ctx.profile
+    ctx.state_dir.mkdir(parents=True, exist_ok=True)
+    (ctx.state_dir / "components.json").write_text(
+        json.dumps(doc, indent=2), encoding="utf-8")
 
 
 def status(*, scope: str = "project", root: Path | None = None) -> dict[str, Any]:
@@ -180,13 +232,20 @@ def repair(*, scope: str = "project", root: Path | None = None,
 
 def update(*, scope: str = "project", profile: str = "recommended",
            hosts: tuple[str, ...] = ("all",), root: Path | None = None,
+           gateway_profile: str | None = None,
            yes: bool = False, dry_run: bool = False) -> dict[str, Any]:
+    if gateway_profile is not None and gateway_profile not in GATEWAY_PROFILES:
+        raise kit.InstallError(
+            kit.E_PROFILE,
+            f"gateway_profile {gateway_profile!r}; {GATEWAY_PROFILES}")
     selected = tuple(HOSTS) if hosts == ("all",) else hosts
     ctx = _ctx(scope, profile, selected, root, dry_run)
     if ctx.dry_run:
         return kit.plan(ctx)
     with kit.acquire_lock(ctx.state_dir):
-        return kit.apply_install(ctx, approved=yes)
+        result = kit.apply_install(ctx, approved=yes)
+    _persist_components(ctx, gateway_profile)
+    return result
 
 
 def uninstall(*, scope: str = "project", root: Path | None = None,
@@ -196,7 +255,7 @@ def uninstall(*, scope: str = "project", root: Path | None = None,
         return kit.uninstall(ctx, purge_state=purge_state)
 
 
-def _init_app_home() -> dict[str, Any]:
+def _init_app_home(gateway_profile: str | None = None) -> dict[str, Any]:
     """The runtime home (config/db/token) — separate from the project install."""
     from ..config import db_path, home_dir, load_config, save_config
     from ..security import TokenStore
@@ -206,6 +265,8 @@ def _init_app_home() -> dict[str, Any]:
     home.mkdir(parents=True, exist_ok=True)
     (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
     cfg = load_config(home)
+    if gateway_profile:
+        cfg["gateway_profile"] = gateway_profile
     save_config(cfg, home)
     Store(db_path(home, cfg)).close()
     tok = TokenStore(home / str(cfg["api"]["token_file"]))

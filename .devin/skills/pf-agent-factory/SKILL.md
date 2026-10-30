@@ -31,7 +31,10 @@ Build product-scoped agents with declared tools, pass evals, gate publication.
 
 ## Limitações
 - Injection attempts → run status=blocked (policy engine).
-- Template runtime is deterministic; LLM generation needs a configured gateway.
+- Default runtime is deterministic template; real LLM loop (`llm_runtime.py`)
+  activates only with a configured provider subprocess — tool calls remain
+  policy-gated, tokens land in the budget ledger, no provider → honest
+  deterministic fallback (never simulated).
 
 ## Evals
 - No tools_allowed → publish 400; eval 0.3 → publish rejected; score 0.7 → ok.

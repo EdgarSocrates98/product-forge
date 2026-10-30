@@ -19,6 +19,9 @@ Get correct read-only SQL executed — never mutate, never bypass validation.
 2. Validate: `POST /queries/validate` (sqlglot — rejects writes/multi-statements).
 3. Execute: `productforge query run <pid> <sid> '<sql>'` — row limits + timeout enforced.
 4. For non-SQL users: `POST /queries/compile` (visual spec) or `POST /queries/nl` (NL scaffold).
+5. NL path: `/queries/nl` returns `via` — `semantic-catalog` when the question
+   matched a governed metric (preferred, deterministic) or `deterministic-nl`
+   fallback; surface the badge honestly.
 
 ## Ferramentas
 - `productforge source schema`
