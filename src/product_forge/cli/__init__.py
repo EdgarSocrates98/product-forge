@@ -220,8 +220,53 @@ def kn_query(product_id: str, question: str, limit: int = 5) -> None:
     _out({"question": question, "hits": hits,
           "answer": None,
           "citations": [{"chunk_id": h["id"], "document_id": h["document_id"],
-                         "snippet": h["snip"]} for h in hits],
+                         "snippet": h["snip"], "title": st.doc_title(h["document_id"])}
+                        for h in hits],
           "note": "retrieval-only; enable an LLM provider for synthesized answers"})
+    st.close()
+
+
+@kn_app.command("extract")
+def kn_extract(product_id: str) -> None:
+    """Extract provisional entities + relations from indexed chunks."""
+    from ..knowledge.extract import build_relations, extract_entities
+
+    st = _store()
+    st.get("products", product_id)
+    chunks = st.list_chunks(product_id)
+    if not chunks:
+        _out({"error": "no indexed chunks — run knowledge import first", "entities": 0})
+        st.close()
+        return
+    ents = extract_entities(product_id, chunks)
+    for e in ents:
+        st.put("entities", e)
+    rels = build_relations(product_id, ents, chunks)
+    for r in rels:
+        st.put("relations", r)
+    st.close()
+    _out({"entities": len(ents), "relations": len(rels),
+          "kinds": {k: sum(1 for e in ents if e.kind.value == k)
+                    for k in {e.kind.value for e in ents}}})
+
+
+@kn_app.command("graph")
+def kn_graph(product_id: str, limit: int = 2000) -> None:
+    """Project the product knowledge graph."""
+    from ..knowledge.graph import product_graph
+
+    st = _store()
+    _out(product_graph(st, product_id, limit))
+    st.close()
+
+
+@kn_app.command("health")
+def kn_health(product_id: str) -> None:
+    """Knowledge coverage and freshness score for a product."""
+    from ..knowledge.graph import knowledge_health
+
+    st = _store()
+    _out(knowledge_health(st, product_id))
     st.close()
 
 

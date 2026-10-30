@@ -174,6 +174,22 @@ class Store:
             self._conn.commit()
         return n
 
+    def list_chunks(self, product_id: str, limit: int = 5000) -> list[dict[str, Any]]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, document_id, seq, text FROM chunks WHERE product_id=?"
+                " ORDER BY document_id, seq LIMIT ?",
+                (product_id, limit),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def doc_title(self, document_id: str) -> str:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT doc FROM entities WHERE collection='documents' AND id=?", (document_id,)
+            ).fetchone()
+        return json.loads(row["doc"]).get("title", document_id) if row else document_id
+
     def search_fts(self, product_id: str, query: str, limit: int = 20) -> list[dict[str, Any]]:
         with self._lock:
             rows = self._conn.execute(

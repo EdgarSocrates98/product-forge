@@ -73,6 +73,11 @@ class ProductIn(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
 
+class QueryIn(BaseModel):
+    question: str = Field(min_length=1)
+    limit: int = Field(default=5, ge=1, le=50)
+
+
 class Ctx:
     """Shared runtime: home, config, store, token, rate buckets, audit."""
 
@@ -294,6 +299,75 @@ def create_app(home: Path | None = None) -> FastAPI:
     _crud("dashboards", "dashboards", Dashboard, {"name", "description", "widgets", "filters"})
     _crud("initiatives", "initiatives", Initiative, {"title", "hypothesis", "priority_score"})
     _crud("decisions", "decisions", Decision, {"title", "context", "decision", "alternatives"})
+
+    # -- knowledge (Cycle 3) ---------------------------------------------------
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/knowledge/query")
+    def kn_query(pid: str, body: QueryIn) -> dict:
+        ctx.store.get("products", pid)
+        hits = ctx.store.search_fts(pid, body.question, limit=body.limit)
+        return envelope({"question": body.question,
+                         "citations": [{"chunk_id": h["id"], "document_id": h["document_id"],
+                                        "snippet": h["snip"], "title": ctx.store.doc_title(h["document_id"])}
+                                       for h in hits],
+                         "answer": None,
+                         "synthesis": "unavailable:no-llm-provider"})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/knowledge/extract")
+    def kn_extract(pid: str, req: Request) -> dict:
+        from ..knowledge.extract import build_relations, extract_entities
+
+        ctx.store.get("products", pid)
+        chunks = ctx.store.list_chunks(pid)
+        ents = extract_entities(pid, chunks)
+        for e in ents:
+            ctx.store.put("entities", e)
+        rels = build_relations(pid, ents, chunks)
+        for r in rels:
+            ctx.store.put("relations", r)
+        ctx.audit(req, "knowledge.extract", "product", pid, product_id=pid)
+        return envelope({"entities": len(ents), "relations": len(rels),
+                         "kinds": {k: sum(1 for e in ents if e.kind.value == k)
+                                   for k in {e.kind.value for e in ents}}})
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/graph")
+    def kn_graph(pid: str, limit: int = 2000) -> dict:
+        from ..knowledge.graph import product_graph
+
+        ctx.store.get("products", pid)
+        return envelope(product_graph(ctx.store, pid, limit))
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/knowledge-health")
+    def kn_health(pid: str) -> dict:
+        from ..knowledge.graph import knowledge_health
+
+        ctx.store.get("products", pid)
+        return envelope(knowledge_health(ctx.store, pid))
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents", status_code=201)
+    def import_doc(pid: str, body: ScopedIn, req: Request) -> dict:
+        from ..domain.models import Document, DocumentStatus
+        from ..knowledge.ingest import chunk_text, sha256_text
+
+        ctx.store.get("products", pid)
+        text = str(body.model_dump().get("content", ""))
+        if not text:
+            from ..errors import ValidationError
+            raise ValidationError("document content is required")
+        doc = Document(id=new_id("doc"), product_id=pid,
+                       title=str(body.model_dump().get("title", "untitled")),
+                       content_hash=sha256_text(text), status=DocumentStatus.IMPORTED)
+        ctx.store.put("documents", doc)
+        doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(text))
+        doc.status = DocumentStatus.INDEXED
+        ctx.store.put("documents", doc)
+        ctx.audit(req, "document.import", "documents", doc.id, product_id=pid)
+        return envelope(doc.model_dump(mode="json", by_alias=True))
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents")
+    def list_docs(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("documents", product_id=pid)})
 
     @app.get(f"{API_PREFIX}/audit")
     def audit_log(product_id: str | None = None, limit: int = 100) -> dict:
