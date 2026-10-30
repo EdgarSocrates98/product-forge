@@ -82,6 +82,28 @@ class RunIn(BaseModel):
     input: str = Field(min_length=1)
 
 
+class ValidateIn(BaseModel):
+    statement: str = Field(min_length=1)
+    dialect: str = "sql"
+
+
+class ExecuteIn(BaseModel):
+    source_id: str
+    statement: str | None = None
+    spec: dict[str, Any] | None = None
+    row_limit: int = Field(default=1000, le=5000)
+    timeout_s: float = Field(default=30.0, le=120.0)
+
+
+class CompileIn(BaseModel):
+    spec: dict[str, Any]
+
+
+class NlIn(BaseModel):
+    question: str = Field(min_length=1)
+    source_id: str | None = None
+
+
 class Ctx:
     """Shared runtime: home, config, store, token, rate buckets, audit."""
 
@@ -454,6 +476,103 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.store.put("agents", agent)
         ctx.audit(req, "agent.update", "agents", aid, product_id=pid)
         return envelope(agent.model_dump(mode="json", by_alias=True))
+
+    # -- analytics (Cycle 5) ---------------------------------------------------
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/queries/validate")
+    def q_validate(pid: str, body: ValidateIn) -> dict:
+        from ..analytics.engine import validate_query
+
+        ctx.store.get("products", pid)
+        return envelope(validate_query(body.statement, body.dialect))
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/queries/compile")
+    def q_compile(pid: str, body: CompileIn) -> dict:
+        from ..analytics.engine import compile_spec
+
+        ctx.store.get("products", pid)
+        sql = compile_spec(body.spec)
+        return envelope({"sql": sql, "spec": body.spec})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/queries/nl")
+    def q_nl(pid: str, body: NlIn) -> dict:
+        from ..analytics.engine import compile_spec, nl_to_sql
+
+        ctx.store.get("products", pid)
+        tables: list[str] = []
+        if body.source_id:
+            ds = ctx.store.get("data_sources", body.source_id)
+            tables = ds.get("catalog_allowlist", [])
+        res = nl_to_sql(body.question, tables)
+        if res.get("ok"):
+            res["sql"] = compile_spec(res["spec"])
+        return envelope(res)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/queries/execute")
+    def q_execute(pid: str, body: ExecuteIn, req: Request) -> dict:
+        from ..analytics.engine import compile_spec, execute_query
+
+        ctx.store.get("products", pid)
+        statement = body.statement or (compile_spec(body.spec) if body.spec else None)
+        if not statement:
+            from ..errors import ValidationError
+            raise ValidationError("statement or spec required")
+        run = execute_query(ctx.store, pid, body.source_id, statement,
+                            row_limit=body.row_limit, timeout_s=body.timeout_s)
+        ctx.audit(req, "query.execute", "query_runs", run["id"], product_id=pid)
+        return envelope(run)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/queries/{{qid}}/cancel")
+    def q_cancel(pid: str, qid: str, req: Request) -> dict:
+        from ..analytics.engine import cancel_query
+
+        ok = cancel_query(qid)
+        ctx.audit(req, "query.cancel", "query_runs", qid, product_id=pid)
+        return envelope({"cancelled": ok, "query_id": qid})
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/queries")
+    def q_list(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("query_runs", product_id=pid)})
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/queries/{{qid}}")
+    def q_get(pid: str, qid: str) -> dict:
+        run = ctx.store.get("query_runs", qid)
+        if run.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"query {qid} not in product {pid}")
+        return envelope(run)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/data-sources/{{sid}}/schema")
+    def ds_schema(pid: str, sid: str) -> dict:
+        from ..analytics.connectors import connector_for
+
+        ds = ctx.store.get("data_sources", sid)
+        if ds.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"data source {sid} not in product {pid}")
+        return envelope(connector_for(ds).schema())
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/data-sources/{{sid}}/verify")
+    def ds_verify(pid: str, sid: str, req: Request) -> dict:
+        from ..analytics.connectors import connector_for
+        from ..domain.models import DataSource
+
+        doc = ctx.store.get("data_sources", sid)
+        if doc.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError(f"data source {sid} not in product {pid}")
+        ds = DataSource.model_validate(doc)
+        try:
+            result = connector_for(doc).verify()
+            ds.status = ds.status.HEALTHY
+        except Exception as e:
+            ds.status = ds.status.ERROR
+            result = {"status": "error", "error": str(e)[:200]}
+        ds.last_verified_at = utcnow()
+        ctx.store.put("data_sources", ds)
+        ctx.audit(req, "source.verify", "data_sources", sid, product_id=pid)
+        return envelope(result)
 
     @app.get(f"{API_PREFIX}/audit")
     def audit_log(product_id: str | None = None, limit: int = 100) -> dict:

@@ -57,7 +57,7 @@ def safe_path(raw: str | Path, roots: list[Path]) -> Path:
     p = Path(raw).expanduser().resolve()
     for root in roots:
         try:
-            p.relative_to(root.resolve())
+            p.relative_to(Path(root).expanduser().resolve())
             return p
         except ValueError:
             continue

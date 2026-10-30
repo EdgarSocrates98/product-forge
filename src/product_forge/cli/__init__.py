@@ -341,6 +341,90 @@ def ag_publish(agent_id: str) -> None:
     st.close()
 
 
+# -- analytics -------------------------------------------------------------
+
+q_app = typer.Typer(help="Analytics: validate, compile, execute queries")
+src_app = typer.Typer(help="Analytical data sources")
+app.add_typer(q_app, name="query")
+app.add_typer(src_app, name="source")
+
+
+@q_app.command("validate")
+def q_validate(statement: str, dialect: str = "sql") -> None:
+    """Validate a statement for read-only safety (sqlglot)."""
+    from ..analytics.engine import validate_query
+
+    _out(validate_query(statement, dialect))
+
+
+@q_app.command("exec")
+def q_exec(product_id: str, source_id: str, statement: str) -> None:
+    """Validate + execute a read-only query against a registered source."""
+    from ..analytics.engine import execute_query
+
+    st = _store()
+    _out(execute_query(st, product_id, source_id, statement))
+    st.close()
+
+
+@q_app.command("list")
+def q_list(product_id: str) -> None:
+    st = _store()
+    _out(st.list("query_runs", product_id=product_id))
+    st.close()
+
+
+@q_app.command("compile")
+def q_compile(spec: str) -> None:
+    """Compile a QuerySpec JSON (visual builder contract) to SQL."""
+    from ..analytics.engine import compile_spec
+
+    _out({"sql": compile_spec(json.loads(spec))})
+
+
+@src_app.command("register")
+def src_register(product_id: str, name: str, connector: str, locator: str = "",
+                 dialect: str = "sql") -> None:
+    from ..domain.models import ConnectorType, DataSource, new_id
+
+    st = _store()
+    st.get("products", product_id)
+    ds = DataSource(id=new_id("src"), product_id=product_id, name=name,
+                    connector=ConnectorType(connector), locator=locator,
+                    dialect=dialect, read_only=True)
+    st.put("data_sources", ds)
+    st.close()
+    _out(ds.model_dump(mode="json", by_alias=True))
+
+
+@src_app.command("schema")
+def src_schema(product_id: str, source_id: str) -> None:
+    from ..analytics.connectors import connector_for
+
+    st = _store()
+    _out(connector_for(st.get("data_sources", source_id)).schema())
+    st.close()
+
+
+@src_app.command("verify")
+def src_verify(product_id: str, source_id: str) -> None:
+    from ..analytics.connectors import connector_for
+    from ..domain.models import DataSource
+
+    st = _store()
+    ds = DataSource.model_validate(st.get("data_sources", source_id))
+    try:
+        res = connector_for(ds.model_dump(mode="json")).verify()
+        ds.status = ds.status.HEALTHY
+    except Exception as e:
+        ds.status = ds.status.ERROR
+        res = {"status": "error", "error": str(e)[:200]}
+    ds.last_verified_at = utcnow()
+    st.put("data_sources", ds)
+    st.close()
+    _out(res)
+
+
 # -- mcp ------------------------------------------------------------------
 
 @mcp_app.command("serve")
