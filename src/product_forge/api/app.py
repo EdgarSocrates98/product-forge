@@ -213,6 +213,11 @@ def create_app(home: Path | None = None) -> FastAPI:
         return envelope({"forge_id": FORGE_ID, "version": __version__,
                          "status": "healthy", "uptime_s": round(time.time() - ctx.started, 2)})
 
+    @app.get(f"{API_PREFIX}/agent-templates")
+    def agent_templates() -> dict:
+        from ..agents.tools import list_templates
+        return envelope({"items": list_templates()})
+
     @app.get(f"{API_PREFIX}/capabilities")
     def capabilities() -> dict:
         caps = [
@@ -347,12 +352,20 @@ def create_app(home: Path | None = None) -> FastAPI:
     def kn_query(pid: str, body: QueryIn) -> dict:
         ctx.store.get("products", pid)
         hits = ctx.store.search_fts(pid, body.question, limit=body.limit)
+        citations = [{"chunk_id": h["id"], "document_id": h["document_id"],
+                      "snippet": h["snip"], "title": ctx.store.doc_title(h["document_id"])}
+                     for h in hits]
+        from ..gateway.synthesis import synthesize
+        synth = synthesize(ctx.store, pid, body.question, citations, ctx.cfg)
         return envelope({"question": body.question,
-                         "citations": [{"chunk_id": h["id"], "document_id": h["document_id"],
-                                        "snippet": h["snip"], "title": ctx.store.doc_title(h["document_id"])}
-                                       for h in hits],
-                         "answer": None,
-                         "synthesis": "unavailable:no-llm-provider"})
+                         "citations": citations,
+                         "answer": synth.get("text"),
+                         "synthesis": ("ok" if synth["status"] == "ok"
+                                       else f"unavailable:{synth.get('reason', 'provider')}"
+                                       if synth["status"] == "unavailable"
+                                       else f"error:{synth.get('error', 'unknown')}"),
+                         "synthesis_meta": {k: v for k, v in synth.items()
+                                            if k not in ("text", "status")}})
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/knowledge/extract")
     def kn_extract(pid: str, req: Request) -> dict:

@@ -1,29 +1,29 @@
 # Graph Report - product-forge  (2026-10-29)
 
 ## Corpus Check
-- 132 files · ~49,876 words
+- 162 files · ~55,875 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1108 nodes · 1791 edges · 86 communities (82 shown, 4 thin omitted)
+- 1252 nodes · 1907 edges · 115 communities (106 shown, 9 thin omitted)
 - Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 97 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `98c2e99a`
+- Built from commit: `97def194`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - app.py
-- test_cycle3.py
+- LLM gateway integration for synthesis (replaces unavailable:no-llm-provider)
 - run_agent
 - cli/__init__.py
-- connectors.py
+- security.py
 - TokenStore
 - engine.py
 - test_negative.py
-- score_initiative
+- fixture
 - aws.py
 - test_cycle89.py
 - ProductForgePortal
@@ -46,15 +46,15 @@
 - Reporting
 - Requirements
 - Sql
-- create_app
+- MCP streamable-HTTP transport alongside stdio
 - Product Forge
-- .audit
-- client
+- Ctx
+- create_app
 - _installkit.py
 - Any
 - lifecycle.py
-- _load_json
-- apply_install
+- InstallError
+- plan
 - Store
 - tools.py
 - Agent Factory
@@ -89,7 +89,7 @@
 - Reporting
 - Requirements
 - Sql
-- _repair_content
+- Ledger
 - datacontract.py
 - sqlite.py
 - call_tool
@@ -97,10 +97,39 @@
 - runtime.py
 - run_workflow
 - record_usage
-- load_components
+- Native agent templates (§6.3) — product-analyst, data-steward, api-guardian
 - product-forge
-- AGENTS.md
+- Product Forge — Agent Instructions
 - product-forge
+- External notification delivery for alerts (webhook/email)
+- Angular module for Product Forge inside forge-portal
+- PostgreSQL store backend alongside SQLite
+- pf-extractor
+- pf-judge
+- pf-synthesizer
+- pf-verifier
+- pf-extractor
+- pf-judge
+- pf-synthesizer
+- pf-verifier
+- Product Forge — Agent Instructions
+- Agent Ops Coordinator
+- Agent Ops Coordinator
+- Data Analyst Coordinator
+- Integration Coordinator
+- Planning Coordinator
+- Product Intelligence Coordinator
+- Data Analyst Coordinator
+- Integration Coordinator
+- Planning Coordinator
+- Product Intelligence Coordinator
+- mcp_verify
+- Product Forge — agent rules (Claude mirror)
+- factory/README.md
+- backups/CLAUDE.md
+- install/__init__.py
+- Any
+- Path
 
 ## God Nodes (most connected - your core abstractions)
 1. `Store` - 57 edges
@@ -111,16 +140,16 @@
 6. `run_agent()` - 19 edges
 7. `TokenStore` - 18 edges
 8. `_store()` - 17 edges
-9. `IMPLEMENTATION_GAP_MATRIX — living status (final, Cycle 12)` - 16 edges
-10. `uninstall()` - 16 edges
+9. `uninstall()` - 16 edges
+10. `IMPLEMENTATION_GAP_MATRIX — living status (final, Cycle 12)` - 16 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `test_schema_explorer()` --uses--> `SQLiteConnector`  [INFERRED]
-  tests/test_cycle5.py → src/product_forge/analytics/connectors.py
-- `test_api_knowledge_flow()` --calls--> `create_app()`  [INFERRED]
-  tests/test_cycle3.py → src/product_forge/api/app.py
+- `test_api_agent_flow()` --calls--> `create_app()`  [INFERRED]
+  tests/test_cycle4.py → src/product_forge/api/app.py
 - `test_mcp_tools_expanded()` --calls--> `Store`  [INFERRED]
   tests/test_install.py → src/product_forge/store/sqlite.py
+- `test_schema_explorer()` --uses--> `SQLiteConnector`  [INFERRED]
+  tests/test_cycle5.py → src/product_forge/analytics/connectors.py
 - `_store()` --uses--> `Store`  [INFERRED]
   tests/test_cycle1011.py → src/product_forge/store/sqlite.py
 - `_seed()` --uses--> `Store`  [INFERRED]
@@ -129,43 +158,43 @@
 ## Import Cycles
 - None detected.
 
-## Communities (86 total, 4 thin omitted)
+## Communities (115 total, 9 thin omitted)
 
 ### Community 0 - "app.py"
-Cohesion: 0.26
-Nodes (12): BaseModel, CompileIn, ExecuteIn, NlIn, ProductIn, QueryIn, HTTP API — forge/PortalApi/1 envelope, bearer auth, audit. Every response uses…, Open body for product-scoped creates; fields whitelisted per route. (+4 more)
+Cohesion: 0.22
+Nodes (14): BaseModel, _cid(), CompileIn, envelope(), ExecuteIn, NlIn, ProductIn, QueryIn (+6 more)
 
-### Community 1 - "test_cycle3.py"
-Cohesion: 0.38
-Nodes (6): home(), Cycle 3: extraction, graph, knowledge health., _seed(), test_api_knowledge_flow(), test_extract_and_graph(), test_knowledge_health()
+### Community 1 - "LLM gateway integration for synthesis (replaces unavailable:no-llm-provider)"
+Cohesion: 0.29
+Nodes (6): Acceptance Criteria, Constraints, Context, Grill Gate, LLM gateway integration for synthesis (replaces unavailable:no-llm-provider), Review Notes
 
 ### Community 2 - "run_agent"
-Cohesion: 0.19
-Nodes (18): AgentDefinition, json_str(), Any, Agent evaluation harness — real runs against real knowledge. A case: {question,…, run_evals(), check_budget(), check_input(), check_tool() (+10 more)
+Cohesion: 0.18
+Nodes (19): AgentDefinition, json_str(), Any, Agent evaluation harness — real runs against real knowledge. A case: {question,…, run_evals(), check_budget(), check_input(), check_tool() (+11 more)
 
 ### Community 3 - "cli/__init__.py"
-Cohesion: 0.06
-Nodes (77): command, KnowledgeEntity, Relation, ag_create(), ag_eval(), ag_list(), ag_publish(), ag_run() (+69 more)
+Cohesion: 0.07
+Nodes (72): command, KnowledgeEntity, Relation, ag_create(), ag_eval(), ag_list(), ag_publish(), ag_run() (+64 more)
 
-### Community 4 - "connectors.py"
-Cohesion: 0.10
-Nodes (20): Connection, Entity, Event, Protocol, Connector, connector_for(), DuckDBConnector, _mask() (+12 more)
+### Community 4 - "security.py"
+Cohesion: 0.29
+Nodes (6): Entity, Security primitives: secret redaction, path confinement, token store.…, Deep-scrub secret-shaped values before persistence or transport., redact(), _secretish(), _T
 
 ### Community 5 - "TokenStore"
 Cohesion: 0.25
 Nodes (3): Path, Local API bearer token — generated on first use, file 0600., TokenStore
 
 ### Community 6 - "engine.py"
-Cohesion: 0.05
-Nodes (47): fixture, parametrize, compile_spec(), execute_query(), _ident(), nl_to_sql(), Any, Query engine — validate → allowlist → execute → record. Every execution… (+39 more)
+Cohesion: 0.06
+Nodes (47): Connection, Event, parametrize, Protocol, Connector, connector_for(), DuckDBConnector, _mask() (+39 more)
 
 ### Community 7 - "test_negative.py"
 Cohesion: 0.17
 Nodes (3): client(), fixture, Negative scenarios — required failure modes all verified.
 
-### Community 8 - "score_initiative"
-Cohesion: 0.18
-Nodes (11): Any, Prioritization — RICE and WSJF scoring, deterministic and explainable., factors may carry rice{reach,impact,confidence,effort} and/or…, score_initiative(), score_rice(), score_wsjf(), build_roadmap(), Any (+3 more)
+### Community 8 - "fixture"
+Cohesion: 0.05
+Nodes (33): fixture, generate_prd(), Any, Store, PRD + roadmap generators — deterministic templates over real data. PRD pulls…, Any, Prioritization — RICE and WSJF scoring, deterministic and explainable., factors may carry rice{reach,impact,confidence,effort} and/or… (+25 more)
 
 ### Community 9 - "aws.py"
 Cohesion: 0.24
@@ -180,8 +209,8 @@ Cohesion: 0.20
 Nodes (8): PortalAdapter, RequestContext, ProductForgePortal, Any, _q1(), PortalAdapter for the vendored _forge_portal server. Ops paths are RELATIVE…, Product Forge adapter — workspaces, products, context package., _store()
 
 ### Community 12 - "test_cycle1011.py"
-Cohesion: 0.22
-Nodes (13): check_gate(), decide(), Any, Approvals — gate sensitive actions behind human review., Look up the latest approval for (action, resource)., request_approval(), Cycles 10-11: watches/alerts/approvals/reports + workflows/routing., _store() (+5 more)
+Cohesion: 0.21
+Nodes (13): check_gate(), decide(), Any, Approvals — gate sensitive actions behind human review., Look up the latest approval for (action, resource)., request_approval(), env(), Cycles 10-11: watches/alerts/approvals/reports + workflows/routing. (+5 more)
 
 ### Community 13 - "IMPLEMENTATION_GAP_MATRIX — living status (final, Cycle 12)"
 Cohesion: 0.12
@@ -251,41 +280,41 @@ Nodes (9): Evals, Exemplos, Ferramentas, Instruções, Limitações, Objetivo, P
 Cohesion: 0.20
 Nodes (9): Evals, Exemplos, Ferramentas, Instruções, Limitações, Objetivo, Pré-condições, Referências (+1 more)
 
-### Community 31 - "create_app"
-Cohesion: 0.25
-Nodes (7): FastAPI, Path, create_app(), Ctx, Shared runtime: home, config, store, token, rate buckets, audit., test_api_agent_flow(), test_api_analytics()
+### Community 31 - "MCP streamable-HTTP transport alongside stdio"
+Cohesion: 0.29
+Nodes (6): Acceptance Criteria, Constraints, Context, Grill Gate, MCP streamable-HTTP transport alongside stdio, Review Notes
 
 ### Community 32 - "Product Forge"
 Cohesion: 0.22
 Nodes (8): Ecosystem compatibility, Install, MCP, Product Forge, Quickstart, Skills, Status, What it is
 
-### Community 33 - ".audit"
-Cohesion: 0.29
-Nodes (6): Request, _cid(), envelope(), Any, Rebuild an OpenAPI paths dict from a stored parsed surface., _surface_to_paths()
+### Community 33 - "Ctx"
+Cohesion: 0.22
+Nodes (6): Request, Ctx, Any, Rebuild an OpenAPI paths dict from a stored parsed surface., Shared runtime: home, config, store, token, rate buckets, audit., _surface_to_paths()
 
-### Community 34 - "client"
-Cohesion: 0.40
-Nodes (3): client(), fixture, Cycle 12 homologation — Payments Product Intelligence (30 steps). Full user…
+### Community 34 - "create_app"
+Cohesion: 0.22
+Nodes (7): FastAPI, create_app(), test_api_knowledge_flow(), test_api_analytics(), client(), fixture, Cycle 12 homologation — Payments Product Intelligence (30 steps). Full user…
 
 ### Community 35 - "_installkit.py"
-Cohesion: 0.10
-Nodes (39): apply_marker_block(), cli_version(), deregister_installation(), discover_projects(), _find_state_root(), _find_vcs_root(), _find_workspace_root(), forge_home() (+31 more)
+Cohesion: 0.11
+Nodes (37): cli_version(), deregister_installation(), discover_projects(), _find_state_root(), _find_vcs_root(), _find_workspace_root(), forge_home(), forge_portal_presence() (+29 more)
 
 ### Community 36 - "Any"
 Cohesion: 0.13
-Nodes (21): _atomic_write(), doctor(), forge_portal_presence(), _json_bytes(), Ledger, _mcp_handshake(), mcp_unset(), mcp_verify() (+13 more)
+Nodes (32): apply_install(), _atomic_write(), components_path(), _created_by(), doctor(), InstallContext, _json_bytes(), load_components() (+24 more)
 
 ### Community 37 - "lifecycle.py"
-Cohesion: 0.19
-Nodes (24): _ctx(), doctor(), _init_app_home(), install(), Any, Path, productforge install lifecycle — thin ForgeSpec wiring over the vendored forge…, The runtime home (config/db/token) — separate from the project install. (+16 more)
+Cohesion: 0.15
+Nodes (29): Any, ForgeSpec, InstallContext, Path, _agents_root(), _bundle_files(), _ctx(), doctor() (+21 more)
 
-### Community 38 - "_load_json"
-Cohesion: 0.13
-Nodes (11): Exception, component_options(), InstallError, _load_json(), _Lock, LockError, _pid_alive(), Best-effort liveness; ``None`` = cannot determine (do not steal). (+3 more)
+### Community 38 - "InstallError"
+Cohesion: 0.14
+Nodes (10): Exception, component_options(), InstallError, _Lock, LockError, _pid_alive(), Best-effort liveness; ``None`` = cannot determine (do not steal)., O_EXCL lockfile carrying ``{pid, created_at}``. Stale locks — dead holder or… (+2 more)
 
-### Community 39 - "apply_install"
-Cohesion: 0.16
-Nodes (18): apply_install(), _asset_kind(), asset_kinds_for(), _created_by(), InstallContext, marker_sha(), plan(), _prune_empty_dirs() (+10 more)
+### Community 39 - "plan"
+Cohesion: 0.33
+Nodes (6): _asset_kind(), asset_kinds_for(), plan(), profile_asset_kinds(), Profile kinds narrowed by the component selection, when present., Pure plan — what *would* change. Never writes.
 
 ### Community 40 - "Store"
 Cohesion: 0.17
@@ -423,9 +452,9 @@ Nodes (9): Evals, Exemplos, Ferramentas, Instruções, Limitações, Objetivo, P
 Cohesion: 0.20
 Nodes (9): Evals, Exemplos, Ferramentas, Instruções, Limitações, Objetivo, Pré-condições, Referências (+1 more)
 
-### Community 74 - "_repair_content"
-Cohesion: 0.22
-Nodes (8): _entry_intact(), mcp_set(), Canonical bytes for a drifted *managed* entry, or ``None`` when the entry…, Per-file verdict. When ``spec`` is given the check is kind-aware: ``marker``…, Kind-aware health check for one ledger entry. Marker entries verify the managed…, Set ``mcpServers.<key>`` inside a managed sub-block. Other servers and top-…, _repair_content(), _sha_file()
+### Community 74 - "Ledger"
+Cohesion: 0.12
+Nodes (12): apply_marker_block(), _entry_intact(), Ledger, marker_sha(), _markers(), Records every managed write under a target root. ``entries[path] = {sha256,…, Per-file verdict. When ``spec`` is given the check is kind-aware: ``marker``…, Kind-aware health check for one ledger entry. Marker entries verify the managed… (+4 more)
 
 ### Community 75 - "datacontract.py"
 Cohesion: 0.25
@@ -452,32 +481,128 @@ Cohesion: 0.36
 Nodes (7): _interpolate(), plan_is_deterministic(), Any, Multi-agent workflows — deterministic DAG over agents and tools. Steps run in…, spec: {name, steps:[{id, kind:agent|tool, agent_id|tool, input?}]}, Workflows are deterministic by construction: declared steps only., run_workflow()
 
 ### Community 81 - "record_usage"
-Cohesion: 0.40
-Nodes (5): Any, Model routing + cost ledger — gateway profiles and honest budgets. No provider…, Append to the product's daily budget ledger (audit-safe)., record_usage(), route()
+Cohesion: 0.38
+Nodes (6): Any, Model routing + cost ledger — gateway profiles and honest budgets. No provider…, Append to the product's daily budget ledger (audit-safe)., record_usage(), route(), test_routing_and_budget()
 
-### Community 82 - "load_components"
+### Community 82 - "Native agent templates (§6.3) — product-analyst, data-steward, api-guardian"
+Cohesion: 0.29
+Nodes (6): Acceptance Criteria, Constraints, Context, Grill Gate, Native agent templates (§6.3) — product-analyst, data-steward, api-guardian, Review Notes
+
+### Community 84 - "Product Forge — Agent Instructions"
+Cohesion: 0.33
+Nodes (5): Agentic layer (spark-forge-aws pattern), Commands, Hard rules, Product Forge, Product Forge — Agent Instructions
+
+### Community 86 - "External notification delivery for alerts (webhook/email)"
+Cohesion: 0.29
+Nodes (6): Acceptance Criteria, Constraints, Context, External notification delivery for alerts (webhook/email), Grill Gate, Review Notes
+
+### Community 87 - "Angular module for Product Forge inside forge-portal"
+Cohesion: 0.29
+Nodes (6): Acceptance Criteria, Angular module for Product Forge inside forge-portal, Constraints, Context, Grill Gate, Review Notes
+
+### Community 88 - "PostgreSQL store backend alongside SQLite"
+Cohesion: 0.29
+Nodes (6): Acceptance Criteria, Constraints, Context, Grill Gate, PostgreSQL store backend alongside SQLite, Review Notes
+
+### Community 89 - "pf-extractor"
+Cohesion: 0.40
+Nodes (4): Entrega, Não faz, pf-extractor, Pressupõe
+
+### Community 90 - "pf-judge"
+Cohesion: 0.40
+Nodes (4): Entrega, Não faz, pf-judge, Pressupõe
+
+### Community 91 - "pf-synthesizer"
+Cohesion: 0.40
+Nodes (4): Entrega, Não faz, pf-synthesizer, Pressupõe
+
+### Community 92 - "pf-verifier"
+Cohesion: 0.40
+Nodes (4): Entrega, Não faz, pf-verifier, Pressupõe
+
+### Community 93 - "pf-extractor"
+Cohesion: 0.40
+Nodes (4): Entrega, Não faz, pf-extractor, Pressupõe
+
+### Community 94 - "pf-judge"
+Cohesion: 0.40
+Nodes (4): Entrega, Não faz, pf-judge, Pressupõe
+
+### Community 95 - "pf-synthesizer"
+Cohesion: 0.40
+Nodes (4): Entrega, Não faz, pf-synthesizer, Pressupõe
+
+### Community 96 - "pf-verifier"
+Cohesion: 0.40
+Nodes (4): Entrega, Não faz, pf-verifier, Pressupõe
+
+### Community 97 - "Product Forge — Agent Instructions"
+Cohesion: 0.40
+Nodes (4): Agentic layer (spark-forge-aws pattern), Commands, Hard rules, Product Forge — Agent Instructions
+
+### Community 98 - "Agent Ops Coordinator"
 Cohesion: 0.50
-Nodes (4): components_path(), load_components(), Where the optional-component selection is persisted., {} when never recorded — absence means default (all enabled).
+Nodes (3): Agent Ops Coordinator, Não faz, Playbook
+
+### Community 99 - "Agent Ops Coordinator"
+Cohesion: 0.50
+Nodes (3): Agent Ops Coordinator, Não faz, Playbook
+
+### Community 100 - "Data Analyst Coordinator"
+Cohesion: 0.50
+Nodes (3): Data Analyst Coordinator, Não faz, Playbook
+
+### Community 101 - "Integration Coordinator"
+Cohesion: 0.50
+Nodes (3): Integration Coordinator, Não faz, Playbook
+
+### Community 102 - "Planning Coordinator"
+Cohesion: 0.50
+Nodes (3): Não faz, Planning Coordinator, Playbook
+
+### Community 103 - "Product Intelligence Coordinator"
+Cohesion: 0.50
+Nodes (3): Não faz, Playbook, Product Intelligence Coordinator
+
+### Community 104 - "Data Analyst Coordinator"
+Cohesion: 0.50
+Nodes (3): Data Analyst Coordinator, Não faz, Playbook
+
+### Community 105 - "Integration Coordinator"
+Cohesion: 0.50
+Nodes (3): Integration Coordinator, Não faz, Playbook
+
+### Community 106 - "Planning Coordinator"
+Cohesion: 0.50
+Nodes (3): Não faz, Planning Coordinator, Playbook
+
+### Community 107 - "Product Intelligence Coordinator"
+Cohesion: 0.50
+Nodes (3): Não faz, Playbook, Product Intelligence Coordinator
+
+### Community 108 - "mcp_verify"
+Cohesion: 0.50
+Nodes (4): _mcp_handshake(), mcp_verify(), JSON-RPC stdio handshake: initialize → notifications/initialized → tools/list.…, initialize → initialized → tools/list (+ tools/call when the spec declares a…
 
 ## Knowledge Gaps
-- **410 isolated node(s):** `Objetivo`, `Pré-condições`, `Instruções`, `Ferramentas`, `Exemplos` (+405 more)
+- **493 isolated node(s):** `Playbook`, `Não faz`, `Playbook`, `Não faz`, `Pressupõe` (+488 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Store` connect `Store` to `test_cycle3.py`, `run_agent`, `cli/__init__.py`, `connectors.py`, `lifecycle.py`, `tools.py`, `datacontract.py`, `sqlite.py`, `call_tool`, `test_cycle1011.py`, `runtime.py`, `run_workflow`, `watches.py`, `ProductForgePortal`, `create_app`?**
-  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+- **Why does `Store` connect `Store` to `Ctx`, `run_agent`, `cli/__init__.py`, `security.py`, `lifecycle.py`, `fixture`, `tools.py`, `datacontract.py`, `sqlite.py`, `call_tool`, `test_cycle1011.py`, `runtime.py`, `run_workflow`, `watches.py`, `ProductForgePortal`?**
+  _High betweenness centrality (0.061) - this node is a cross-community bridge._
 - **Why does `_init_app_home()` connect `lifecycle.py` to `Store`, `TokenStore`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
-- **Why does `TokenStore` connect `TokenStore` to `client`, `cli/__init__.py`, `connectors.py`, `lifecycle.py`, `engine.py`, `test_negative.py`, `test_cycle89.py`, `create_app`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Why does `TokenStore` connect `TokenStore` to `Ctx`, `create_app`, `cli/__init__.py`, `security.py`, `lifecycle.py`, `test_negative.py`, `fixture`, `test_cycle89.py`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
 - **Are the 6 inferred relationships involving `Store` (e.g. with `_init_app_home()` and `_store()`) actually correct?**
   _`Store` has 6 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Objetivo`, `Pré-condições`, `Instruções` to the rest of the system?**
-  _410 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `Playbook`, `Não faz`, `Playbook` to the rest of the system?**
+  _493 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `cli/__init__.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.058333333333333334 - nodes in this community are weakly interconnected._
-- **Should `connectors.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06558558558558558 - nodes in this community are weakly interconnected._
+- **Should `engine.py` be split into smaller, more focused modules?**
+  _Cohesion score 0.057342657342657345 - nodes in this community are weakly interconnected._

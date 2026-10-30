@@ -114,13 +114,39 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         st.close()
 
 
-def serve() -> None:
-    """Minimal JSON-RPC stdio loop (MCP handshake + tools/list + tools/call)."""
-    import sys
+def dispatch(req: dict[str, Any]) -> dict[str, Any] | None:
+    """One JSON-RPC request → response (or None for notifications).
 
-    def _send(obj: dict[str, Any]) -> None:
-        sys.stdout.write(json.dumps(obj) + "\n")
-        sys.stdout.flush()
+    Shared by the stdio loop and the HTTP transport — identical message
+    shape on both.
+    """
+    rid = req.get("id")
+    method = req.get("method", "")
+    if method == "initialize":
+        return {"jsonrpc": "2.0", "id": rid, "result": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {"tools": {}},
+            "serverInfo": {"name": "product-forge", "version": "0.1.0"}}}
+    if method == "notifications/initialized":
+        return None
+    if method == "tools/list":
+        return {"jsonrpc": "2.0", "id": rid, "result": {"tools": tool_specs()}}
+    if method == "tools/call":
+        params = req.get("params", {})
+        result = call_tool(params.get("name", ""), params.get("arguments", {}))
+        return {"jsonrpc": "2.0", "id": rid, "result": {
+            "content": [{"type": "text", "text": json.dumps(result, default=str)}]}}
+    if method == "ping":
+        return {"jsonrpc": "2.0", "id": rid, "result": {}}
+    if rid is not None:
+        return {"jsonrpc": "2.0", "id": rid,
+                "error": {"code": -32601, "message": f"method not found: {method}"}}
+    return None
+
+
+def serve() -> None:
+    """JSON-RPC stdio loop (MCP handshake + tools/list + tools/call)."""
+    import sys
 
     for line in sys.stdin:
         line = line.strip()
@@ -130,24 +156,42 @@ def serve() -> None:
             req = json.loads(line)
         except json.JSONDecodeError:
             continue
-        rid = req.get("id")
-        method = req.get("method", "")
-        if method == "initialize":
-            _send({"jsonrpc": "2.0", "id": rid, "result": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
-                "serverInfo": {"name": "product-forge", "version": "0.1.0"}}})
-        elif method == "notifications/initialized":
-            continue
-        elif method == "tools/list":
-            _send({"jsonrpc": "2.0", "id": rid, "result": {"tools": tool_specs()}})
-        elif method == "tools/call":
-            params = req.get("params", {})
-            result = call_tool(params.get("name", ""), params.get("arguments", {}))
-            _send({"jsonrpc": "2.0", "id": rid, "result": {
-                "content": [{"type": "text", "text": json.dumps(result, default=str)}]}})
-        elif method == "ping":
-            _send({"jsonrpc": "2.0", "id": rid, "result": {}})
-        elif rid is not None:
-            _send({"jsonrpc": "2.0", "id": rid,
-                   "error": {"code": -32601, "message": f"method not found: {method}"}})
+        resp = dispatch(req)
+        if resp is not None:
+            sys.stdout.write(json.dumps(resp) + "\n")
+            sys.stdout.flush()
+
+
+def serve_http(host: str = "127.0.0.1", port: int = 8471) -> None:
+    """Streamable-HTTP MCP transport: POST /mcp with the same JSON-RPC
+    messages as stdio, guarded by the local bearer token.
+
+    Limitation: POST request/response only (no SSE stream) — enough for
+    initialize, tools/list and tools/call per MCP 2024-11-05.
+    """
+    try:
+        import uvicorn
+        from fastapi import FastAPI, Request
+        from fastapi.responses import JSONResponse
+    except ImportError as e:  # pragma: no cover
+        raise RuntimeError("pip install product-forge[api] for HTTP MCP") from e
+
+    from ..config import home_dir, load_config
+    from ..errors import UnauthorizedError
+    from ..security import TokenStore
+
+    cfg = load_config(home_dir("user"))
+    token = TokenStore(home_dir("user") / str(cfg["api"]["token_file"])).token
+    app = FastAPI(title="product-forge MCP", docs_url=None, openapi_url=None)
+
+    @app.post("/mcp")
+    async def mcp(req: Request) -> JSONResponse:
+        auth = req.headers.get("authorization", "")
+        if auth != f"Bearer {token}":
+            raise UnauthorizedError("mcp requires the local bearer token")
+        body = await req.json()
+        resp = dispatch(body) if isinstance(body, dict) else [
+            r for r in (dispatch(b) for b in body) if r is not None]
+        return JSONResponse(resp if resp is not None else {})
+
+    uvicorn.run(app, host=host, port=port, log_level="warning")

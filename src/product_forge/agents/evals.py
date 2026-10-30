@@ -21,7 +21,9 @@ DEFAULT_SUITE: list[dict[str, Any]] = [
 
 
 def run_evals(store: Store, agent: Any, cases: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    cases = cases or DEFAULT_SUITE
+    if cases is None:
+        from .tools import template_eval_cases
+        cases = template_eval_cases(getattr(agent, "template", "custom")) or DEFAULT_SUITE
     results = []
     passed = 0
     for case in cases:

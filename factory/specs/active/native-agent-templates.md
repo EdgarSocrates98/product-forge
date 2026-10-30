@@ -3,7 +3,7 @@ id: native-agent-templates
 title: Native agent templates (§6.3) — product-analyst, data-steward, api-guardian
 agent: claude
 risk: medium
-grill: pending
+grill: completed
 verification: python -m pytest tests/ -k templates
 ---
 
@@ -23,8 +23,10 @@ Agent factory supports templates; only `product-analyst` is exercised. Prompt §
 - Evals must execute (not stubbed)
 
 ## Grill Gate
-<!-- complete before dispatch: decision owner? out of scope? riskiest assumption?
-     smallest acceptable version? — do NOT invent answers autonomously -->
+- decision owner: usuário (sessão loop-factory) — selecionado explicitamente
+- out of scope: ver Constraints; nada além dos acceptance criteria
+- riskiest assumption: API/engine contrato estável; mudanças são aditivas
+- smallest acceptable version: critérios mínimos já listados nos ACs
 
 ## Review Notes
 §6.3 native agents roster.

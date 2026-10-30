@@ -12,9 +12,9 @@
     "semantic_hash": ""
   },
   "pyproject.toml": {
-    "mtime": 1793323035.6608346,
-    "seen": 1793323195.857509,
-    "ast_hash": "f7845789af4a111b8e97096669ece25e",
+    "mtime": 1793323304.0979612,
+    "seen": 1793323334.4896367,
+    "ast_hash": "6aa497bab4f1d6436175e7b57079db90",
     "semantic_hash": ""
   },
   "src/product_forge/__init__.py": {
@@ -636,9 +636,9 @@
     "semantic_hash": ""
   },
   ".product-forge/install-ledger.json": {
-    "mtime": 1793323176.5500908,
-    "seen": 1793323195.857495,
-    "ast_hash": "82d1d07f420e0b6c4acced18af42306c",
+    "mtime": 1793323322.229066,
+    "seen": 1793323334.489617,
+    "ast_hash": "add414ff52832c607c4d3ebb9b3e4667",
     "semantic_hash": ""
   },
   ".product-forge/receipts/install-20261030T011827Z.json": {
@@ -684,15 +684,15 @@
     "semantic_hash": ""
   },
   "src/product_forge/install/lifecycle.py": {
-    "mtime": 1793323073.495759,
-    "seen": 1793323195.8575432,
-    "ast_hash": "41d42451518e360e41455ad6bb913240",
+    "mtime": 1793323297.6421087,
+    "seen": 1793323334.4896755,
+    "ast_hash": "e616d9496d69d5ac07d195d6e432a331",
     "semantic_hash": ""
   },
   "tests/test_install.py": {
-    "mtime": 1793323163.60597,
-    "seen": 1793323195.8575826,
-    "ast_hash": "5f30a9d96187252db61a8b038537bc6a",
+    "mtime": 1793323304.6869478,
+    "seen": 1793323334.4897223,
+    "ast_hash": "29ebefd79645fa7cdd9bef812091664d",
     "semantic_hash": ""
   },
   ".agents/skills/pf-agent-factory/SKILL.md": {
@@ -1080,9 +1080,213 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1793323107.3571877,
-    "seen": 1793323195.8576434,
-    "ast_hash": "ad7b56a2f544cfa64f45a7cef76ca4b5",
+    "mtime": 1793323309.9946132,
+    "seen": 1793323334.4898176,
+    "ast_hash": "09280fa34747d2ce10e8d068b7a123f5",
+    "semantic_hash": ""
+  },
+  ".product-forge/receipts/install-20261030T012150Z.json": {
+    "mtime": 1793323310.021802,
+    "seen": 1793323334.4896293,
+    "ast_hash": "5367df3f23253bd9489a32d0f5bd457b",
+    "semantic_hash": ""
+  },
+  ".product-forge/receipts/install-20261030T012202Z.json": {
+    "mtime": 1793323322.2339973,
+    "seen": 1793323334.4896312,
+    "ast_hash": "f1a0245eb7b75837843bf90ffdd4bb26",
+    "semantic_hash": ""
+  },
+  ".agents/agents/agent-ops-coordinator.md": {
+    "mtime": 1793323309.9526198,
+    "seen": 1793323334.4897246,
+    "ast_hash": "3ef5f9038671df7889c5e13d6e06dae3",
+    "semantic_hash": ""
+  },
+  ".agents/agents/data-analyst-coordinator.md": {
+    "mtime": 1793323309.9566083,
+    "seen": 1793323334.4897256,
+    "ast_hash": "b7a2e7f0a5b4ea072b5a91a2a83b3bf5",
+    "semantic_hash": ""
+  },
+  ".agents/agents/executors/pf-extractor.md": {
+    "mtime": 1793323309.9608111,
+    "seen": 1793323334.4897268,
+    "ast_hash": "463bdb4e8e134b51f954092176319c37",
+    "semantic_hash": ""
+  },
+  ".agents/agents/executors/pf-judge.md": {
+    "mtime": 1793323309.9648652,
+    "seen": 1793323334.4897277,
+    "ast_hash": "27de704fb517573409623016e8b9bb0d",
+    "semantic_hash": ""
+  },
+  ".agents/agents/executors/pf-synthesizer.md": {
+    "mtime": 1793323309.969155,
+    "seen": 1793323334.4897287,
+    "ast_hash": "ff3c923763518a79c4dc51027e3da8f6",
+    "semantic_hash": ""
+  },
+  ".agents/agents/executors/pf-verifier.md": {
+    "mtime": 1793323309.973261,
+    "seen": 1793323334.48973,
+    "ast_hash": "53f789de0e859be7547178562a5c269d",
+    "semantic_hash": ""
+  },
+  ".agents/agents/integration-coordinator.md": {
+    "mtime": 1793323309.9777117,
+    "seen": 1793323334.4897308,
+    "ast_hash": "159ec70bf4dcb5b9ba5a465255189219",
+    "semantic_hash": ""
+  },
+  ".agents/agents/planning-coordinator.md": {
+    "mtime": 1793323309.9814925,
+    "seen": 1793323334.4897318,
+    "ast_hash": "7857d24abf1f97b9482bf4c4454a67b8",
+    "semantic_hash": ""
+  },
+  ".agents/agents/product-intel-coordinator.md": {
+    "mtime": 1793323309.98538,
+    "seen": 1793323334.489733,
+    "ast_hash": "5434fee666022b19cc32887f7f461f4f",
+    "semantic_hash": ""
+  },
+  ".product-forge/backups/AGENTS.md": {
+    "mtime": 1793323309.9910448,
+    "seen": 1793323334.4898155,
+    "ast_hash": "37163c380983c7819265c2756d3dedd2",
+    "semantic_hash": ""
+  },
+  ".product-forge/backups/CLAUDE.md": {
+    "mtime": 1793323310.0105247,
+    "seen": 1793323334.4898167,
+    "ast_hash": "05286f49409c5c5a795fd75b78aee6f3",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1793323310.0137806,
+    "seen": 1793323334.4898202,
+    "ast_hash": "b7a31c28aaed5f68e631cea63c7956c2",
+    "semantic_hash": ""
+  },
+  "agents/agent-ops-coordinator.md": {
+    "mtime": 1793323276.9535449,
+    "seen": 1793323334.4898224,
+    "ast_hash": "3ef5f9038671df7889c5e13d6e06dae3",
+    "semantic_hash": ""
+  },
+  "agents/data-analyst-coordinator.md": {
+    "mtime": 1793323276.9533393,
+    "seen": 1793323334.4898233,
+    "ast_hash": "b7a2e7f0a5b4ea072b5a91a2a83b3bf5",
+    "semantic_hash": ""
+  },
+  "agents/executors/pf-extractor.md": {
+    "mtime": 1793323276.9536226,
+    "seen": 1793323334.4898243,
+    "ast_hash": "463bdb4e8e134b51f954092176319c37",
+    "semantic_hash": ""
+  },
+  "agents/executors/pf-judge.md": {
+    "mtime": 1793323276.953667,
+    "seen": 1793323334.489825,
+    "ast_hash": "27de704fb517573409623016e8b9bb0d",
+    "semantic_hash": ""
+  },
+  "agents/executors/pf-synthesizer.md": {
+    "mtime": 1793323276.9537752,
+    "seen": 1793323334.489826,
+    "ast_hash": "ff3c923763518a79c4dc51027e3da8f6",
+    "semantic_hash": ""
+  },
+  "agents/executors/pf-verifier.md": {
+    "mtime": 1793323276.9537206,
+    "seen": 1793323334.4898272,
+    "ast_hash": "53f789de0e859be7547178562a5c269d",
+    "semantic_hash": ""
+  },
+  "agents/integration-coordinator.md": {
+    "mtime": 1793323276.9534929,
+    "seen": 1793323334.489828,
+    "ast_hash": "159ec70bf4dcb5b9ba5a465255189219",
+    "semantic_hash": ""
+  },
+  "agents/planning-coordinator.md": {
+    "mtime": 1793323276.9533942,
+    "seen": 1793323334.489829,
+    "ast_hash": "7857d24abf1f97b9482bf4c4454a67b8",
+    "semantic_hash": ""
+  },
+  "agents/product-intel-coordinator.md": {
+    "mtime": 1793323276.953271,
+    "seen": 1793323334.4898303,
+    "ast_hash": "5434fee666022b19cc32887f7f461f4f",
+    "semantic_hash": ""
+  },
+  "factory/README.md": {
+    "mtime": 1793323276.9544294,
+    "seen": 1793323334.48984,
+    "ast_hash": "212fd402f9a7b4dcbefc73210b9e0cf0",
+    "semantic_hash": ""
+  },
+  "factory/specs/inbox/llm-gateway-integration.md": {
+    "mtime": 1793323276.9546885,
+    "seen": 1793323334.489841,
+    "ast_hash": "1a3173e474f5593511518ef1dfade391",
+    "semantic_hash": ""
+  },
+  "factory/specs/inbox/mcp-http-transport.md": {
+    "mtime": 1793323276.9550347,
+    "seen": 1793323334.489842,
+    "ast_hash": "edf21cfbd2a4f0d37e6a37b1d00890d3",
+    "semantic_hash": ""
+  },
+  "factory/specs/inbox/native-agent-templates.md": {
+    "mtime": 1793323276.9549475,
+    "seen": 1793323334.489843,
+    "ast_hash": "369e291c909ec833b081acd349f8bd94",
+    "semantic_hash": ""
+  },
+  "factory/specs/inbox/notification-delivery.md": {
+    "mtime": 1793323276.9548585,
+    "seen": 1793323334.4898436,
+    "ast_hash": "69e21e50875227f98ada3e0ab266dad3",
+    "semantic_hash": ""
+  },
+  "factory/specs/inbox/portal-angular-module.md": {
+    "mtime": 1793323276.9545584,
+    "seen": 1793323334.4898448,
+    "ast_hash": "a99560e78f538df3f225d7c7c237f7db",
+    "semantic_hash": ""
+  },
+  "factory/specs/inbox/postgres-backend.md": {
+    "mtime": 1793323276.954786,
+    "seen": 1793323334.4898458,
+    "ast_hash": "694a269e97aad0e8366aba4124381516",
+    "semantic_hash": ""
+  },
+  "rules/catalog/pf-agent.yaml": {
+    "mtime": 1793323276.9539492,
+    "seen": 1793323334.4898465,
+    "ast_hash": "6737f6a2476a0c19e7c606057f762215",
+    "semantic_hash": ""
+  },
+  "rules/catalog/pf-cloud.yaml": {
+    "mtime": 1793323276.9540546,
+    "seen": 1793323334.4898477,
+    "ast_hash": "cbad5758c3c8fcecdc0c4ffa0d0197c5",
+    "semantic_hash": ""
+  },
+  "rules/catalog/pf-know.yaml": {
+    "mtime": 1793323276.9538875,
+    "seen": 1793323334.4898484,
+    "ast_hash": "97b0d223744f78a4dac3164a7b4c426b",
+    "semantic_hash": ""
+  },
+  "rules/catalog/pf-sql.yaml": {
+    "mtime": 1793323276.9540036,
+    "seen": 1793323334.489849,
+    "ast_hash": "8dd5860c5bce3fae59fa3f0621a907fc",
     "semantic_hash": ""
   }
 }

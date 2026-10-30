@@ -29,7 +29,8 @@ SECRET_KEYS = (
     "connection_string",
 )
 
-REDACT_EXEMPT = frozenset({"plan_token", "token_id", "token_preview"})
+REDACT_EXEMPT = frozenset({"plan_token", "token_id", "token_preview",
+                           "tokens_in", "tokens_out"})
 
 
 def _secretish(key: str) -> bool:

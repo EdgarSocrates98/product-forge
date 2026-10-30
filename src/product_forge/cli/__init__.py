@@ -403,6 +403,14 @@ def ag_publish(agent_id: str) -> None:
     st.close()
 
 
+@ag_app.command("templates")
+def ag_templates() -> None:
+    """List native agent templates (§6.3 roster) with skill mapping."""
+    from ..agents.tools import list_templates
+
+    _out({"items": list_templates()})
+
+
 # -- analytics -------------------------------------------------------------
 
 q_app = typer.Typer(help="Analytics: validate, compile, execute queries")
@@ -554,14 +562,23 @@ def plan_roadmap(product_id: str) -> None:
 # -- mcp ------------------------------------------------------------------
 
 @mcp_app.command("serve")
-def mcp_serve() -> None:
-    """Start the MCP server (stdio). Requires product-forge[mcp]."""
+def mcp_serve(transport: str = typer.Option("stdio", "--transport",
+                                          help="stdio | http"),
+              host: str = typer.Option("127.0.0.1", "--host"),
+              port: int = typer.Option(8471, "--port")) -> None:
+    """Start the MCP server — stdio (default) or streamable-HTTP at POST /mcp.
+
+    HTTP mode requires the local bearer token (same as the API).
+    """
     try:
-        from ..mcp.server import serve
+        from ..mcp.server import serve, serve_http
     except ImportError:
         typer.echo("mcp extra not installed: pip install product-forge[mcp]", err=True)
         raise typer.Exit(1) from None
-    serve()
+    if transport == "http":
+        serve_http(host=host, port=port)
+    else:
+        serve()
 
 
 # -- portal ----------------------------------------------------------------

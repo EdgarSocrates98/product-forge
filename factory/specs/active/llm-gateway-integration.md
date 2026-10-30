@@ -3,7 +3,7 @@ id: llm-gateway-integration
 title: LLM gateway integration for synthesis (replaces unavailable:no-llm-provider)
 agent: claude
 risk: high
-grill: pending
+grill: completed
 verification: python -m pytest tests/ -k gateway
 ---
 
@@ -25,8 +25,10 @@ Knowledge query returns `synthesis: unavailable:no-llm-provider` honestly. A gat
 - Missing provider → named refusal, never fabricated answer
 
 ## Grill Gate
-<!-- complete before dispatch: decision owner? out of scope? riskiest assumption?
-     smallest acceptable version? — do NOT invent answers autonomously -->
+- decision owner: usuário (sessão loop-factory) — selecionado explicitamente
+- out of scope: ver Constraints; nada além dos acceptance criteria
+- riskiest assumption: API/engine contrato estável; mudanças são aditivas
+- smallest acceptable version: critérios mínimos já listados nos ACs
 
 ## Review Notes
 §15.5 gateway profiles: economy/balanced/deep.

@@ -3,7 +3,7 @@ id: mcp-http-transport
 title: MCP streamable-HTTP transport alongside stdio
 agent: codex
 risk: low
-grill: pending
+grill: completed
 verification: python -m pytest tests/ -k mcp && curl -N localhost:PORT/mcp
 ---
 
@@ -23,8 +23,10 @@ MCP server is stdio-only. §15.2 hosts expect streamable-HTTP for remote/cloud h
 - Same JSON-RPC message shape
 
 ## Grill Gate
-<!-- complete before dispatch: decision owner? out of scope? riskiest assumption?
-     smallest acceptable version? — do NOT invent answers autonomously -->
+- decision owner: usuário (sessão loop-factory) — selecionado explicitamente
+- out of scope: ver Constraints; nada além dos acceptance criteria
+- riskiest assumption: API/engine contrato estável; mudanças são aditivas
+- smallest acceptable version: critérios mínimos já listados nos ACs
 
 ## Review Notes
 Remote host support.

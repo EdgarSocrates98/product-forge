@@ -22,6 +22,10 @@ DEFAULTS: dict[str, Any] = {
     "api": {"bind": "127.0.0.1", "port": 0, "token_file": "state/api_token"},
     "llm": {"provider": "none", "model": None, "budget_tokens_day": 200_000},
     "gateway_profile": "balanced",  # economy | balanced | deep
+    # LLM provider boundary (§15.5): provider_cmd is an external subprocess
+    # speaking productforge/SynthesisRequest|Result — never an SDK import,
+    # never credentials in this file. None = synthesis honestly unavailable.
+    "gateway": {"provider_cmd": None, "timeout_s": 30},
     "install_profile": "recommended",  # minimal | recommended | full
 }
 
