@@ -95,3 +95,66 @@ def test_delegate_audit_ids_unique(tmp_path, monkeypatch):
         "SELECT id FROM entities WHERE collection='audit_events'").fetchall()
     assert len(rows) == 2 and rows[0][0] != rows[1][0]
     st.close()
+
+
+def test_durable_jobs(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "pf"))
+    from product_forge.config import db_path, home_dir, load_config
+    from product_forge.jobs.registry import JobRegistry
+    from product_forge.store.sqlite import Store
+
+    home = home_dir("user")
+    (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
+    st = Store(db_path(home, load_config(home)))
+    reg = JobRegistry(st)
+    reg.register("echo", lambda p: {"echo": p["msg"]})
+    j1 = reg.enqueue("echo", {"msg": "a"}, "p1", idempotency_key="k1")
+    j2 = reg.enqueue("echo", {"msg": "b"}, "p1", idempotency_key="k1")
+    assert j1["id"] == j2["id"]  # idempotent
+    done = reg.run_next()
+    assert done["status"] == "done"
+    import json
+    assert json.loads(done["result"])["echo"] == "a"
+    # crash simulation: force a job to running, then recover
+    st._conn.execute("UPDATE jobs SET status='running' WHERE id=?", (done["id"],))
+    assert JobRegistry(st).recover() == 1
+    assert st._conn.execute("SELECT status FROM jobs WHERE id=?",
+                            (done["id"],)).fetchone()[0] == "queued"
+    # handler that always fails → dead_letter after MAX_ATTEMPTS
+    reg.register("boom", lambda p: 1 / 0)
+    reg.enqueue("boom", {})
+    last = None
+    for _ in range(4):  # echo retry first, then 3 boom attempts
+        job = reg.run_next()
+        if job is not None:
+            last = job
+    assert last is not None and last["status"] == "dead_letter"
+    st.close()
+
+
+def test_rbac_workspace_scope(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "pf"))
+    from fastapi.testclient import TestClient
+
+    from product_forge.api.app import create_app
+    from product_forge.config import home_dir, load_config
+    from product_forge.security import TokenStore
+
+    home = home_dir("user")
+    (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
+    cfg = load_config(home)
+    admin = TokenStore(home / str(cfg["api"]["token_file"])).token
+    cfg["principals"] = [{"token": admin, "role": "admin", "workspaces": []},
+                         {"token": "viewer_tok", "role": "viewer", "workspaces": []}]
+    (home / "config.json").write_text(__import__("json").dumps(cfg))
+    c = TestClient(create_app(home))
+    h_adm = {"Authorization": f"Bearer {admin}"}
+    # admin creates workspace+product OUTSIDE its declared scope → also 403
+    wid = c.post("/api/v1/workspaces", json={"name": "W"}, headers=h_adm).json()["data"]["id"]
+    pid = c.post("/api/v1/products", json={"workspace_id": wid, "name": "P"},
+                 headers=h_adm).json()["data"]["id"]
+    # any product route is now outside both principals' workspace lists
+    assert c.get(f"/api/v1/products/{pid}", headers=h_adm).status_code == 403
+    # unknown-token principal → 401, not a scope leak
+    assert c.get(f"/api/v1/products/{pid}").status_code == 401

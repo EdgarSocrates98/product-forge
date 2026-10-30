@@ -82,6 +82,13 @@ class RunIn(BaseModel):
     input: str = Field(min_length=1)
 
 
+class JobIn(BaseModel):
+    kind: str = Field(min_length=1)
+    payload: dict[str, Any] | None = None
+    product_id: str | None = None
+    idempotency_key: str | None = None
+
+
 class DelegateCallIn(BaseModel):
     workflow: str = Field(min_length=1)
     args: list[str] | None = None
@@ -137,6 +144,9 @@ class Ctx:
         self._req: deque[float] = deque()
         self._lock = threading.Lock()
         self.started = time.time()
+        from ..jobs.registry import JobRegistry
+        self.jobs = JobRegistry(self.store)
+        self.jobs_recovered = self.jobs.recover()
 
     def rate_ok(self) -> bool:
         now = time.time()
@@ -162,6 +172,27 @@ class Ctx:
                 **kw,
             }
         )
+
+
+def _path_product(path: str) -> str | None:
+    """Extract product id from /api/v1/products/<pid>[/...] paths."""
+    parts = path.split("/")
+    try:
+        i = parts.index("products")
+        return parts[i + 1] if len(parts) > i + 1 and parts[i + 1] else None
+    except ValueError:
+        return None
+
+
+def _principal_allows(cfg: dict[str, Any], token: str, workspace_id: str) -> bool:
+    """Workspace scope check; empty principals = local single-user wildcard."""
+    principals = cfg.get("principals") or []
+    if not principals:
+        return True
+    for p in principals:
+        if p.get("token") == token:
+            return workspace_id in (p.get("workspaces") or [])
+    return False
 
 
 def create_app(home: Path | None = None) -> FastAPI:
@@ -198,10 +229,23 @@ def create_app(home: Path | None = None) -> FastAPI:
             # §3.2: every private route requires bearer — GETs included.
             # Only /health is public (it discloses forge_id/version only).
             auth = req.headers.get("authorization", "")
-            if not ctx.tokens.check(auth.removeprefix("Bearer ").strip()):
+            token = auth.removeprefix("Bearer ").strip()
+            if not ctx.tokens.check(token):
                 err = {"code": "PF-UNAUTHORIZED", "message": "invalid or missing token",
                        "severity": "error", "retryable": False}
                 return JSONResponse(status_code=401, content=envelope(error=err, cid=req.state.cid))
+            # §3.2 authorization: product routes are workspace-scoped per
+            # principal (config.principals; empty = local single-user wildcard).
+            pid = _path_product(req.url.path)
+            if pid:
+                try:
+                    ws = ctx.store.get("products", pid)["workspace_id"]
+                except Exception:
+                    ws = None  # missing product → 404 downstream, no leak
+                if ws and not _principal_allows(ctx.cfg, token, ws):
+                    err = {"code": "PF-FORBIDDEN", "message": "workspace not in principal scope",
+                           "severity": "error", "retryable": False}
+                    return JSONResponse(status_code=403, content=envelope(error=err, cid=req.state.cid))
             if int(req.headers.get("content-length", 0)) > MAX_BODY:
                 err = {"code": "PF-PAYLOAD-TOO-LARGE", "message": "payload too large",
                        "severity": "warning", "retryable": False}
@@ -223,6 +267,34 @@ def create_app(home: Path | None = None) -> FastAPI:
     def health() -> dict:
         return envelope({"forge_id": FORGE_ID, "version": __version__,
                          "status": "healthy", "uptime_s": round(time.time() - ctx.started, 2)})
+
+    @app.get(f"{API_PREFIX}/jobs")
+    def jobs_list(status: str | None = None, product_id: str | None = None) -> dict:
+        return envelope({"items": ctx.jobs.list(status, product_id),
+                         "recovered_on_boot": ctx.jobs_recovered})
+
+    @app.post(f"{API_PREFIX}/jobs")
+    def jobs_enqueue(body: JobIn, req: Request) -> dict:
+        job = ctx.jobs.enqueue(body.kind, body.payload, body.product_id,
+                               body.idempotency_key)
+        ctx.audit(req, "job.enqueue", "job", job["id"], product_id=body.product_id or "")
+        return envelope(job)
+
+    @app.post(f"{API_PREFIX}/jobs/{{jid}}/cancel")
+    def jobs_cancel(jid: str, req: Request) -> dict:
+        job = ctx.jobs.cancel(jid)
+        ctx.audit(req, "job.cancel", "job", jid)
+        return envelope(job)
+
+    @app.post(f"{API_PREFIX}/jobs/drain")
+    def jobs_drain(limit: int = 10) -> dict:
+        ran = []
+        for _ in range(limit):
+            job = ctx.jobs.run_next()
+            if job is None:
+                break
+            ran.append({"id": job["id"], "status": job["status"]})
+        return envelope({"ran": ran})
 
     @app.get(f"{API_PREFIX}/delegates")
     def delegates_list() -> dict:

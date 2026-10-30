@@ -29,6 +29,11 @@ DEFAULTS: dict[str, Any] = {
     # Sibling-forge delegates (subprocess+JSON): operator allowlist, e.g.
     # [{"id": "data-sentinel", "cli": "data-sentinel", "workflows": ["inventory"]}]
     "delegates": [],
+    # RBAC-lite (§3.2): principals map bearer token → workspace scope.
+    # Local single-user default = wildcard (all workspaces). Shared mode:
+    # [{"token": "<bearer>", "role": "viewer|editor|admin",
+    #   "workspaces": ["w1","w2"]}] — product access is gated by its workspace.
+    "principals": [],
     "install_profile": "recommended",  # minimal | recommended | full
 }
 
