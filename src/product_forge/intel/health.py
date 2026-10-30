@@ -95,12 +95,11 @@ def evidence_graph(store: Any, product_id: str, limit: int = 2000) -> dict[str, 
     nodes = [{"id": e["id"], "kind": e.get("kind", "entity"),
               "name": e.get("name", e["id"]), "source": "extracted"}
              for e in base_nodes]
-    try:
+    import contextlib
+    with contextlib.suppress(Exception):
         prod = store.get("products", product_id)
         nodes.append({"id": prod["id"], "kind": "product",
                       "name": prod.get("name", product_id), "source": "collection"})
-    except Exception:
-        pass
     typed = {"initiatives": "initiative", "decisions": "decision",
              "dashboards": "dashboard", "agents": "agent", "metrics": "metric",
              "data_sources": "data_source", "api_specs": "api", "reports": "report",

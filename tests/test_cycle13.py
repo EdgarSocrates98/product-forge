@@ -203,3 +203,31 @@ def test_health_center_and_evidence_graph(tmp_path, monkeypatch):
     g = evidence_graph(st, "p1")
     assert g["counts"]["nodes"] >= 1 and g["schema"] == "productforge/EvidenceGraph/v1"
     st.close()
+
+
+def test_experiments_and_meetings(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "pf"))
+    from product_forge.intel.experiments import conclude_experiment, decision_completeness, extract_drafts
+
+    # experiment: guardrail breach → stopped, honest outcome
+    exp = {"title": "Checkout A/B", "hypothesis": "fewer steps → more conversion",
+           "success_metrics": ["conversion"], "guardrails": {"error_rate": 0.05},
+           "baseline": {"conversion": 0.10}}
+    out = conclude_experiment(exp, {"conversion": 0.13, "error_rate": 0.08})
+    assert out["outcome"] == "stopped_by_guardrail" and out["status"] == "stopped"
+    out2 = conclude_experiment(exp, {"conversion": 0.14, "error_rate": 0.01})
+    assert out2["outcome"] == "supporting_hypothesis"
+    out3 = conclude_experiment(exp, {"conversion": 0.10, "error_rate": 0.01})
+    assert out3["outcome"].startswith("inconclusive")
+
+    # meeting extraction → drafts only
+    drafts = extract_drafts(
+        "Alice: onboard\nDecisão: remover etapa de CNPJ\nTODO: criar ticket de tracking\n"
+        "decision: rename plan tiers")
+    kinds = [d["kind"] for d in drafts]
+    assert kinds.count("decision") == 2 and kinds.count("action") == 1
+    assert all(d["line"] for d in drafts)
+
+    # decision completeness — honest missing list
+    c = decision_completeness({"title": "X", "decision": "ship it"})
+    assert c["completeness"] < 1 and "evidence" in c["missing"]

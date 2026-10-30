@@ -24,8 +24,10 @@ from ..domain.models import (
     Dashboard,
     DataSource,
     Decision,
+    Experiment,
     Initiative,
     KnowledgeSource,
+    Meeting,
     Product,
     Workspace,
     new_id,
@@ -444,6 +446,83 @@ def create_app(home: Path | None = None) -> FastAPI:
     _crud("dashboards", "dashboards", Dashboard, {"name", "description", "widgets", "filters"})
     _crud("initiatives", "initiatives", Initiative, {"title", "hypothesis", "priority_score"})
     _crud("decisions", "decisions", Decision, {"title", "context", "decision", "alternatives"})
+    _crud("experiments", "experiments", Experiment,
+          {"title", "hypothesis", "design", "success_metrics", "guardrails",
+           "baseline", "status", "results"})
+    _crud("meetings", "meetings", Meeting, {"title", "transcript"})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/experiments/{{eid}}/conclude")
+    def experiment_conclude(pid: str, eid: str, body: dict[str, Any], req: Request) -> dict:
+        from ..intel.experiments import conclude_experiment
+        exp = ctx.store.get("experiments", eid)
+        if exp.get("product_id") != pid:
+            raise ForgeError("PF-404", "experiment not in product", 404)
+        upd = conclude_experiment(exp, body.get("results") or {}, body.get("verdict", ""))
+        exp.update(upd)
+        ctx.store.put("experiments", exp)
+        ctx.audit(req, "experiments.conclude", "experiments", eid, product_id=pid)
+        refs = []
+        if body.get("record_decision"):
+            dec = Decision(id=new_id("dec"), product_id=pid,
+                           title=f"Experiment outcome: {exp['title']}",
+                           context=exp.get("hypothesis", ""),
+                           decision=upd["outcome"],
+                           evidence=[f"experiment:{eid}"])
+            ctx.store.put("decisions", dec)
+            refs.append(dec.id)
+        return envelope({**upd, "decision_refs": refs})
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/decisions/{{did}}/completeness")
+    def decision_completeness(pid: str, did: str) -> dict:
+        from ..intel.experiments import decision_completeness
+        dec = ctx.store.get("decisions", did)
+        if dec.get("product_id") != pid:
+            raise ForgeError("PF-404", "decision not in product", 404)
+        return envelope(decision_completeness(dec))
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/meetings/{{mid}}/extract")
+    def meeting_extract(pid: str, mid: str, req: Request) -> dict:
+        from ..intel.experiments import extract_drafts
+        mtg = ctx.store.get("meetings", mid)
+        if mtg.get("product_id") != pid:
+            raise ForgeError("PF-404", "meeting not in product", 404)
+        mtg["draft_items"] = extract_drafts(mtg.get("transcript") or "")
+        mtg["status"] = "draft"
+        ctx.store.put("meetings", mtg)
+        ctx.audit(req, "meetings.extract", "meetings", mid, product_id=pid)
+        return envelope({"meeting_id": mid, "status": "draft",
+                         "draft_items": mtg["draft_items"],
+                         "note": "drafts only — publish requires human review"})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/meetings/{{mid}}/publish")
+    def meeting_publish(pid: str, mid: str, body: dict[str, Any], req: Request) -> dict:
+        mtg = ctx.store.get("meetings", mid)
+        if mtg.get("product_id") != pid:
+            raise ForgeError("PF-404", "meeting not in product", 404)
+        if not body.get("reviewed"):
+            raise ForgeError("PF-REVIEW-REQUIRED",
+                             "human review required: resubmit with reviewed=true", 409)
+        refs: list[str] = []
+        for item in body.get("items") or mtg.get("draft_items") or []:
+            if item.get("kind") == "decision":
+                dec = Decision(id=new_id("dec"), product_id=pid,
+                               title=item["text"][:80], decision=item["text"],
+                               evidence=[f"meeting:{mid}:line{item.get('line')}"])
+                ctx.store.put("decisions", dec)
+                refs.append(dec.id)
+            elif item.get("kind") == "action":
+                ini = Initiative(id=new_id("ini"), product_id=pid,
+                                 title=item["text"][:80],
+                                 evidence=[f"meeting:{mid}:line{item.get('line')}"])
+                ctx.store.put("initiatives", ini)
+                refs.append(ini.id)
+        mtg["status"] = "published"
+        mtg["published_refs"] = refs
+        ctx.store.put("meetings", mtg)
+        ctx.audit(req, "meetings.publish", "meetings", mid, product_id=pid,
+                  details={"refs": refs})
+        return envelope({"meeting_id": mid, "status": "published",
+                         "published_refs": refs})
 
     # -- knowledge (Cycle 3) ---------------------------------------------------
 

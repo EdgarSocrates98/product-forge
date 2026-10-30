@@ -282,6 +282,28 @@ class Decision(Entity):
     evidence: list[str] = Field(default_factory=list)
 
 
+class Experiment(Entity):
+    product_id: str
+    title: str
+    hypothesis: str = ""
+    design: str = ""
+    success_metrics: list[str] = Field(default_factory=list)
+    guardrails: dict[str, float] = Field(default_factory=dict)
+    baseline: dict[str, float] = Field(default_factory=dict)
+    status: Literal["draft", "running", "concluded", "stopped"] = "draft"
+    results: dict[str, float] = Field(default_factory=dict)
+    outcome: str = ""
+
+
+class Meeting(Entity):
+    product_id: str
+    title: str
+    transcript: str = ""
+    status: Literal["ingested", "draft", "published"] = "ingested"
+    draft_items: list[dict[str, Any]] = Field(default_factory=list)
+    published_refs: list[str] = Field(default_factory=list)
+
+
 class AuditEvent(Entity):
     workspace_id: str | None = None
     product_id: str | None = None

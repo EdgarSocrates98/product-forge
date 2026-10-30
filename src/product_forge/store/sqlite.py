@@ -42,6 +42,8 @@ COLLECTIONS = (
     "alerts",
     "reports",
     "approvals",
+    "experiments",
+    "meetings",
     "audit_events",
 )
 
