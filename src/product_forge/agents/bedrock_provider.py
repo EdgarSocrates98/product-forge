@@ -62,7 +62,13 @@ def main() -> int:
         return 2
     try:
         import boto3  # noqa: PLC0415 — optional dependency by design
-        from botocore.exceptions import ClientError, MissingDependencyException, NoCredentialsError, ProfileNotFound, SSOTokenLoadError  # noqa: PLC0415
+        from botocore.exceptions import (  # noqa: PLC0415
+            ClientError,
+            MissingDependencyException,
+            NoCredentialsError,
+            ProfileNotFound,
+            SSOTokenLoadError,
+        )
     except ModuleNotFoundError:
         _reply({"error": {"code": "PF-PROVIDER",
                           "message": "boto3 not installed — "
