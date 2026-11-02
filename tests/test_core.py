@@ -99,7 +99,7 @@ def test_envelope_and_errors(home):
     env = envelope({"a": 1})
     assert env["schema"] == "forge/PortalApi/1" and env["data"]["a"] == 1
     err = NotFoundError("nope")
-    assert err.body()["code"] == "PORTAL-NOT-FOUND"
+    assert err.body()["code"] == "PF-NOT-FOUND"
     assert ValidationError("bad").http_status == 422
 
 

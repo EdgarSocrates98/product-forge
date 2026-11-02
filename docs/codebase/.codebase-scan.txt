@@ -1,0 +1,381 @@
+
+=== DIRECTORY TREE (max depth 3, source files only) ===
+.agents
+.agents/agents
+.agents/agents/agent-ops-coordinator.md
+.agents/agents/data-analyst-coordinator.md
+.agents/agents/executors
+.agents/agents/executors/pf-extractor.md
+.agents/agents/executors/pf-judge.md
+.agents/agents/executors/pf-synthesizer.md
+.agents/agents/executors/pf-verifier.md
+.agents/agents/integration-coordinator.md
+.agents/agents/planning-coordinator.md
+.agents/agents/product-intel-coordinator.md
+.agents/skills
+.agents/skills/pf-agent-factory
+.agents/skills/pf-agent-factory/SKILL.md
+.agents/skills/pf-agent-factory/agents
+.agents/skills/pf-analytics
+.agents/skills/pf-analytics/SKILL.md
+.agents/skills/pf-analytics/agents
+.agents/skills/pf-apis
+.agents/skills/pf-apis/SKILL.md
+.agents/skills/pf-apis/agents
+.agents/skills/pf-aws
+.agents/skills/pf-aws/SKILL.md
+.agents/skills/pf-aws/agents
+.agents/skills/pf-azure
+.agents/skills/pf-azure/SKILL.md
+.agents/skills/pf-azure/agents
+.agents/skills/pf-dashboards
+.agents/skills/pf-dashboards/SKILL.md
+.agents/skills/pf-dashboards/agents
+.agents/skills/pf-data-products
+.agents/skills/pf-data-products/SKILL.md
+.agents/skills/pf-data-products/agents
+.agents/skills/pf-finops
+.agents/skills/pf-finops/SKILL.md
+.agents/skills/pf-finops/agents
+.agents/skills/pf-governance
+.agents/skills/pf-governance/SKILL.md
+.agents/skills/pf-governance/agents
+.agents/skills/pf-knowledge
+.agents/skills/pf-knowledge/SKILL.md
+.agents/skills/pf-knowledge/agents
+.agents/skills/pf-prioritization
+.agents/skills/pf-prioritization/SKILL.md
+.agents/skills/pf-prioritization/agents
+.agents/skills/pf-product-discovery
+.agents/skills/pf-product-discovery/SKILL.md
+.agents/skills/pf-product-discovery/agents
+.agents/skills/pf-product-strategy
+.agents/skills/pf-product-strategy/SKILL.md
+.agents/skills/pf-product-strategy/agents
+.agents/skills/pf-reporting
+.agents/skills/pf-reporting/SKILL.md
+.agents/skills/pf-reporting/agents
+.agents/skills/pf-requirements
+.agents/skills/pf-requirements/SKILL.md
+.agents/skills/pf-requirements/agents
+.agents/skills/pf-sql
+.agents/skills/pf-sql/SKILL.md
+.agents/skills/pf-sql/agents
+.devin
+.devin/skills
+.devin/skills/pf-agent-factory
+.devin/skills/pf-agent-factory/SKILL.md
+.devin/skills/pf-agent-factory/agents
+.devin/skills/pf-analytics
+.devin/skills/pf-analytics/SKILL.md
+.devin/skills/pf-analytics/agents
+.devin/skills/pf-apis
+.devin/skills/pf-apis/SKILL.md
+.devin/skills/pf-apis/agents
+.devin/skills/pf-aws
+.devin/skills/pf-aws/SKILL.md
+.devin/skills/pf-aws/agents
+.devin/skills/pf-azure
+.devin/skills/pf-azure/SKILL.md
+.devin/skills/pf-azure/agents
+.devin/skills/pf-dashboards
+.devin/skills/pf-dashboards/SKILL.md
+.devin/skills/pf-dashboards/agents
+.devin/skills/pf-data-products
+.devin/skills/pf-data-products/SKILL.md
+.devin/skills/pf-data-products/agents
+.devin/skills/pf-finops
+.devin/skills/pf-finops/SKILL.md
+.devin/skills/pf-finops/agents
+.devin/skills/pf-governance
+.devin/skills/pf-governance/SKILL.md
+.devin/skills/pf-governance/agents
+.devin/skills/pf-knowledge
+.devin/skills/pf-knowledge/SKILL.md
+.devin/skills/pf-knowledge/agents
+.devin/skills/pf-prioritization
+.devin/skills/pf-prioritization/SKILL.md
+.devin/skills/pf-prioritization/agents
+.devin/skills/pf-product-discovery
+.devin/skills/pf-product-discovery/SKILL.md
+.devin/skills/pf-product-discovery/agents
+.devin/skills/pf-product-strategy
+.devin/skills/pf-product-strategy/SKILL.md
+.devin/skills/pf-product-strategy/agents
+.devin/skills/pf-reporting
+.devin/skills/pf-reporting/SKILL.md
+.devin/skills/pf-reporting/agents
+.devin/skills/pf-requirements
+.devin/skills/pf-requirements/SKILL.md
+.devin/skills/pf-requirements/agents
+.devin/skills/pf-sql
+.devin/skills/pf-sql/SKILL.md
+.devin/skills/pf-sql/agents
+.github
+.github/workflows
+.github/workflows/ci.yml
+.gitignore
+.loop
+.loop/NEXT.md
+.mcp.json
+.product-forge
+.product-forge/backups
+.product-forge/backups/.agents
+.product-forge/backups/.agents/skills
+.product-forge/backups/.devin
+.product-forge/backups/.devin/skills
+.product-forge/backups/AGENTS.md
+.product-forge/backups/CLAUDE.md
+.product-forge/bundle
+.product-forge/bundle/rules
+.product-forge/bundle/rules/catalog
+.product-forge/components.json
+.product-forge/install-ledger.json
+.product-forge/receipts
+.product-forge/receipts/install-20261030T011827Z.json
+.product-forge/receipts/install-20261030T011839Z.json
+.product-forge/receipts/install-20261030T011851Z.json
+.product-forge/receipts/install-20261030T011917Z.json
+.product-forge/receipts/install-20261030T011936Z.json
+.product-forge/receipts/install-20261030T012150Z.json
+.product-forge/receipts/install-20261030T012202Z.json
+.product-forge/receipts/install-20261030T012809Z.json
+.product-forge/receipts/install-20261030T012847Z.json
+.product-forge/receipts/install-20261030T013313Z.json
+.product-forge/receipts/install-20261030T013339Z.json
+.product-forge/receipts/install-20261030T014455Z.json
+.product-forge/receipts/install-20261030T014526Z.json
+.product-forge/receipts/install-20261030T015009Z.json
+.product-forge/receipts/install-20261030T015038Z.json
+.product-forge/receipts/install-20261030T015158Z.json
+.product-forge/receipts/install-20261030T020422Z.json
+.product-forge/receipts/install-20261030T020524Z.json
+.product-forge/receipts/install-20261030T020631Z.json
+.product-forge/receipts/install-20261030T020818Z.json
+.product-forge/receipts/install-20261030T021138Z.json
+.product-forge/receipts/install-20261030T021408Z.json
+.product-forge/receipts/install-20261030T090017Z.json
+.product-forge/receipts/install-20261030T090921Z.json
+.product-forge/receipts/install-20261030T090943Z.json
+.product-forge/receipts/install-20261030T091009Z.json
+.product-forge/receipts/install-20261030T093006Z.json
+.product-forge/receipts/install-20261030T094233Z.json
+.product-forge/receipts/install-20261030T094504Z.json
+.product-forge/receipts/install-20261030T095014Z.json
+.product-forge/receipts/install-20261030T114436Z.json
+.product-forge/receipts/install-20261030T115317Z.json
+.product-forge/receipts/install-20261030T115638Z.json
+.product-forge/receipts/install-20261030T124550Z.json
+.product-forge/receipts/install-20261030T134426Z.json
+.product-forge/receipts/install-20261030T152357Z.json
+.product-forge/receipts/install-20261102T130021Z.json
+.product-forge/receipts/install-20261102T130053Z.json
+.product-forge/receipts/install-20261102T130236Z.json
+.product-forge/receipts/install-20261102T130642Z.json
+.product-forge/receipts/install-20261102T130736Z.json
+.product-forge/receipts/install-20261102T130844Z.json
+.product-forge/receipts/install-20261102T130920Z.json
+.product-forge/receipts/install-20261102T130951Z.json
+.product-forge/receipts/install-20261102T131043Z.json
+.product-forge/receipts/install-20261102T131112Z.json
+.product-forge/receipts/install-20261102T131141Z.json
+.product-forge/receipts/install-20261102T131258Z.json
+.product-forge/receipts/install-20261102T131329Z.json
+.product-forge/receipts/install-20261102T131406Z.json
+.product-forge/receipts/install-20261102T131439Z.json
+.product-forge/receipts/install-20261102T132116Z.json
+.pytest_cache
+.pytest_cache/.gitignore
+.pytest_cache/CACHEDIR.TAG
+.pytest_cache/README.md
+.pytest_cache/v
+.pytest_cache/v/cache
+.pytest_cache/v/cache/lastfailed
+.pytest_cache/v/cache/nodeids
+.ruff_cache
+.ruff_cache/.gitignore
+.ruff_cache/0.17.3
+.ruff_cache/0.17.3/11943524148256424522
+.ruff_cache/0.17.3/13005628464003226421
+.ruff_cache/0.17.3/16052004297008339234
+.ruff_cache/0.17.3/16892677469142636453
+.ruff_cache/0.17.3/2446876163397982209
+
+=== STACK DETECTION (manifest files) ===
+
+--- pyproject.toml ---
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "product-forge"
+dynamic = ["version"]
+description = "Product Forge — Product Intelligence, Analytics Intelligence & Agentic Workspace for PMs and PAs"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "EdgarSocrates98" }]
+keywords = ["product-management", "product-analytics", "agents", "forge", "mcp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "pydantic>=2.7,<3",
+    "typer>=0.12",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.110", "uvicorn>=0.29"]
+mcp = ["mcp>=1.9"]
+analytics = ["sqlglot>=25", "duckdb>=1.0"]
+aws = ["boto3>=1.34"]
+azure = ["azure-identity>=1.17", "azure-monitor-query>=1.1"]
+docs = ["pypdf>=4.0", "python-docx>=1.1", "openpyxl>=3.1"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "jsonschema>=4.21",
+    "httpx>=0.27",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "sqlglot>=25",
+    "duckdb>=1.0",
+    "pypdf>=4.0",
+    "python-docx>=1.1",
+    "openpyxl>=3.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "jsonschema>=4.21",
+    "httpx>=0.27",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "sqlglot>=25",
+    "duckdb>=1.0",
+    "pypdf>=4.0",
+    "python-docx>=1.1",
+    "openpyxl>=3.1",
+]
+
+[project.scripts]
+productforge = "product_forge.cli:app"
+
+[project.urls]
+Repository = "https://github.com/EdgarSocrates98/product-forge"
+Issues = "https://github.com/EdgarSocrates98/product-forge/issues"
+
+[tool.hatch.version]
+path = "src/product_forge/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+
+[TRUNCATED] Showing first 80 of 116 lines.
+
+=== ENTRY POINTS ===
+No common entry points found. Check 'main' or 'scripts.start' in manifest files above.
+
+=== LINTING AND FORMATTING CONFIG ===
+No linting or formatting config files found in project root.
+
+=== ENVIRONMENT VARIABLE TEMPLATES ===
+No .env.example or .env.template found. Identify required environment variables by searching the code and config for environment variable reads.
+
+=== TODO / FIXME / HACK (production code only, test dirs excluded) ===
+None found.
+
+=== GIT RECENT COMMITS (last 20) ===
+995c176 fix: ruff-clean context v2 tests (CI lint gate)
+810bcf5 feat(api): forge/ProductAgentSessionContext/v2 authorization endpoint
+1fa5f7f bedrock provider: ruff-format multi-import line
+73feb62 bedrock provider: map MissingDependencyException -> unavailable:dependency
+5514ef9 sso scaffolding script
+07cbae3 bedrock sso provider adapter: gateway.provider_cmd subprocess mapping to bedrock-runtime Converse; SSO credential chain via PF_BEDROCK_PROFILE, named unavailable:/unverified: states, no fabricated responses; boto3 installed; docs/BEDROCK_SSO.md setup guide
+92ac75d deep-regression-suite (in-progress): parametric sweep proves envelope + 401 on every method of every /api/v1 route (health exempt, public); grill gates completed with owner answers; spec staged to active
+cd50ea8 deep-test gap (a): route contract sweep + envelope fix — starlette HTTPException handler emits PF-NOT-FOUND (route-miss leaked {'detail'}), PF-* codes on all HTTP errors; 4 new sweep tests lock envelope on all 52 GET routes, auth-401s, 404s. Factory: 3 specs staged for the multi-team blockers (deep-regression-suite, live-provider-homologation, real-authz-multi-tenant) with open questions for human grill
+785b717 Cycle 25 (PF): risk-tiered publish gates — low 0.50 / medium 0.65 / high 0.80 + allow_destructive for high-risk agents
+56074b8 docs: install guide, API reference, MCP reference, changelog, README refresh
+8b5bd96 Guided install parity with sparkforge-aws: wizard, workspace scope, bootstrap scripts
+c46279e Skill-creator pass: refresh pf-* skills for post-Cycle-15 capabilities
+6f759d5 add logo
+d6a1930 feat(cycle16/17): analysis notebooks + doc-store persistence fix
+26447cf feat(cycle18): persona homologation + production readiness report
+ccf374a feat(cycle17): Experiment Studio + Meeting Intelligence + Decision Journal
+28ab31d feat(cycle17): Product Health Center + unified evidence graph
+3faf4a7 feat(cycle16): semantic metrics catalog — KPIs as data, not guesses
+c227b1d feat(cycle15): real LLM agent runtime via gateway provider
+9501cf4 feat(cycle13): durable job registry + workspace-scoped RBAC-lite
+
+=== HIGH-CHURN FILES (last 90 days, top 20) ===
+  20 src/product_forge/api/app.py
+  11 graphify-out/.graphify_labels.json
+  11 graphify-out/.graphify_labels.json.sig
+  11 graphify-out/GRAPH_REPORT.md
+  11 graphify-out/cache/stat-index.json
+  11 graphify-out/graph.html
+  11 graphify-out/graph.json
+  11 graphify-out/manifest.json
+  10 src/product_forge/store/sqlite.py
+  10 graphify-out/2026-10-29/.graphify_labels.json
+  10 graphify-out/2026-10-29/GRAPH_REPORT.md
+  10 graphify-out/2026-10-29/graph.json
+  10 graphify-out/2026-10-29/manifest.json
+   9 src/product_forge/cli/__init__.py
+   5 README.md
+   5 tests/test_cycle13.py
+   4 src/product_forge/config.py
+   4 pyproject.toml
+   4 .product-forge/install-ledger.json
+   3 src/product_forge/agents/bedrock_provider.py
+
+=== MONOREPO SIGNALS ===
+No monorepo signals detected.
+
+=== CODE METRICS ===
+Total files scanned: 616
+Total lines of code: 47124
+
+Files by language:
+  Other: 524
+  Python: 92
+
+Top 10 largest files:
+graphify-out/graph.json: 1806.9KB
+graphify-out/2026-10-30/graph.json: 1798.9KB
+docs/assets/logo.png: 1558.5KB
+graphify-out/graph.html: 1513.1KB
+graphify-out/2026-10-29/graph.json: 1482.3KB
+graphify-out/cache/ast/v0.9.48-s2/dfd22938f1d34ed0dd515d7aecaa4341208664f3ff21061b17e85091ea942120.json: 206.9KB
+graphify-out/cache/ast/v0.9.48-s2/8b8f5af4b2242d8311d909f2f7ed46bc87827e29abad2757045168b21a0b3d97.json: 139.4KB
+graphify-out/cache/ast/v0.9.48-s2/b1024e280ee8c31cd9910c022cbcdc67528bcc1c8c0f979b2640899167aa57b7.json: 105.1KB
+graphify-out/cache/ast/v0.9.48-s2/68b708a32af53979ec8c90cb194f4d7227c2ee2d398eab17c9fbb15ba33f448a.json: 104.7KB
+graphify-out/cache/ast/v0.9.48-s2/92b099be080ee8b6ebc2b007869cf99d672f5cd79f296272efa75fb793d13d09.json: 101.9KB
+
+=== CI/CD PIPELINES ===
+CI/CD: GitHub Actions
+
+=== CONTAINERS & ORCHESTRATION ===
+No containerization configs detected.
+
+=== SECURITY & COMPLIANCE ===
+No security configs detected.
+
+=== PERFORMANCE & TESTING ===
+No performance testing configs detected.
+
+=== SCAN COMPLETE ===

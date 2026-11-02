@@ -30,7 +30,7 @@ class ForgeError(Exception):
 
 
 class NotFoundError(ForgeError):
-    code = "PORTAL-NOT-FOUND"
+    code = "PF-NOT-FOUND"
     http_status = 404
 
 

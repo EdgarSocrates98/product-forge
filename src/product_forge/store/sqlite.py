@@ -7,6 +7,7 @@ Collections map 1:1 to domain entities. Audit events are never updated.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import threading
 from collections.abc import Iterable
@@ -40,6 +41,7 @@ COLLECTIONS = (
     "metrics",
     "watches",
     "alerts",
+    "notifications",
     "reports",
     "approvals",
     "experiments",
@@ -110,12 +112,36 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status, updated_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_idem ON jobs(idempotency_key);
 """),
+    (3, """
+    ALTER TABLE jobs ADD COLUMN expires_at TEXT;
+    """),
 ]
 SCHEMA_VERSION = max(v for v, _ in MIGRATIONS)
 
 
 class Store:
     """Thread-safe JSON-document store over SQLite."""
+
+    def __new__(cls, path: Path):
+        """Select the configured durable backend without changing callers.
+
+        SQLite remains the zero-configuration local default. A PostgreSQL DSN
+        opts into the compatible backend for supervised/container installs.
+        """
+        backend = os.environ.get("PRODUCT_FORGE_DB_BACKEND", "").lower()
+        dsn = os.environ.get("PRODUCT_FORGE_DATABASE_URL", "").strip()
+        if not backend or not dsn:
+            try:
+                cfg = json.loads((path.parent.parent / "config.json").read_text(encoding="utf-8"))
+                store_cfg = cfg.get("store", {})
+                backend = backend or str(store_cfg.get("backend", "auto")).lower()
+                dsn = dsn or str(store_cfg.get("database_url") or "")
+            except (OSError, json.JSONDecodeError):
+                backend = backend or "auto"
+        if backend == "postgres" or (backend == "auto" and dsn):
+            from .postgres import PostgresStore
+            return PostgresStore(dsn)
+        return super().__new__(cls)
 
     def __init__(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)

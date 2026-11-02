@@ -31,6 +31,7 @@ dependencies = [
 api = ["fastapi>=0.110", "uvicorn>=0.29"]
 mcp = ["mcp>=1.9"]
 analytics = ["sqlglot>=25", "duckdb>=1.0"]
+postgres = ["psycopg[binary]>=3.2"]
 aws = ["boto3>=1.34"]
 azure = ["azure-identity>=1.17", "azure-monitor-query>=1.1"]
 docs = ["pypdf>=4.0", "python-docx>=1.1", "openpyxl>=3.1"]
@@ -41,6 +42,7 @@ dev = [
     "mypy>=1.10",
     "jsonschema>=4.21",
     "httpx>=0.27",
+    "httpx2>=2.16",
     "fastapi>=0.110",
     "uvicorn>=0.29",
     "sqlglot>=25",
@@ -48,6 +50,7 @@ dev = [
     "pypdf>=4.0",
     "python-docx>=1.1",
     "openpyxl>=3.1",
+    "psycopg[binary]>=3.2",
 ]
 
 [dependency-groups]
@@ -58,6 +61,7 @@ dev = [
     "mypy>=1.10",
     "jsonschema>=4.21",
     "httpx>=0.27",
+    "httpx2>=2.16",
     "fastapi>=0.110",
     "uvicorn>=0.29",
     "sqlglot>=25",
@@ -65,6 +69,7 @@ dev = [
     "pypdf>=4.0",
     "python-docx>=1.1",
     "openpyxl>=3.1",
+    "psycopg[binary]>=3.2",
 ]
 
 [project.scripts]

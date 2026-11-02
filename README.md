@@ -29,8 +29,24 @@ Bootstrap the CLI (wheel → isolated venv → launcher):
 # or dev flow: uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
 ```
 
-Then install the Forge — bare `productforge install` on a TTY opens the
-**guided wizard** (same contract as `sparkforge-aws install`):
+Then install the Forge. For the non-technical first-run path, use one command:
+
+```bash
+productforge install
+```
+
+It applies the recommended local profile, installs the Product Forge PM/PA
+portal assets and host integrations, records a receipt and runs diagnostics.
+It also provisions a managed PostgreSQL container for the recommended
+profile. It does not open a browser or ask for AI provider credentials.
+
+The recommended profile uses an installation-scoped Docker volume and a
+generated local DSN. `productforge portal` reconciles the database before
+opening the UI; `productforge status` and `productforge doctor` report its
+health. Use `--profile minimal` for an explicit SQLite-only offline install.
+
+On a TTY, advanced users can use the **guided wizard** (same contract as
+`sparkforge-aws install`):
 
 1. **Scope** — `project` | `workspace` | `user`
 2. **Install profile** — `minimal` | `recommended` | `full`
@@ -62,7 +78,7 @@ productforge knowledge import <product_id> docs/payments.md
 productforge knowledge query <product_id> "retry policy"
 productforge agent create <product_id> "Payments Analyst" --template product-analyst
 productforge api serve            # local API on 127.0.0.1
-productforge portal               # visual studio
+productforge portal               # opens the Product Forge PM/PA portal and manages the local Agent Bridge
 productforge mcp serve            # MCP tools for agent hosts
 ```
 

@@ -7,12 +7,18 @@ every op to real Store calls — nothing fabricates state.
 
 from __future__ import annotations
 
+import json
+import os
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
 from typing import Any
 
 from .. import FORGE_ID, __version__
-from .._forge_portal import Operation, PortalAdapter, RequestContext
+from .._forge_portal import Operation, PortalAdapter, RequestContext, default_operations
 from ..config import db_path, home_dir, load_config
-from ..domain.models import Product, Workspace, new_id
+from ..domain.models import Initiative, Product, Workspace, new_id
 from ..store.sqlite import Store
 
 
@@ -38,6 +44,10 @@ class ProductForgePortal(PortalAdapter):
 
     def __init__(self) -> None:
         super().__init__()
+        # Keep the operation registry instance-local.  The vendored base class
+        # intentionally stays minimal and its dataclass field is also exposed
+        # as a class attribute for compatibility with the sibling forges.
+        self.ops = list(default_operations(self))
         self.register(Operation("GET", "/workspaces", self._ws_list))
         self.register(Operation("POST", "/workspaces", self._ws_create, mutating=True, confirm="create"))
         self.register(Operation("GET", "/products", self._products))
@@ -48,11 +58,30 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("POST", "/products/{pid}/knowledge/query", self._kn_query))
         self.register(Operation("GET", "/products/{pid}/graph", self._graph))
         self.register(Operation("GET", "/products/{pid}/knowledge-health", self._kn_health))
+        self.register(Operation("GET", "/agent/health", self._agent_health))
+        self.register(Operation("GET", "/agent/providers", self._agent_providers))
+        self.register(Operation("POST", "/agent/providers/claude/auth", self._claude_auth,
+                                mutating=True, confirm="start"))
+        self.register(Operation("GET", "/chat/sessions", self._chat_sessions))
+        self.register(Operation("POST", "/chat/sessions", self._chat_create,
+                                mutating=True, confirm="create"))
+        self.register(Operation("POST", "/chat/sessions/{sid}/prompt", self._chat_prompt,
+                                mutating=True, confirm="send"))
+        self.register(Operation("POST", "/chat/sessions/{sid}/events", self._chat_events))
+        self.register(Operation("DELETE", "/chat/sessions/{sid}", self._chat_close,
+                                mutating=True, confirm="close"))
         self.register(Operation("POST", "/products/{pid}/queries/execute", self._q_exec,
                                 mutating=True, confirm="execute"))
         self.register(Operation("POST", "/products/{pid}/agents/{aid}/run", self._agent_run,
                                 mutating=True, confirm="run"))
         self.register(Operation("GET", "/products/{pid}/roadmap", self._roadmap))
+        self.register(Operation("GET", "/products/{pid}/initiatives", self._initiatives))
+        self.register(Operation("POST", "/products/{pid}/initiatives", self._initiative_create,
+                                mutating=True, confirm="create"))
+        self.register(Operation("POST", "/products/{pid}/initiatives/{iid}/prioritize",
+                                self._initiative_prioritize, mutating=True, confirm="prioritize"))
+        self.register(Operation("GET", "/products/{pid}/boards", self._board))
+        self.register(Operation("GET", "/notifications", self._notifications))
         self.register(Operation("GET", "/products/{pid}/alerts", self._alerts))
         self.register(Operation("GET", "/audit", self._audit))
 
@@ -69,6 +98,8 @@ class ProductForgePortal(PortalAdapter):
             {"id": "analytics", "state": "unverified"},
             {"id": "dashboards", "state": "unverified"},
             {"id": "planning", "state": "unverified"},
+            {"id": "chat", "state": "unverified"},
+            {"id": "agent-bridge", "state": "unverified"},
         ]
 
     def nav(self) -> list[dict[str, Any]]:
@@ -76,7 +107,10 @@ class ProductForgePortal(PortalAdapter):
             {"id": "home", "label_key": "nav.home", "route": "/"},
             {"id": "workspaces", "label_key": "nav.workspaces", "route": "/workspaces"},
             {"id": "products", "label_key": "nav.products", "route": "/products"},
+            {"id": "boards", "label_key": "nav.boards", "route": "/boards"},
+            {"id": "roadmaps", "label_key": "nav.roadmaps", "route": "/roadmaps"},
             {"id": "knowledge", "label_key": "nav.knowledge", "route": "/knowledge"},
+            {"id": "chat", "label_key": "nav.chat", "route": "/chat"},
             {"id": "agents", "label_key": "nav.agents", "route": "/agents"},
             {"id": "analytics", "label_key": "nav.analytics", "route": "/analytics"},
             {"id": "dashboards", "label_key": "nav.dashboards", "route": "/dashboards"},
@@ -230,9 +264,138 @@ class ProductForgePortal(PortalAdapter):
         finally:
             st.close()
 
+    def _initiatives(self, ctx: RequestContext) -> dict[str, Any]:
+        st = _store()
+        try:
+            return {"items": st.list("initiatives", product_id=ctx.params["pid"], limit=500)}
+        finally:
+            st.close()
+
+    def _initiative_create(self, ctx: RequestContext) -> dict[str, Any]:
+        body = ctx.body or {}
+        st = _store()
+        try:
+            st.get("products", ctx.params["pid"])
+            item = Initiative(id=new_id("ini"), product_id=ctx.params["pid"],
+                              title=str(body.get("title", "")).strip(),
+                              hypothesis=str(body.get("hypothesis", "")),
+                              status=str(body.get("status", "proposed")))
+            if not item.title:
+                raise ValueError("initiative title is required")
+            st.put("initiatives", item)
+            ctx.emit("initiative.created", resource_id=item.id)
+            return item.model_dump(mode="json", by_alias=True)
+        finally:
+            st.close()
+
+    def _initiative_prioritize(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..planning.prioritize import score_initiative
+        st = _store()
+        try:
+            doc = st.get("initiatives", ctx.params["iid"])
+            if doc.get("product_id") != ctx.params["pid"]:
+                raise KeyError(ctx.params["iid"])
+            result = score_initiative(doc, (ctx.body or {}).get("factors", {}))
+            doc["priority_score"] = result["score"]
+            doc["status"] = "prioritized"
+            st.put("initiatives", Initiative.model_validate(doc))
+            ctx.emit("initiative.prioritized", resource_id=ctx.params["iid"])
+            return result
+        finally:
+            st.close()
+
+    def _board(self, ctx: RequestContext) -> dict[str, Any]:
+        items = self._initiatives(ctx)["items"]
+        columns = {key: [] for key in ("proposed", "prioritized", "in_progress", "done", "rejected")}
+        for item in items:
+            columns.setdefault(item.get("status", "proposed"), []).append(item)
+        return {"schema": "productforge/Board/v1", "product_id": ctx.params["pid"],
+                "columns": columns, "items": items}
+
+    def _notifications(self, ctx: RequestContext) -> dict[str, Any]:
+        st = _store()
+        try:
+            return {"items": st.list("alerts", limit=100) + st.list("notifications", limit=100),
+                    "delivery": "approval-gated-webhook-or-smtp"}
+        finally:
+            st.close()
+
     def _alerts(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()
         try:
             return {"items": st.list("alerts", product_id=ctx.params["pid"])}
         finally:
             st.close()
+
+    @staticmethod
+    def _bridge_request(path: str, *, method: str = "GET",
+                        body: dict[str, Any] | None = None) -> dict[str, Any]:
+        base = os.environ.get("FORGE_BRIDGE_URL", "http://127.0.0.1:8471").rstrip("/")
+        parsed = urllib.parse.urlsplit(base)
+        if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
+            "127.0.0.1", "localhost", "::1"
+        }:
+            return {"state": "unavailable", "reason": "non_loopback_bridge_url"}
+        token_file = Path(os.environ.get(
+            "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token"
+        )).expanduser()
+        headers = {"Accept": "application/json"}
+        try:
+            token = token_file.read_text(encoding="utf-8").strip()
+        except OSError:
+            token = ""
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        data = json.dumps(body).encode("utf-8") if body is not None else None
+        if data is not None:
+            headers["Content-Type"] = "application/json"
+        request = urllib.request.Request(  # noqa: S310 - URL validated above
+            f"{base}{path}", data=data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(request, timeout=2) as response:  # noqa: S310 - loopback validated above
+                payload = json.loads(response.read().decode("utf-8"))
+                return payload if isinstance(payload, dict) else {"items": payload}
+        except urllib.error.HTTPError as exc:
+            try:
+                detail = json.loads(exc.read().decode("utf-8"))
+            except (OSError, ValueError):
+                detail = {"message": str(exc)}
+            return {"state": "error", "status": exc.code, "error": detail}
+        except (OSError, ValueError, urllib.error.URLError) as exc:
+            return {"state": "unavailable", "reason": type(exc).__name__}
+
+    @staticmethod
+    def _bridge_get(path: str) -> dict[str, Any]:
+        return ProductForgePortal._bridge_request(path)
+
+    def _agent_health(self, ctx: RequestContext) -> dict[str, Any]:
+        return self._bridge_get("/status")
+
+    def _agent_providers(self, ctx: RequestContext) -> dict[str, Any]:
+        return self._bridge_get("/providers")
+
+    def _claude_auth(self, ctx: RequestContext) -> dict[str, Any]:
+        return self._bridge_request("/providers/claude-code/auth", method="POST",
+                                    body=dict(ctx.body or {}))
+
+    def _chat_sessions(self, ctx: RequestContext) -> dict[str, Any]:
+        return self._bridge_get("/agent-sessions")
+
+    def _chat_create(self, ctx: RequestContext) -> dict[str, Any]:
+        body = dict(ctx.body or {})
+        body.setdefault("provider", "fake")
+        return self._bridge_request("/agent-sessions", method="POST", body=body)
+
+    def _chat_prompt(self, ctx: RequestContext) -> dict[str, Any]:
+        return self._bridge_request(
+            f"/agent-sessions/{ctx.params['sid']}/prompt",
+            method="POST", body=dict(ctx.body or {}))
+
+    def _chat_events(self, ctx: RequestContext) -> dict[str, Any]:
+        return self._bridge_request(
+            f"/agent-sessions/{ctx.params['sid']}/events",
+            method="POST", body=dict(ctx.body or {}))
+
+    def _chat_close(self, ctx: RequestContext) -> dict[str, Any]:
+        return self._bridge_request(
+            f"/agent-sessions/{ctx.params['sid']}", method="DELETE")

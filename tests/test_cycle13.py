@@ -65,7 +65,7 @@ def test_migrations_and_backup(tmp_path, monkeypatch):
     st = Store(db_path(home, load_config(home)))
     assert st.migrate() == []  # already at SCHEMA_VERSION
     row = st._conn.execute("SELECT version FROM schema_migrations").fetchall()
-    assert row and row[-1][0] == 2
+    assert row and row[-1][0] == 3
     assert st._conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
     st.put("products", Product(id="p1", workspace_id="w1", name="X"))
     dest = st.backup(tmp_path / "bak.db")

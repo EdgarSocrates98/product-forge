@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -91,6 +92,7 @@ class JobIn(BaseModel):
     payload: dict[str, Any] | None = None
     product_id: str | None = None
     idempotency_key: str | None = None
+    expires_at: str | None = None
 
 
 class DelegateCallIn(BaseModel):
@@ -228,6 +230,17 @@ def create_app(home: Path | None = None) -> FastAPI:
                "severity": "error", "retryable": exc.status_code >= 500}
         return JSONResponse(status_code=exc.status_code, content=envelope(error=err))
 
+    @app.exception_handler(RequestValidationError)
+    async def _validation_err(_req: Request, exc: RequestValidationError) -> JSONResponse:
+        err = {
+            "code": "PF-VALIDATION",
+            "message": "request validation failed",
+            "severity": "warning",
+            "retryable": False,
+            "details": {"errors": exc.errors()},
+        }
+        return JSONResponse(status_code=422, content=envelope(error=err))
+
     from starlette.exceptions import HTTPException as _StarletteHTTPException
 
     @app.exception_handler(_StarletteHTTPException)
@@ -305,7 +318,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.post(f"{API_PREFIX}/jobs")
     def jobs_enqueue(body: JobIn, req: Request) -> dict:
         job = ctx.jobs.enqueue(body.kind, body.payload, body.product_id,
-                               body.idempotency_key)
+                               body.idempotency_key, body.expires_at)
         ctx.audit(req, "job.enqueue", "job", job["id"], product_id=body.product_id or "")
         return envelope(job)
 
@@ -422,6 +435,30 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.get(f"{API_PREFIX}/products/{{pid}}")
     def get_product(pid: str) -> dict:
         return envelope(ctx.store.get("products", pid))
+
+    @app.patch(f"{API_PREFIX}/products/{{pid}}")
+    def patch_product(pid: str, body: ScopedIn, req: Request) -> dict:
+        from ..errors import ValidationError
+
+        doc = ctx.store.get("products", pid)
+        allowed = {"name", "description", "domain", "tags", "stakeholders", "status"}
+        data = {k: v for k, v in body.model_dump(exclude_unset=True).items() if k in allowed}
+        if not data:
+            raise ValidationError("at least one product field is required")
+        doc.update(data)
+        product = Product.model_validate(doc)
+        ctx.store.put("products", product)
+        ctx.audit(req, "product.update", "product", pid,
+                  product_id=pid, workspace_id=product.workspace_id)
+        return envelope(product.model_dump(mode="json", by_alias=True))
+
+    @app.delete(f"{API_PREFIX}/products/{{pid}}")
+    def delete_product(pid: str, req: Request) -> dict:
+        product = ctx.store.get("products", pid)
+        ctx.store.delete("products", pid)
+        ctx.audit(req, "product.delete", "product", pid,
+                  product_id=pid, workspace_id=product.get("workspace_id", ""))
+        return envelope({"deleted": True, "id": pid})
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/context")
     def product_context(pid: str) -> dict:
@@ -556,6 +593,35 @@ def create_app(home: Path | None = None) -> FastAPI:
                 from ..errors import NotFoundError
                 raise NotFoundError(f"{c}/{rid} not in product {pid}")
             return envelope(doc)
+
+        @app.patch(f"{API_PREFIX}/products/{{pid}}/{path}/{{rid}}")
+        def _patch(pid: str, rid: str, body: ScopedIn, req: Request,
+                   p=path, c=collection, m=model) -> dict:  # type: ignore[misc]
+            from ..errors import NotFoundError, ValidationError
+
+            doc = ctx.store.get(c, rid)
+            if doc.get("product_id") != pid:
+                raise NotFoundError(f"{c}/{rid} not in product {pid}")
+            data = {k: v for k, v in body.model_dump(exclude_unset=True).items()
+                    if k in in_fields}
+            if not data:
+                raise ValidationError("at least one entity field is required")
+            doc.update(data)
+            ent = m.model_validate(doc)
+            ctx.store.put(c, ent)
+            ctx.audit(req, f"{p}.update", c, rid, product_id=pid)
+            return envelope(ent.model_dump(mode="json", by_alias=True))
+
+        @app.delete(f"{API_PREFIX}/products/{{pid}}/{path}/{{rid}}")
+        def _delete(pid: str, rid: str, req: Request, p=path, c=collection) -> dict:  # type: ignore[misc]
+            from ..errors import NotFoundError
+
+            doc = ctx.store.get(c, rid)
+            if doc.get("product_id") != pid:
+                raise NotFoundError(f"{c}/{rid} not in product {pid}")
+            ctx.store.delete(c, rid)
+            ctx.audit(req, f"{p}.delete", c, rid, product_id=pid)
+            return envelope({"deleted": True, "id": rid})
 
     _crud("sources", "knowledge_sources", KnowledgeSource,
           {"name", "type", "locator", "classification", "metadata"})
@@ -976,6 +1042,33 @@ def create_app(home: Path | None = None) -> FastAPI:
             from ..errors import NotFoundError
             raise NotFoundError(f"query {qid} not in product {pid}")
         return envelope(run)
+
+    @app.patch(f"{API_PREFIX}/products/{{pid}}/queries/{{qid}}")
+    def q_patch(pid: str, qid: str, body: ScopedIn, req: Request) -> dict:
+        from ..errors import NotFoundError, ValidationError
+
+        run = ctx.store.get("query_runs", qid)
+        if run.get("product_id") != pid:
+            raise NotFoundError(f"query {qid} not in product {pid}")
+        data = {k: v for k, v in body.model_dump(exclude_unset=True).items()
+                if k in {"statement", "status", "error", "truncated"}}
+        if not data:
+            raise ValidationError("at least one query field is required")
+        run.update(data)
+        ctx.store.put_doc("query_runs", run)
+        ctx.audit(req, "query.update", "query_runs", qid, product_id=pid)
+        return envelope(run)
+
+    @app.delete(f"{API_PREFIX}/products/{{pid}}/queries/{{qid}}")
+    def q_delete(pid: str, qid: str, req: Request) -> dict:
+        from ..errors import NotFoundError
+
+        run = ctx.store.get("query_runs", qid)
+        if run.get("product_id") != pid:
+            raise NotFoundError(f"query {qid} not in product {pid}")
+        ctx.store.delete("query_runs", qid)
+        ctx.audit(req, "query.delete", "query_runs", qid, product_id=pid)
+        return envelope({"deleted": True, "id": qid})
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/data-sources/{{sid}}/schema")
     def ds_schema(pid: str, sid: str) -> dict:

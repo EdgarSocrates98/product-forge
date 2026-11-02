@@ -141,11 +141,64 @@ class DuckDBConnector:
                            masked_columns=masked)
 
 
+class PostgresConnector:
+    """Read-only PostgreSQL analytics connector, enabled by the postgres extra."""
+
+    def __init__(self, dsn: str) -> None:
+        self.dsn = dsn
+
+    def _conn(self):
+        try:
+            import psycopg
+            return psycopg.connect(self.dsn, connect_timeout=5)
+        except ImportError as exc:
+            raise SourceUnavailableError("install product-forge[postgres]") from exc
+
+    def verify(self) -> dict[str, Any]:
+        try:
+            with self._conn() as conn, conn.cursor() as cur:
+                cur.execute("SELECT 1")
+            return {"status": "healthy", "engine": "postgres"}
+        except Exception as exc:  # noqa: BLE001
+            raise SourceUnavailableError(f"postgres unavailable: {exc}") from exc
+
+    def schema(self) -> dict[str, Any]:
+        with self._conn() as conn, conn.cursor() as cur:
+            cur.execute("""SELECT table_name, column_name, data_type
+                          FROM information_schema.columns
+                          WHERE table_schema='public' ORDER BY table_name, ordinal_position""")
+            tables: dict[str, list[dict[str, str]]] = {}
+            for table, name, kind in cur.fetchall():
+                tables.setdefault(table, []).append({"name": name, "type": kind})
+        return {"engine": "postgres", "tables": [{"name": n, "columns": cols}
+                                                    for n, cols in tables.items()]}
+
+    def execute(self, sql: str, *, row_limit: int = MAX_ROWS, timeout_s: float = 30.0,
+                cancel: threading.Event | None = None) -> QueryResult:
+        del cancel
+        start = time.perf_counter()
+        with self._conn() as conn, conn.cursor() as cur:
+            cur.execute("SELECT set_config('statement_timeout', %s, false)",
+                        (str(int(timeout_s * 1000)),))
+            cur.execute(sql)
+            columns = [d.name for d in (cur.description or [])][:MAX_COLS]
+            rows = cur.fetchmany(row_limit + 1)
+        truncated = len(rows) > row_limit
+        rows = rows[:row_limit]
+        masked_rows, masked = _mask(columns, rows)
+        return QueryResult(columns=columns, rows=[list(r) for r in masked_rows],
+                           row_count=len(rows), truncated=truncated,
+                           duration_ms=round((time.perf_counter() - start) * 1000, 1),
+                           masked_columns=masked)
+
+
 def connector_for(ds: dict[str, Any], allowed_roots: list[Path] | None = None) -> Connector:
     kind = ds.get("connector")
     if kind == "sqlite":
         return SQLiteConnector(Path(ds["locator"]), allowed_roots)
     if kind in {"duckdb", "csv"}:
         return DuckDBConnector(Path(ds["locator"]) if ds.get("locator") else None)
+    if kind == "postgres":
+        return PostgresConnector(str(ds["locator"]))
     raise UnsafeOperationError(
         f"connector '{kind}' has no verified local driver — register credentials/driver first")
