@@ -1,5 +1,7 @@
 ---
 id: deep-regression-suite
+status: archived
+closed_at: 2026-11-02
 title: Deep regression suite over the full /api/v1 surface
 agent: claude
 risk: high

@@ -1,5 +1,7 @@
 ---
 id: portal-angular-module
+status: archived
+closed_at: 2026-11-02
 title: Product Forge PM/PA portal with multi-host AI chat
 agent: claude
 risk: medium
