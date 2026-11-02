@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import FORGE_ID, __version__
-from .._forge_portal import Operation, PortalAdapter, RequestContext, default_operations
+from .._forge_portal import Operation, PortalAdapter, PortalError, RequestContext, default_operations
 from ..config import db_path, home_dir, load_config
 from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id
 from ..store.sqlite import Store
@@ -30,6 +30,20 @@ def _store() -> Store:
 def _q1(ctx: RequestContext, key: str) -> str | None:
     vals = ctx.query.get(key)
     return vals[0] if vals else None
+
+
+class _BridgeProxyOperation(Operation):
+    """Match the typed same-origin Bridge gateway without exposing its port."""
+
+    def __init__(self, method: str, handler: Any) -> None:
+        super().__init__(method, "/bridge/**", handler)
+        self.proxy_method = method
+
+    def match(self, path: str) -> dict[str, str] | None:
+        prefix = "/bridge/"
+        if not path.startswith(prefix) or path in {prefix, "/bridge/bootstrap"}:
+            return None
+        return {"bridge_path": "/" + path[len(prefix):], "__method": self.proxy_method}
 
 
 class ProductForgePortal(PortalAdapter):
@@ -60,6 +74,8 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}/knowledge-health", self._kn_health))
         self.register(Operation("GET", "/agent/health", self._agent_health))
         self.register(Operation("GET", "/agent/providers", self._agent_providers))
+        for method in ("GET", "POST"):
+            self.register(_BridgeProxyOperation(method, self._bridge_proxy))
         self.register(Operation("POST", "/bridge/bootstrap", self._bridge_bootstrap,
                                 mutating=True, confirm="bootstrap"))
         self.register(Operation("POST", "/agent/providers/claude/auth", self._claude_auth,
@@ -401,7 +417,8 @@ class ProductForgePortal(PortalAdapter):
 
     @staticmethod
     def _bridge_request(path: str, *, method: str = "GET",
-                        body: dict[str, Any] | None = None) -> dict[str, Any]:
+                        body: dict[str, Any] | None = None,
+                        token_override: str = "") -> dict[str, Any]:
         base = os.environ.get("FORGE_BRIDGE_URL", "http://127.0.0.1:8471").rstrip("/")
         parsed = urllib.parse.urlsplit(base)
         if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
@@ -412,10 +429,12 @@ class ProductForgePortal(PortalAdapter):
             "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token"
         )).expanduser()
         headers = {"Accept": "application/json"}
-        try:
-            token = token_file.read_text(encoding="utf-8").strip()
-        except OSError:
-            token = ""
+        token = token_override
+        if not token:
+            try:
+                token = token_file.read_text(encoding="utf-8").strip()
+            except OSError:
+                token = ""
         if token:
             headers["Authorization"] = f"Bearer {token}"
         data = json.dumps(body).encode("utf-8") if body is not None else None
@@ -440,6 +459,52 @@ class ProductForgePortal(PortalAdapter):
     def _bridge_get(path: str) -> dict[str, Any]:
         return ProductForgePortal._bridge_request(path)
 
+    def _bridge_proxy(self, ctx: RequestContext) -> dict[str, Any]:
+        """Forward a Bridge contract through this process' same-origin API.
+
+        The browser never receives the master pair token or the Bridge URL.
+        The adapter adds the internal credential server-side and maps upstream
+        failures to the PortalApi envelope through ``PortalError``.
+        ``_method`` is accepted only for the small set of legacy UI actions
+        that used PATCH/DELETE before the gateway existed.
+        """
+        body = dict(ctx.body or {})
+        method = str(body.pop("_method", ctx.params.get("__method", "GET"))).upper()
+        path = ctx.params["bridge_path"]
+        allowed = ("/status", "/providers", "/diagnostics", "/mcp/doctor",
+                   "/agent-sessions", "/approvals", "/files", "/intel")
+        if not path.startswith(allowed) or path in {"/pair/exchange", "/pair/rotate"}:
+            raise PortalError(
+                "BRIDGE-GATEWAY-FORBIDDEN",
+                "operation is not exposed by the Product Forge gateway",
+                http=403,
+            )
+        gateway_token = getattr(self, "_gateway_bridge_token", "")
+        if not gateway_token:
+            raise PortalError(
+                "BRIDGE-SESSION-REQUIRED",
+                "Bridge gateway session is not initialized; retry bootstrap",
+                http=503,
+                retryable=True,
+            )
+        result = self._bridge_request(
+            path,
+            method=method,
+            body=body or None,
+            token_override=gateway_token,
+        )
+        status = result.get("status")
+        if isinstance(status, int) and status >= 400:
+            detail = result.get("error") or result
+            raise PortalError(
+                "BRIDGE-UPSTREAM",
+                "Agent Bridge rejected the request",
+                http=status if status in {400, 401, 403, 404, 409, 429, 500, 502, 503, 504} else 502,
+                retryable=status in {408, 429, 500, 502, 503, 504},
+                details=detail if isinstance(detail, dict) else None,
+            )
+        return result
+
     def _agent_health(self, ctx: RequestContext) -> dict[str, Any]:
         return self._bridge_get("/status")
 
@@ -447,11 +512,11 @@ class ProductForgePortal(PortalAdapter):
         return self._bridge_get("/providers")
 
     def _bridge_bootstrap(self, ctx: RequestContext) -> dict[str, Any]:
-        """Pair the browser through the same-origin Portal session.
+        """Bring the managed Bridge into the gateway session.
 
-        The master token is read only by the managed local runtime and is
-        exchanged immediately; it is never returned or stored by this
-        adapter. The browser receives only a scoped, expiring session token.
+        Pairing is deliberately server-side.  The browser receives a health
+        result only; neither the master pair token, an internal URL nor a
+        Bridge bearer token crosses the Portal boundary.
         """
         token_file = Path(os.environ.get(
             "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token"
@@ -459,18 +524,25 @@ class ProductForgePortal(PortalAdapter):
         try:
             master = token_file.read_text(encoding="utf-8").strip()
         except OSError:
-            return {"state": "unavailable", "reason": "bridge_pair_token_missing"}
+            return {"connected": False, "bridge": {"state": "unavailable", "reason": "pair_token_missing"}}
         if not master:
-            return {"state": "unavailable", "reason": "bridge_pair_token_empty"}
+            return {"connected": False, "bridge": {"state": "unavailable", "reason": "pair_token_empty"}}
         result = self._bridge_request("/pair/exchange", method="POST", body={
             "pair_token": master,
             "device_name": "product-forge-portal",
             "scopes": ["agent"],
         })
-        if "session_token" in result:
-            result["base_url"] = os.environ.get(
-                "FORGE_BRIDGE_URL", "http://127.0.0.1:8471").rstrip("/")
-        return result
+        if "session_token" not in result:
+            return {"connected": False, "bridge": result}
+        # Keep this credential server-side for subsequent proxy calls.  The
+        # short-lived exchanged token is held in process memory only.
+        self._gateway_bridge_token = str(result["session_token"])
+        return {
+            "connected": True,
+            "bridge": {"state": "ready", "capabilities": ["sessions", "streaming"]},
+            "device": {"device_id": "gateway", "device_name": "Product Forge gateway",
+                        "scopes": ["agent"], "created_at": 0, "expires_at": 0, "last_seen": 0},
+        }
 
     def _claude_auth(self, ctx: RequestContext) -> dict[str, Any]:
         return self._bridge_request("/providers/claude-code/auth", method="POST",
