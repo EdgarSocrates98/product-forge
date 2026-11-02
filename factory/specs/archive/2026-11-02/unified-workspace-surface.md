@@ -1,5 +1,7 @@
 ---
 id: unified-workspace-surface
+status: archived
+closed_at: 2026-11-02
 title: Unified chat, board and product workspace surface
 agent: codex
 risk: high

@@ -130,6 +130,18 @@ sucesso artificial.
 - O DSN não é gravado em código, logs ou documentos; produção deve fornecê-lo
   por secret/env. Sem DSN, o modo local continua usando SQLite por segurança.
 
-Assim, o bloqueio de notificações webhook e o smoke do backend PostgreSQL estão
-destravados. SMTP externo ainda depende de uma conta/relay autorizado; Claude
-continua sendo o bloqueio de provider.
+Assim, o bloqueio de notificações webhook foi fechado e o SMTP foi homologado
+contra um sandbox externo Ethereal com STARTTLS e alerta sintético. Isso prova o
+caminho SMTP sem transformar uma caixa descartável em relay de produção; a
+implantação ainda deve fornecer credenciais SMTP próprias por ambiente.
+
+O harness real dos quatro providers foi formalizado no Forge Agent Bridge e tem
+execução manual e nightly, com artefato redigido. Devin, Codex e Copilot têm
+smokes autenticados; Claude continua honestamente bloqueado por credencial
+externa: a conta não tem plano/API key e a sessão AWS estava expirada.
+
+As specs concluídas foram arquivadas formalmente em
+`factory/specs/archive/2026-11-02/`; live-provider-homologation permanece em
+inbox até o login Claude ser concluído. O PostgreSQL permanece disponível como
+backend gerenciado no perfil recomendado/full e SQLite continua sendo o modo
+local sem DSN.

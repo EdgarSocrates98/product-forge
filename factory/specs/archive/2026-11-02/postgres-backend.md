@@ -1,5 +1,7 @@
 ---
 id: postgres-backend
+status: archived
+closed_at: 2026-11-02
 title: PostgreSQL store backend alongside SQLite
 agent: codex
 risk: high

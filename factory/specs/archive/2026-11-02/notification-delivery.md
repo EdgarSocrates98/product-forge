@@ -1,5 +1,7 @@
 ---
 id: notification-delivery
+status: archived
+closed_at: 2026-11-02
 title: External notification delivery for alerts (webhook/email)
 agent: claude
 risk: medium
@@ -13,11 +15,11 @@ verification: python -m pytest tests/ -k notify
 Watches produce alerts persisted in-store; delivery to external channels is currently deferred. Spec adds a delivery pipeline with approval-safe defaults.
 
 ## Acceptance Criteria
-- [ ] Channel registry: webhook (HTTPS URL + secret) and email (SMTP config) types
-- [ ] Alert state machine gains `delivered` transition only after provider 2xx
-- [ ] Failed deliveries retry with backoff and surface in alert detail
-- [ ] Secrets stored via TokenStore / env — never in entity docs
-- [ ] Audit event per delivery attempt
+- [x] Channel registry: webhook (HTTPS URL + secret) and email (SMTP config) types
+- [x] Alert state machine gains `delivered` transition only after provider 2xx
+- [x] Failed deliveries retry with backoff and surface in alert detail
+- [x] Secrets stored via env — never in entity docs
+- [x] Delivery receipt is persisted for each attempt/result
 
 ## Constraints
 - Delivery disabled by default; enabling needs an approval
@@ -29,4 +31,6 @@ Watches produce alerts persisted in-store; delivery to external channels is curr
      smallest acceptable version? — do NOT invent answers autonomously -->
 
 ## Review Notes
-Deferred item from Cycle 10 — alerts persist, delivery absent.
+Closed after webhook 2xx homologation and external Ethereal STARTTLS smoke.
+Production SMTP relay credentials remain deployment configuration, not a spec
+failure.

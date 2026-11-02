@@ -1,5 +1,7 @@
 ---
 id: unified-local-runtime
+status: archived
+closed_at: 2026-11-02
 title: One-command local runtime for Product Forge, Portal and Agent Bridge
 agent: codex
 risk: high
