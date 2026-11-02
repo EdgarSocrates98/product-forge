@@ -40,7 +40,7 @@ def run_guided_install() -> int:
     from ..ui.wizard import run_wizard
 
     def _install(**kw: Any) -> dict[str, Any]:
-        return lifecycle.install(
+        result = lifecycle.install(
             scope=kw.get("scope", "project"),
             profile=kw.get("profile", "recommended"),
             hosts=_hosts_tuple(kw.get("host")),
@@ -49,6 +49,11 @@ def run_guided_install() -> int:
             dry_run=bool(kw.get("dry_run")),
             yes=bool(kw.get("yes")),
         )
+        if not kw.get("dry_run"):
+            from .managed_runtime import ensure_postgres
+            result["runtime"] = ensure_postgres(lifecycle._init_app_home()["home"],
+                                                  profile=kw.get("profile", "recommended"))
+        return result
 
     def _doctor(**kw: Any) -> dict[str, Any]:
         return lifecycle.doctor(scope=kw.get("scope", "project"))
@@ -68,10 +73,15 @@ def run_flag_install(*, scope: str, profile: str, host: str,
     """Non-interactive flag path — returns the receipt doc."""
     comps = (tuple(c.strip() for c in components.split(",") if c.strip())
              if components else None)
-    return lifecycle.install(
+    result = lifecycle.install(
         scope=scope, profile=profile, hosts=_hosts_tuple(host),
         root=Path(root) if root else None, components=comps,
         gateway_profile=gateway_profile, dry_run=dry_run, yes=yes)
+    if not dry_run:
+        from ..config import home_dir
+        from .managed_runtime import ensure_postgres
+        result["runtime"] = ensure_postgres(home_dir("user"), profile=profile)
+    return result
 
 
 def guided_install_available() -> bool:

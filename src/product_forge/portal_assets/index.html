@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Product Forge · PM &amp; PA Workspace</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Pular para o conteúdo</a>
+    <header class="topbar">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">PF</span><span><span class="eyebrow">PM / PA WORKSPACE</span><strong>Product Forge</strong></span></a>
+      <div class="topbar-actions"><span id="health" class="status" role="status">Verificando serviços locais…</span><button type="button" class="ghost" id="refresh">Atualizar</button></div>
+    </header>
+    <main id="content" class="app-shell">
+      <aside class="rail" aria-label="Navegação do workspace"><p class="eyebrow">SEU WORKSPACE</p><nav><a class="active" href="#overview">Visão geral</a><a href="#products">Produtos</a><a href="#boards">Boards &amp; roadmaps</a><a href="#knowledge">Conhecimento</a><a href="#chat">Conversas</a></nav><div class="rail-note"><span class="pulse" aria-hidden="true"></span><span>Contexto local protegido<br /><small>Sem credenciais até você pedir</small></span></div></aside>
+      <div class="content-column">
+        <section class="hero" id="overview"><div class="hero-copy"><p class="eyebrow">PRODUCT INTELLIGENCE / 01</p><h2>Contexto que vira decisão.</h2><p>Um workspace para PMs e PAs conectarem produto, evidência e execução — com IA quando ela realmente ajuda.</p><div class="hero-actions"><a class="primary" href="#chat">Abrir conversa <span aria-hidden="true">↗</span></a><a class="text-link" href="#products">Explorar produtos</a></div></div><div class="focus-note"><span class="eyebrow">PRÓXIMO PASSO</span><strong>Comece pelo contexto do produto.</strong><p>Crie seu primeiro workspace e produto para ativar board, conhecimento e copiloto.</p><form id="start-form" class="start-form"><label for="start-workspace">Workspace</label><input id="start-workspace" required placeholder="Ex.: Minha equipe" /><label for="start-product">Produto</label><input id="start-product" required placeholder="Ex.: App de pagamentos" /><button class="primary" type="submit">Começar agora <span aria-hidden="true">↗</span></button></form></div></section>
+        <section class="signal-row" aria-label="Sinais do workspace"><div><span class="eyebrow">PRODUTOS</span><strong id="product-count">—</strong><span>no workspace</span></div><div><span class="eyebrow">CONTEXTO</span><strong>Local</strong><span>citações preservadas</span></div><div><span class="eyebrow">HOSTS IA</span><strong>4</strong><span>conectáveis</span></div></section>
+        <section class="workspace-grid" id="products"><div class="section-heading"><div><p class="eyebrow">SEU SISTEMA DE TRABALHO</p><h2>Onde o trabalho ganha forma</h2></div><span class="muted">Tudo parte de um produto real.</span></div><div class="grid" id="cards"></div></section>
+        <section class="panel board-panel" id="boards"><div class="panel-head"><div><p class="eyebrow">EXECUÇÃO / 02</p><h2>Board &amp; roadmap</h2><p class="muted">Transforme contexto em iniciativas visíveis, priorizadas e rastreáveis.</p></div><span class="muted" id="board-summary">Selecione um produto para começar.</span></div><div class="board" id="board-columns"><p class="muted">Crie um produto para ativar o board.</p></div><form id="initiative-form" class="inline-form"><label class="visually-hidden" for="initiative-title">Nova iniciativa</label><input id="initiative-title" placeholder="Nova iniciativa…" autocomplete="off" /><button type="submit" class="primary">Adicionar</button></form></section>
+        <section class="panel host-panel" id="knowledge"><div class="panel-head"><div><p class="eyebrow">AI HOSTS / 02</p><h2>Escolha como pensar junto</h2></div><span class="muted">Cada host mantém seu próprio login.</span></div><div class="hosts" id="hosts" aria-live="polite"></div><form id="claude-auth-form" class="inline-form host-auth"><label for="claude-auth-mode">Claude</label><select id="claude-auth-mode"><option value="subscription">Login / assinatura Claude</option><option value="bedrock">Amazon Bedrock / AWS</option></select><button type="submit" class="ghost">Configurar primeiro uso</button></form></section>
+        <section class="panel chat-panel" id="chat"><div class="panel-head"><div><p class="eyebrow">PRODUCT COPILOT / 03</p><h2>Converse com o contexto</h2><p class="muted">A conversa fica ligada ao workspace e pode voltar depois.</p></div><label class="provider-label" for="provider">Host<select id="provider"><option value="codex">Codex</option><option value="claude">Claude</option><option value="devin">Devin</option><option value="copilot">GitHub Copilot</option><option value="fake">Test provider</option></select></label></div><div id="messages" class="messages" aria-live="polite"><p class="muted">Faça uma pergunta para iniciar. O login só será solicitado no primeiro uso do host.</p></div><form id="chat-form"><label class="visually-hidden" for="prompt">Pergunta para o copiloto</label><input id="prompt" placeholder="Ex.: qual risco do roadmap merece atenção?" autocomplete="off" /><button type="submit" class="primary">Enviar <span aria-hidden="true">↗</span></button></form></section>
+      </div>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

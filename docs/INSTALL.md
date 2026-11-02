@@ -27,6 +27,33 @@ uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
 # or: pip install -e ".[api,mcp,analytics]"
 ```
 
+## Managed PostgreSQL
+
+The `recommended` and `full` profiles provision PostgreSQL 16 through Docker
+Compose. The installer generates a per-install password, keeps it in the
+protected runtime directory, binds PostgreSQL to loopback only, waits for
+`pg_isready`, and stores the DSN in the Product Forge config. Each Product
+Forge home receives its own Compose project and volume, so test, user and
+project installations cannot share credentials accidentally.
+
+```bash
+productforge install                         # starts managed PostgreSQL
+productforge status                          # shows backend and health metadata
+productforge doctor                          # checks Docker Compose availability
+productforge portal                          # reconciles PostgreSQL + Portal + Bridge
+productforge install --profile minimal       # explicit SQLite-only/offline mode
+```
+
+Docker is required for `recommended`/`full`; the installer fails with an
+actionable message instead of silently changing the persistence backend. An
+external production database can be supplied without Docker:
+
+```bash
+export PRODUCT_FORGE_DB_BACKEND=postgres
+export PRODUCT_FORGE_DATABASE_URL='postgresql://USER:PASSWORD@HOST:5432/productforge'
+productforge portal
+```
+
 ## 2. `productforge install` — lifecycle
 
 ### Guided (bare command on a TTY)

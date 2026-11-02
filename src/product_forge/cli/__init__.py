@@ -23,12 +23,14 @@ kn_app = typer.Typer(help="Knowledge operations")
 ag_app = typer.Typer(help="Agent registry")
 api_app = typer.Typer(help="Local HTTP API")
 mcp_app = typer.Typer(help="MCP server")
+store_app = typer.Typer(help="Persistence backend management")
 app.add_typer(ws_app, name="workspace")
 app.add_typer(prd_app, name="product")
 app.add_typer(kn_app, name="knowledge")
 app.add_typer(ag_app, name="agent")
 app.add_typer(api_app, name="api")
 app.add_typer(mcp_app, name="mcp")
+app.add_typer(store_app, name="store")
 
 
 def _out(obj: Any) -> None:
@@ -38,6 +40,49 @@ def _out(obj: Any) -> None:
 def _store() -> Store:
     home = home_dir()
     return Store(db_path(home, load_config(home)))
+
+
+@store_app.command("migrate")
+def migrate_store(
+    to: str = typer.Option(..., "--to", help="Target backend: postgres"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+    yes: bool = typer.Option(False, "--yes", help="Confirm copying local documents"),
+) -> None:
+    """Copy the local SQLite document store to PostgreSQL.
+
+    The source remains untouched. A failed transaction can be rolled back by
+    dropping the target schema; the command never deletes or rewrites SQLite.
+    """
+    if to.lower() != "postgres":
+        raise typer.BadParameter("only --to postgres is supported")
+    home = home_dir()
+    cfg = load_config(home)
+    from ..store.sqlite import COLLECTIONS
+    from ..store.sqlite import Store as SQLiteStore
+    source = SQLiteStore(db_path(home, cfg))
+
+    counts = {collection: len(source.list(collection, limit=100_000)) for collection in COLLECTIONS}
+    if dry_run:
+        _out({"dry_run": True, "target": "postgres", "counts": counts,
+              "rollback": "drop target pf_entities/pf_chunks tables; SQLite source is unchanged"})
+        return
+    if not yes:
+        raise typer.BadParameter("migration writes the target; pass --yes after reviewing --dry-run")
+    import os
+
+    from ..store.postgres import PostgresStore
+
+    dsn = os.environ.get("PRODUCT_FORGE_DATABASE_URL") or str(cfg.get("store", {}).get("database_url") or "")
+    target = PostgresStore(dsn)
+    try:
+        for collection in COLLECTIONS:
+            for doc in source.list(collection, limit=100_000):
+                target.put_doc(collection, doc)
+        _out({"migrated": True, "target": "postgres", "counts": counts,
+              "rollback": "drop target pf_entities/pf_chunks tables; SQLite source is unchanged"})
+    finally:
+        target.close()
+        source.close()
 
 
 @app.command()
@@ -130,6 +175,7 @@ def status() -> None:
     home = home_dir()
     cfg = load_config(home)
     db = db_path(home, cfg)
+    from ..install.managed_runtime import postgres_status
     _out({
         "forge_id": FORGE_ID,
         "version": __version__,
@@ -140,6 +186,7 @@ def status() -> None:
         "profile": cfg.get("install_profile"),
         "gateway_profile": cfg.get("gateway_profile"),
         "llm_provider": cfg.get("llm", {}).get("provider"),
+        "database_runtime": postgres_status(home),
     })
 
 
@@ -147,6 +194,8 @@ def status() -> None:
 def doctor() -> None:
     """Environment health diagnostics — read-only."""
     import importlib.util
+
+    from ..install.managed_runtime import docker_compose_available, postgres_status
 
     home = home_dir()
     checks = []
@@ -161,10 +210,33 @@ def doctor() -> None:
         ("sqlglot", importlib.util.find_spec("sqlglot") is not None, "extra: analytics"),
         ("duckdb", importlib.util.find_spec("duckdb") is not None, "extra: analytics"),
         ("theforge", importlib.util.find_spec("theforge") is not None, "control plane"),
+        ("docker-compose", docker_compose_available() or
+         load_config(home).get("install_profile") in {"minimal", "offline"},
+         "required for recommended/full PostgreSQL runtime"),
     ]:
         checks.append({"check": name, "ok": ok, "detail": detail})
     _out({"forge_id": FORGE_ID, "version": __version__, "checks": checks,
+          "database_runtime": postgres_status(home),
           "ok": all(c["ok"] for c in checks if c["check"] in {"python>=3.11", "pydantic", "typer"})})
+
+
+@app.command()
+def portal(
+    port: int = typer.Option(0, min=0, max=65535, help="Portal port; 0 chooses a free port."),
+    bridge_port: int = typer.Option(8471, min=1, max=65535, help="Agent Bridge loopback port."),
+    no_open: bool = typer.Option(False, "--no-open", help="Do not open a browser."),
+    quiet: bool = typer.Option(False, "--quiet", help="Suppress managed Bridge output."),
+) -> None:
+    """Open the Product Forge PM/PA portal and manage its local Bridge."""
+    from ..portal.runtime import run
+
+    try:
+        run(port=port, bridge_port=bridge_port, open_browser=not no_open, quiet=quiet)
+    except KeyboardInterrupt:
+        raise typer.Exit(0) from None
+    except Exception as e:
+        _out({"portal": False, "error": {"code": "PF-PORTAL", "message": str(e)}})
+        raise typer.Exit(1) from e
 
 
 # -- api -----------------------------------------------------------------
@@ -601,17 +673,6 @@ def mcp_serve(transport: str = typer.Option("stdio", "--transport",
         serve_http(host=host, port=port)
     else:
         serve()
-
-
-# -- portal ----------------------------------------------------------------
-
-@app.command()
-def portal(port: int = typer.Option(0), no_open: bool = typer.Option(False, "--no-open")) -> None:
-    """Serve the Forge Portal (127.0.0.1) with the Product Forge adapter."""
-    from .._forge_portal import serve as portal_serve
-    from ..portal.adapter import ProductForgePortal
-
-    portal_serve(ProductForgePortal(), port=port, open_url=not no_open)
 
 
 def main() -> None:

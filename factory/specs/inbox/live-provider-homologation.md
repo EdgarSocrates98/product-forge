@@ -1,24 +1,25 @@
 ---
 id: live-provider-homologation
-title: Live homologation — one LLM provider + one cloud connector
+title: Live homologation — all Product Forge AI hosts + one cloud connector
 agent: claude
 risk: high
 grill: completed
 verification: python -m pytest tests/ -k homolog && cat docs/providers/HOMOLOGATION_EVIDENCE.md
 ---
 
-# Live homologation — one LLM provider + one cloud connector
+# Live homologation — all Product Forge AI hosts + one cloud connector
 
 ## Context
 LLM runtime seam, AWS/Azure connectors and capability states exist but
-were never exercised with real credentials. Everything downstream is
-honestly `unverified` — this spec turns exactly one provider + one cloud
-from unverified to verified, with transcripts as evidence.
+are not exercised with a complete real-provider matrix. Everything downstream
+must remain honestly `unverified` until exercised — this spec turns Codex,
+Claude, Devin and GitHub Copilot, plus one cloud connector, from unverified
+to verified with transcripts as evidence.
 
 ## Acceptance Criteria
-- [ ] One LLM provider (Anthropic/OpenAI/Bedrock — owner's pick) executes
-      a real `agent run` end-to-end with recorded request/response
-      artifacts under `docs/providers/evidence/`
+- [ ] Codex, Claude, Devin and GitHub Copilot each execute a real
+      `agent run` end-to-end with recorded request/response artifacts under
+      `docs/providers/evidence/`
 - [ ] One cloud connector (AWS or Azure) lists real resources in an
       authorized test account; inventory states flip `unverified→verified`
       only for exercised APIs
@@ -40,7 +41,7 @@ from unverified to verified, with transcripts as evidence.
 
 ## Grill Gate
 <!-- decision owner? out of scope? riskiest assumption? smallest version? -->
-- Decision owner: Edgar (answered 2026-10). Provider: Anthropic. Cloud: AWS (local profile).
-- Out of scope: Codex/Devin/Azure — stay unverified.
-- Riskiest assumption: Anthropic credentials + AWS profile actually usable from this host.
-- Smallest acceptable version: one real agent run + one real AWS list call, transcripts redacted under docs/providers/evidence/.
+- Decision owner: Edgar (answered 2026-11-02). Providers: Codex, Claude, Devin and GitHub Copilot. Cloud: AWS (local profile).
+- Out of scope: Azure — stays unverified for this milestone.
+- Riskiest assumption: all four host credentials and the AWS profile are usable from the authorized environment.
+- Smallest acceptable version: one real run for each of the four hosts + one real AWS list call, with transcripts redacted under `docs/providers/evidence/`.

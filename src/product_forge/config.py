@@ -16,6 +16,7 @@ Scope = Literal["user", "project", "workspace"]
 DEFAULTS: dict[str, Any] = {
     "scope": "user",
     "db_path": "state/productforge.db",
+    "store": {"backend": "auto", "database_url": None},
     "object_store": "state/objects",
     "log_level": "INFO",
     "read_only_default": True,
@@ -94,6 +95,10 @@ def _apply_env(cfg: dict[str, Any]) -> None:
         cfg["log_level"] = v
     if v := os.environ.get(f"{ENV_PREFIX}DB_PATH"):
         cfg["db_path"] = v
+    if v := os.environ.get(f"{ENV_PREFIX}DB_BACKEND"):
+        cfg.setdefault("store", {})["backend"] = v.lower()
+    if v := os.environ.get(f"{ENV_PREFIX}DATABASE_URL"):
+        cfg.setdefault("store", {})["database_url"] = v
     if v := os.environ.get(f"{ENV_PREFIX}GATEWAY_PROFILE"):
         cfg["gateway_profile"] = v
     if v := os.environ.get(f"{ENV_PREFIX}LLM_PROVIDER"):

@@ -13,6 +13,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ..domain.models import new_id, utcnow
+from ..errors import ConflictError
 
 MAX_ATTEMPTS = 3
 
@@ -35,7 +36,8 @@ class JobRegistry:
 
     def enqueue(self, kind: str, payload: dict[str, Any] | None = None,
                 product_id: str | None = None,
-                idempotency_key: str | None = None) -> dict[str, Any]:
+                idempotency_key: str | None = None,
+                expires_at: str | None = None) -> dict[str, Any]:
         if idempotency_key:
             existing = self._rows("WHERE idempotency_key=? AND kind=?",
                                   (idempotency_key, kind))
@@ -45,9 +47,9 @@ class JobRegistry:
         now = utcnow()
         self.store._conn.execute(  # noqa: SLF001
             "INSERT INTO jobs(id,kind,product_id,status,payload,idempotency_key,"
-            "created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
+            "created_at,updated_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)",
             (jid, kind, product_id, "queued", json.dumps(payload or {}),
-             idempotency_key, now, now))
+             idempotency_key, now, now, expires_at))
         self.store._conn.commit()  # noqa: SLF001
         return self.get(jid)
 
@@ -56,21 +58,40 @@ class JobRegistry:
         if not rows:
             from ..errors import NotFoundError
             raise NotFoundError(f"jobs/{jid} not found")
-        return rows[0]
+        row = rows[0]
+        if row.get("expires_at") and row["status"] in {"queued", "running"}:
+            if row["expires_at"] <= utcnow():
+                self.store._conn.execute(  # noqa: SLF001
+                    "UPDATE jobs SET status='expired', updated_at=? WHERE id=?",
+                    (utcnow(), jid),
+                )
+                self.store._conn.commit()  # noqa: SLF001
+                row["status"] = "expired"
+        return row
 
     def list(self, status: str | None = None,
              product_id: str | None = None) -> list[dict[str, Any]]:
-        where, params = [], []
-        if status:
-            where.append("status=?")
-            params.append(status)
-        if product_id:
-            where.append("product_id=?")
-            params.append(product_id)
-        clause = "WHERE " + " AND ".join(where) if where else ""
-        return self._rows(clause, tuple(params))
+        rows = self._rows()
+        refreshed = [self.get(row["id"]) for row in rows]
+        return [row for row in refreshed
+                if (status is None or row["status"] == status)
+                and (product_id is None or row.get("product_id") == product_id)]
 
     def _transition(self, jid: str, status: str, **fields: Any) -> dict[str, Any]:
+        current = self.get(jid)
+        allowed = {
+            "queued": {"running", "dead_letter", "cancelled"},
+            "running": {"queued", "done", "dead_letter", "cancelled"},
+            "done": set(),
+            "failed": set(),
+            "dead_letter": set(),
+            "cancelled": set(),
+        }
+        if status not in allowed.get(current["status"], set()):
+            raise ConflictError(
+                f"invalid job transition {current['status']} -> {status}",
+                details={"job_id": jid, "from": current["status"], "to": status},
+            )
         sets, params = ["status=?", "updated_at=?"], [status, utcnow()]
         for k, v in fields.items():
             sets.append(f"{k}=?")
@@ -101,6 +122,9 @@ class JobRegistry:
         if not rows:
             return None
         job = rows[0]
+        job = self.get(job["id"])
+        if job["status"] != "queued":
+            return job
         handler = self._handlers.get(job["kind"])
         if handler is None:
             return self._transition(job["id"], "dead_letter",

@@ -1,0 +1,19 @@
+services:
+  productforge-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: productforge
+      POSTGRES_USER: productforge
+      POSTGRES_PASSWORD: ${PRODUCTFORGE_POSTGRES_PASSWORD:-productforge-dev-only}
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - productforge-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U productforge -d productforge"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  productforge-postgres:

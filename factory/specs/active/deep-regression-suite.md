@@ -4,7 +4,7 @@ title: Deep regression suite over the full /api/v1 surface
 agent: claude
 risk: high
 grill: completed
-verification: python -m pytest tests/ -q && python -m ruff check src tests
+verification: uv run pytest tests/ --cov=product_forge.api --cov=product_forge.analytics.engine --cov-fail-under=80 -q && uv run ruff check src tests
 ---
 
 # Deep regression suite over the full /api/v1 surface
@@ -15,16 +15,17 @@ verification: python -m pytest tests/ -q && python -m ruff check src tests
 verbs, id-shaped routes, and failure paths still have smoke-level depth.
 
 ## Acceptance Criteria
-- [ ] Parameterized contract suite: every /api/v1 route×method emits
+- [x] Parameterized contract suite: every /api/v1 route×method emits
       `forge/PortalApi/1` + PF-* errors (401/404/422 paths each)
-- [ ] Per-domain negative tests: missing auth, wrong workspace, invalid
+- [x] Per-domain negative tests: missing auth, wrong workspace, invalid
       body, expired job, cross-product access denied
-- [ ] Mutation round-trips for products/sources/knowledge/agents/queries/
+- [x] Mutation round-trips for products/sources/knowledge/agents/queries/
       dashboards/plans: create → read → verify persisted → update → delete
-- [ ] Job lifecycle: enqueue → poll → terminal state → invalid transitions
+- [x] Job lifecycle: enqueue → poll → terminal state → invalid transitions
       rejected
-- [ ] Coverage floor: pytest-cov ≥80% on `src/product_forge/api` and `engine`
-- [ ] CI job `regression` runs the suite; no `|| true`
+- [x] Coverage floor: pytest-cov ≥80% on `src/product_forge/api` and
+      `src/product_forge/analytics/engine.py`
+- [x] CI job `regression` runs the suite; no `|| true`
 
 ## Constraints
 - No test may weaken an acceptance criterion to pass
@@ -37,3 +38,10 @@ verbs, id-shaped routes, and failure paths still have smoke-level depth.
 - Out of scope: pg backend, OIDC, live providers.
 - Riskiest assumption: coverage floor ≥80% may expose unreachable code — record, don't inflate.
 - Smallest acceptable version: parametric envelope sweep on all methods + per-domain negatives + round-trips on core entities.
+
+## Verification Evidence
+- `117 passed` with API coverage `80.06%` and analytics engine coverage `85%`.
+- `ruff check src tests` passes.
+- Validation errors now emit `PF-VALIDATION`; missing resources emit `PF-NOT-FOUND`.
+- Jobs support expiration (`expired`) and reject transitions from terminal states.
+- CI regression job runs the full suite with both coverage targets.
