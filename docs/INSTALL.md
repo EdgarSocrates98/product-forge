@@ -29,30 +29,55 @@ uv venv .venv && uv pip install -p .venv/bin/python -e ".[dev]"
 
 ## Managed PostgreSQL
 
-The `recommended` and `full` profiles provision PostgreSQL 16 through Docker
-Compose. The installer generates a per-install password, keeps it in the
-protected runtime directory, binds PostgreSQL to loopback only, waits for
-`pg_isready`, and stores the DSN in the Product Forge config. Each Product
-Forge home receives its own Compose project and volume, so test, user and
-project installations cannot share credentials accidentally.
+Local installs without a DSN remain on SQLite. PostgreSQL 16 through Docker
+Compose is available when explicitly requested with
+`PRODUCT_FORGE_MANAGED_POSTGRES=1`; production can instead provide an
+external DSN. When managed mode is enabled, the installer generates a
+per-install password, keeps it in the protected runtime directory, binds
+PostgreSQL to loopback only, waits for `pg_isready`, and stores the DSN in the
+Product Forge config.
 
 ```bash
-productforge install                         # starts managed PostgreSQL
+productforge install                         # local SQLite, no external DSN
+PRODUCT_FORGE_MANAGED_POSTGRES=1 productforge install  # Docker PostgreSQL
 productforge status                          # shows backend and health metadata
 productforge doctor                          # checks Docker Compose availability
 productforge portal                          # reconciles PostgreSQL + Portal + Bridge
 productforge install --profile minimal       # explicit SQLite-only/offline mode
 ```
 
-Docker is required for `recommended`/`full`; the installer fails with an
-actionable message instead of silently changing the persistence backend. An
-external production database can be supplied without Docker:
+Docker is optional for local installs. An external production database can be
+supplied without Docker:
 
 ```bash
 export PRODUCT_FORGE_DB_BACKEND=postgres
 export PRODUCT_FORGE_DATABASE_URL='postgresql://USER:PASSWORD@HOST:5432/productforge'
 productforge portal
 ```
+
+## SMTP notifications
+
+SMTP is an external integration; the installer does **not** invent a mail
+server, mailbox, username or password. `install.sh`, `install.windows.sh` and
+`install.ps1` only install Product Forge and persist its own launcher/runtime
+variables. They never create SMTP credentials.
+
+For an authorized homologation, the operator supplies the provider-specific
+values at execution time (or through a secret manager) and runs:
+
+```bash
+export PRODUCT_FORGE_SMTP_HOST=smtp.example.com
+export PRODUCT_FORGE_SMTP_PORT=587
+export PRODUCT_FORGE_SMTP_USERNAME=productforge@example.com
+export PRODUCT_FORGE_SMTP_PASSWORD='use-a-secret-manager-in-production'
+export PRODUCT_FORGE_SMTP_FROM=productforge@example.com
+export PRODUCT_FORGE_SMTP_TO=operator@example.com
+uv run python scripts/smtp_homologation.py
+```
+
+The smoke test uses STARTTLS, reads the password only from the environment,
+does not persist or print it, and returns `blocked` when the required values
+are absent.
 
 ## 2. `productforge install` — lifecycle
 
