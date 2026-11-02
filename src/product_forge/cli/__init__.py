@@ -223,7 +223,8 @@ def doctor() -> None:
 @app.command()
 def portal(
     port: int = typer.Option(0, min=0, max=65535, help="Portal port; 0 chooses a free port."),
-    bridge_port: int = typer.Option(8471, min=1, max=65535, help="Agent Bridge loopback port."),
+    bridge_port: int = typer.Option(0, min=0, max=65535,
+                                    help="Agent Bridge loopback port; 0 chooses a free port."),
     no_open: bool = typer.Option(False, "--no-open", help="Do not open a browser."),
     quiet: bool = typer.Option(False, "--quiet", help="Suppress managed Bridge output."),
 ) -> None:

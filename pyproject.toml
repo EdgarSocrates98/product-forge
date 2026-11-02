@@ -75,7 +75,10 @@ dev = [
 ]
 
 [project.scripts]
-productforge = "product_forge.cli:app"
+# Route the installed command through the small dispatcher so a bare
+# `productforge install` gets the guided wizard on a real TTY.  Pointing the
+# entry point directly at the Typer object bypasses that contract in wheels.
+productforge = "product_forge.cli:main"
 
 [project.urls]
 Repository = "https://github.com/EdgarSocrates98/product-forge"

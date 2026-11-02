@@ -16,9 +16,16 @@ from pathlib import Path
 from typing import Any
 
 from .. import FORGE_ID, __version__
-from .._forge_portal import Operation, PortalAdapter, PortalError, RequestContext, default_operations
+from .._forge_portal import (
+    Operation,
+    PortalAdapter,
+    PortalError,
+    RequestContext,
+    SseResult,
+    default_operations,
+)
 from ..config import db_path, home_dir, load_config
-from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id
+from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id, utcnow
 from ..store.sqlite import Store
 
 
@@ -105,6 +112,12 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}/tasks", self._tasks))
         self.register(Operation("POST", "/products/{pid}/tasks/{tid}/move",
                                self._task_move, mutating=True, confirm="move"))
+        self.register(Operation("POST", "/products/{pid}/task-proposals",
+                               self._task_proposal_create, mutating=True, confirm="create"))
+        self.register(Operation("GET", "/products/{pid}/task-proposals",
+                               self._task_proposal_list))
+        self.register(Operation("POST", "/products/{pid}/task-proposals/{proposal_id}/approve",
+                               self._task_proposal_decide, mutating=True, confirm="decide"))
         self.register(Operation("GET", "/notifications", self._notifications))
         self.register(Operation("GET", "/products/{pid}/alerts", self._alerts))
         self.register(Operation("GET", "/audit", self._audit))
@@ -400,6 +413,60 @@ class ProductForgePortal(PortalAdapter):
         finally:
             st.close()
 
+    def _task_proposal_create(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..operations.proposals import create_proposal
+
+        body = ctx.body or {}
+        st = _store()
+        try:
+            st.get("products", ctx.params["pid"])
+            rec = create_proposal(
+                st,
+                ctx.params["pid"],
+                list(body.get("tasks") or []),
+                source=str(body.get("source") or "chat"),
+                session_id=str(body.get("session_id") or ""),
+                idempotency_key=body.get("idempotency_key"),
+            )
+            ctx.emit("task-proposal.created", resource_id=rec["id"])
+            return rec
+        finally:
+            st.close()
+
+    def _task_proposal_list(self, ctx: RequestContext) -> dict[str, Any]:
+        st = _store()
+        try:
+            st.get("products", ctx.params["pid"])
+            return {"items": st.list("task_proposals", product_id=ctx.params["pid"], limit=500)}
+        finally:
+            st.close()
+
+    def _task_proposal_decide(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..operations.proposals import approve_proposal
+
+        body = ctx.body or {}
+        st = _store()
+        try:
+            proposal = st.get("task_proposals", ctx.params["proposal_id"])
+            if proposal.get("product_id") != ctx.params["pid"]:
+                raise KeyError(ctx.params["proposal_id"])
+            if body.get("approved", True) is False:
+                proposal["state"] = "rejected"
+                proposal["updated_at"] = utcnow()
+                rec = st.put_doc("task_proposals", proposal, status="rejected")
+            else:
+                rec = approve_proposal(
+                    st,
+                    ctx.params["proposal_id"],
+                    reviewer="portal",
+                    idempotency_key=body.get("idempotency_key"),
+                )
+            ctx.emit("task-proposal.decided", resource_id=ctx.params["proposal_id"],
+                     approved=bool(body.get("approved", True)))
+            return rec
+        finally:
+            st.close()
+
     def _notifications(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()
         try:
@@ -487,6 +554,8 @@ class ProductForgePortal(PortalAdapter):
                 http=503,
                 retryable=True,
             )
+        if method == "GET" and path.endswith("/stream"):
+            return self._bridge_stream(path, token_override=gateway_token)
         result = self._bridge_request(
             path,
             method=method,
@@ -504,6 +573,64 @@ class ProductForgePortal(PortalAdapter):
                 details=detail if isinstance(detail, dict) else None,
             )
         return result
+
+    @staticmethod
+    def _bridge_stream(path: str, *, token_override: str) -> SseResult:
+        """Relay Bridge SSE frames through the canonical same-origin server.
+
+        The Portal server owns the browser connection; this adapter owns the
+        loopback connection to Bridge.  Events remain incremental and retain
+        their native ``seq``/``id`` fields, so the Angular client can reconnect
+        with its cursor instead of receiving one buffered JSON document.
+        """
+        base = os.environ.get("FORGE_BRIDGE_URL", "http://127.0.0.1:8471").rstrip("/")
+        parsed = urllib.parse.urlsplit(base)
+        if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
+            "127.0.0.1", "localhost", "::1"
+        }:
+            raise PortalError("BRIDGE-GATEWAY-FORBIDDEN", "bridge URL must be loopback", http=403)
+        request = urllib.request.Request(  # noqa: S310 - loopback URL validated
+            f"{base}{path}",
+            headers={
+                "Authorization": f"Bearer {token_override}",
+                "Accept": "text/event-stream",
+            },
+        )
+        try:
+            response = urllib.request.urlopen(request, timeout=65)  # noqa: S310 - validated loopback
+        except (OSError, urllib.error.URLError) as exc:
+            raise PortalError(
+                "BRIDGE-UPSTREAM",
+                "Agent Bridge stream is unavailable",
+                http=503,
+                retryable=True,
+                details={"reason": type(exc).__name__},
+            ) from exc
+
+        def events():
+            current: dict[str, Any] = {}
+            try:
+                for raw in response:
+                    line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
+                    if not line:
+                        data = current.pop("data", None)
+                        if data:
+                            try:
+                                event = json.loads(data)
+                            except json.JSONDecodeError:
+                                event = {"type": "bridge.raw", "payload": {"data": data}}
+                            if isinstance(event, dict):
+                                yield event
+                        current = {}
+                        continue
+                    if line.startswith(":"):
+                        continue
+                    key, _, value = line.partition(":")
+                    current[key] = value.lstrip()
+            finally:
+                response.close()
+
+        return SseResult(events())
 
     def _agent_health(self, ctx: RequestContext) -> dict[str, Any]:
         return self._bridge_get("/status")
@@ -553,7 +680,13 @@ class ProductForgePortal(PortalAdapter):
 
     def _chat_create(self, ctx: RequestContext) -> dict[str, Any]:
         body = dict(ctx.body or {})
-        body.setdefault("provider", "fake")
+        if not str(body.get("provider", "")).strip():
+            raise PortalError(
+                "PROVIDER-REQUIRED",
+                "select an installed and authenticated AI provider before starting a chat",
+                http=422,
+                action="connect-provider",
+            )
         return self._bridge_request("/agent-sessions", method="POST", body=body)
 
     def _chat_prompt(self, ctx: RequestContext) -> dict[str, Any]:
