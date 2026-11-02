@@ -85,6 +85,34 @@ def test_task_board_persists_move_and_comment(tmp_path):
     assert refreshed["comments"][0]["text"] == "Ready for review"
 
 
+def test_chat_task_proposal_requires_approval_and_is_idempotent(tmp_path):
+    from product_forge.config import load_config
+    from product_forge.security import TokenStore
+
+    client = TestClient(create_app(home=tmp_path))
+    cfg = load_config(tmp_path)
+    token = TokenStore(tmp_path / str(cfg["api"]["token_file"])).token
+    headers = {"Authorization": f"Bearer {token}"}
+    wid = client.post("/api/v1/workspaces", json={"name": "Proposals"}, headers=headers).json()["data"]["id"]
+    pid = client.post("/api/v1/products", json={"workspace_id": wid, "name": "Chat PM"},
+                      headers=headers).json()["data"]["id"]
+    payload = {"source": "chat", "session_id": "ses_1", "idempotency_key": "msg_1",
+               "tasks": [{"title": "Validate onboarding", "priority": "high"}]}
+    first = client.post(f"/api/v1/products/{pid}/task-proposals", json=payload, headers=headers)
+    assert first.status_code == 201
+    proposal = first.json()["data"]
+    assert proposal["state"] == "proposed"
+    assert client.get(f"/api/v1/products/{pid}/tasks", headers=headers).json()["data"]["items"] == []
+    approved = client.post(f"/api/v1/products/{pid}/task-proposals/{proposal['id']}/approve",
+                           json={"approved": True}, headers=headers)
+    assert approved.status_code == 200 and approved.json()["data"]["state"] == "approved"
+    retry = client.post(f"/api/v1/products/{pid}/task-proposals/{proposal['id']}/approve",
+                        json={"approved": True}, headers=headers)
+    assert retry.status_code == 200
+    tasks = client.get(f"/api/v1/products/{pid}/tasks", headers=headers).json()["data"]["items"]
+    assert len(tasks) == 1 and tasks[0]["title"] == "Validate onboarding"
+
+
 def test_authenticated_route_error_matrix_is_enveloped(tmp_path):
     from product_forge.config import load_config
     from product_forge.security import TokenStore

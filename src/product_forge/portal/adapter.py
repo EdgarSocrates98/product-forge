@@ -60,6 +60,8 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}/knowledge-health", self._kn_health))
         self.register(Operation("GET", "/agent/health", self._agent_health))
         self.register(Operation("GET", "/agent/providers", self._agent_providers))
+        self.register(Operation("POST", "/bridge/bootstrap", self._bridge_bootstrap,
+                                mutating=True, confirm="bootstrap"))
         self.register(Operation("POST", "/agent/providers/claude/auth", self._claude_auth,
                                 mutating=True, confirm="start"))
         self.register(Operation("GET", "/chat/sessions", self._chat_sessions))
@@ -369,6 +371,9 @@ class ProductForgePortal(PortalAdapter):
             doc = st.get("tasks", ctx.params["tid"])
             if doc.get("product_id") != ctx.params["pid"]:
                 raise KeyError(ctx.params["tid"])
+            expected = (ctx.body or {}).get("expected_version")
+            if expected is not None and int(expected) != int(doc.get("version", 1)):
+                raise ValueError("task changed; reload before moving")
             doc["column_id"] = str((ctx.body or {}).get("column_id", "backlog"))
             doc["position"] = int((ctx.body or {}).get("position", doc.get("position", 0)))
             doc["version"] = int(doc.get("version", 1)) + 1
@@ -440,6 +445,32 @@ class ProductForgePortal(PortalAdapter):
 
     def _agent_providers(self, ctx: RequestContext) -> dict[str, Any]:
         return self._bridge_get("/providers")
+
+    def _bridge_bootstrap(self, ctx: RequestContext) -> dict[str, Any]:
+        """Pair the browser through the same-origin Portal session.
+
+        The master token is read only by the managed local runtime and is
+        exchanged immediately; it is never returned or stored by this
+        adapter. The browser receives only a scoped, expiring session token.
+        """
+        token_file = Path(os.environ.get(
+            "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token"
+        )).expanduser()
+        try:
+            master = token_file.read_text(encoding="utf-8").strip()
+        except OSError:
+            return {"state": "unavailable", "reason": "bridge_pair_token_missing"}
+        if not master:
+            return {"state": "unavailable", "reason": "bridge_pair_token_empty"}
+        result = self._bridge_request("/pair/exchange", method="POST", body={
+            "pair_token": master,
+            "device_name": "product-forge-portal",
+            "scopes": ["agent"],
+        })
+        if "session_token" in result:
+            result["base_url"] = os.environ.get(
+                "FORGE_BRIDGE_URL", "http://127.0.0.1:8471").rstrip("/")
+        return result
 
     def _claude_auth(self, ctx: RequestContext) -> dict[str, Any]:
         return self._bridge_request("/providers/claude-code/auth", method="POST",

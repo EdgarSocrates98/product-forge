@@ -15,6 +15,26 @@ from typing import Any, TypeVar
 
 _T = TypeVar("_T")
 
+
+def verify_oidc_token(token: str, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Verify an OIDC JWT against issuer/audience and a configured JWKS URL."""
+    try:
+        import jwt
+        from jwt import PyJWKClient
+    except ImportError as exc:  # pragma: no cover - configuration error
+        raise ValueError("OIDC requires product-forge[api] with PyJWT[crypto]") from exc
+    oidc = cfg.get("oidc") or {}
+    jwks_url = str(oidc.get("jwks_url") or "")
+    issuer = str(oidc.get("issuer") or "")
+    audience = oidc.get("audience") or None
+    if not jwks_url or not issuer or not audience:
+        raise ValueError("OIDC requires issuer, audience and jwks_url")
+    key = PyJWKClient(jwks_url).get_signing_key_from_jwt(token).key
+    claims = jwt.decode(token, key, algorithms=["RS256", "ES256"],
+                        issuer=issuer, audience=audience,
+                        options={"require": ["sub", "iss", "exp"]})
+    return claims
+
 SECRET_KEYS = (
     "token",
     "secret",

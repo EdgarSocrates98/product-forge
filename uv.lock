@@ -1306,6 +1306,7 @@ analytics = [
 ]
 api = [
     { name = "fastapi" },
+    { name = "pyjwt", extra = ["crypto"] },
     { name = "uvicorn" },
 ]
 aws = [
@@ -1324,6 +1325,7 @@ dev = [
     { name = "mypy" },
     { name = "openpyxl" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "pyjwt", extra = ["crypto"] },
     { name = "pypdf" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1354,6 +1356,7 @@ dev = [
     { name = "mypy" },
     { name = "openpyxl" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "pyjwt", extra = ["crypto"] },
     { name = "pypdf" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1382,6 +1385,8 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], marker = "extra == 'dev'", specifier = ">=3.2" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'postgres'", specifier = ">=3.2" },
     { name = "pydantic", specifier = ">=2.7,<3" },
+    { name = "pyjwt", extras = ["crypto"], marker = "extra == 'api'", specifier = ">=2.9" },
+    { name = "pyjwt", extras = ["crypto"], marker = "extra == 'dev'", specifier = ">=2.9" },
     { name = "pypdf", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "pypdf", marker = "extra == 'docs'", specifier = ">=4.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
@@ -1408,6 +1413,7 @@ dev = [
     { name = "mypy", specifier = ">=1.10" },
     { name = "openpyxl", specifier = ">=3.1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.9" },
     { name = "pypdf", specifier = ">=4.0" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-cov", specifier = ">=5.0" },
