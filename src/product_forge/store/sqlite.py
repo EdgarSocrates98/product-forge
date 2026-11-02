@@ -33,6 +33,7 @@ COLLECTIONS = (
     "dashboards",
     "boards",
     "tasks",
+    "task_proposals",
     "initiatives",
     "decisions",
     "agent_runs",

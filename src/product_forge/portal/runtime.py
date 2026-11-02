@@ -32,6 +32,9 @@ def _assets_dir() -> Path:
         if candidate.is_dir() and (candidate / "index.html").is_file():
             return candidate
     bundled = Path(__file__).resolve().parents[1] / "portal_assets"
+    embedded_angular = bundled / "angular"
+    if (embedded_angular / "index.html").is_file():
+        return embedded_angular
     if bundled.is_dir():
         return bundled
     override = os.environ.get("PRODUCT_FORGE_PORTAL_ASSETS")

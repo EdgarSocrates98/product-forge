@@ -39,7 +39,7 @@ from ..domain.models import (
     utcnow,
 )
 from ..errors import ForgeError
-from ..security import TokenStore, redact
+from ..security import TokenStore, redact, verify_oidc_token
 from ..store.sqlite import Store
 
 MAX_BODY = 1 << 20
@@ -274,7 +274,15 @@ def create_app(home: Path | None = None) -> FastAPI:
             # Only /health is public (it discloses forge_id/version only).
             auth = req.headers.get("authorization", "")
             token = auth.removeprefix("Bearer ").strip()
-            if not ctx.tokens.check(token):
+            oidc_claims = None
+            if (ctx.cfg.get("oidc") or {}).get("enabled"):
+                try:
+                    oidc_claims = verify_oidc_token(token, ctx.cfg)
+                except Exception:
+                    oidc_claims = None
+            oidc_enabled = bool((ctx.cfg.get("oidc") or {}).get("enabled"))
+            valid_token = bool(oidc_claims) if oidc_enabled else ctx.tokens.check(token)
+            if not valid_token:
                 err = {"code": "PF-UNAUTHORIZED", "message": "invalid or missing token",
                        "severity": "error", "retryable": False}
                 return JSONResponse(status_code=401, content=envelope(error=err, cid=req.state.cid))
@@ -286,7 +294,10 @@ def create_app(home: Path | None = None) -> FastAPI:
                     ws = ctx.store.get("products", pid)["workspace_id"]
                 except Exception:
                     ws = None  # missing product → 404 downstream, no leak
-                if ws and not _principal_allows(ctx.cfg, token, ws):
+                claimed_workspaces = ((oidc_claims or {}).get("workspaces")
+                                      or (oidc_claims or {}).get("workspace_ids"))
+                scoped = ws in claimed_workspaces if claimed_workspaces else True
+                if ws and (not scoped or (oidc_claims is None and not _principal_allows(ctx.cfg, token, ws))):
                     err = {"code": "PF-FORBIDDEN", "message": "workspace not in principal scope",
                            "severity": "error", "retryable": False}
                     return JSONResponse(status_code=403, content=envelope(error=err, cid=req.state.cid))
@@ -685,6 +696,9 @@ def create_app(home: Path | None = None) -> FastAPI:
         doc = ctx.store.get("tasks", tid)
         if doc.get("product_id") != pid:
             raise ForgeError("PF-NOT-FOUND", "task does not belong to product", 404)
+        expected = getattr(body, "expected_version", None)
+        if expected is not None and int(expected) != int(doc.get("version", 1)):
+            raise ForgeError("PF-CONFLICT", "task changed; reload before moving", 409)
         column_id = str(getattr(body, "column_id", "") or "")
         if not column_id:
             raise ForgeError("PF-VALIDATION", "column_id is required", 422)
@@ -1453,6 +1467,41 @@ def create_app(home: Path | None = None) -> FastAPI:
     def approval_list(pid: str) -> dict:
         ctx.store.get("products", pid)
         return envelope({"items": ctx.store.list("approvals", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/task-proposals", status_code=201)
+    def task_proposal_create(pid: str, body: ScopedIn, req: Request) -> dict:
+        from ..operations.proposals import create_proposal
+        ctx.store.get("products", pid)
+        values = body.model_dump()
+        rec = create_proposal(ctx.store, pid, list(values.get("tasks") or []),
+                              source=str(values.get("source") or "chat"),
+                              session_id=str(values.get("session_id") or ""),
+                              idempotency_key=values.get("idempotency_key"))
+        ctx.audit(req, "task-proposal.create", "task_proposals", rec["id"], product_id=pid)
+        return envelope(rec)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/task-proposals")
+    def task_proposal_list(pid: str) -> dict:
+        ctx.store.get("products", pid)
+        return envelope({"items": ctx.store.list("task_proposals", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/task-proposals/{{proposal_id}}/approve")
+    def task_proposal_approve(pid: str, proposal_id: str, body: ScopedIn, req: Request) -> dict:
+        from ..operations.proposals import approve_proposal
+        ctx.store.get("products", pid)
+        proposal = ctx.store.get("task_proposals", proposal_id)
+        if proposal.get("product_id") != pid:
+            raise ForgeError("PF-NOT-FOUND", "proposal does not belong to product", 404)
+        values = body.model_dump()
+        if values.get("approved", True) is False:
+            proposal["state"] = "rejected"
+            proposal["updated_at"] = utcnow()
+            rec = ctx.store.put_doc("task_proposals", proposal, status="rejected")
+        else:
+            rec = approve_proposal(ctx.store, proposal_id, reviewer="api",
+                                   idempotency_key=values.get("idempotency_key"))
+        ctx.audit(req, "task-proposal.approve", "task_proposals", proposal_id, product_id=pid)
+        return envelope(rec)
 
     # -- advanced agentic (Cycle 11) ---------------------------------------------
 

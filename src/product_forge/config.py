@@ -35,6 +35,9 @@ DEFAULTS: dict[str, Any] = {
     # [{"token": "<bearer>", "role": "viewer|editor|admin",
     #   "workspaces": ["w1","w2"]}] — product access is gated by its workspace.
     "principals": [],
+    # Optional production identity boundary. Disabled keeps the local bearer
+    # contract; enabling it requires a verified OIDC JWT for every API call.
+    "oidc": {"enabled": False, "issuer": None, "audience": None, "jwks_url": None},
     "install_profile": "recommended",  # minimal | recommended | full
 }
 
@@ -103,6 +106,12 @@ def _apply_env(cfg: dict[str, Any]) -> None:
         cfg["gateway_profile"] = v
     if v := os.environ.get(f"{ENV_PREFIX}LLM_PROVIDER"):
         cfg.setdefault("llm", {})["provider"] = v
+    if v := os.environ.get(f"{ENV_PREFIX}OIDC_ENABLED"):
+        cfg.setdefault("oidc", {})["enabled"] = v.lower() in {"1", "true", "yes", "on"}
+    for env, key in (("OIDC_ISSUER", "issuer"), ("OIDC_AUDIENCE", "audience"),
+                     ("OIDC_JWKS_URL", "jwks_url")):
+        if v := os.environ.get(f"{ENV_PREFIX}{env}"):
+            cfg.setdefault("oidc", {})[key] = v
 
 
 def db_path(home: Path, cfg: dict[str, Any] | None = None) -> Path:
