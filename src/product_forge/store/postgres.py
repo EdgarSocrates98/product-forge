@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import threading
 from collections.abc import Iterable
+from contextlib import contextmanager
 from typing import Any
 
 from ..domain.models import Entity, new_id, utcnow
@@ -30,6 +31,9 @@ class _CompatConnection:
 
     def commit(self) -> None:
         self._connection.commit()
+
+    def rollback(self) -> None:
+        self._connection.rollback()
 
     def close(self) -> None:
         self._connection.close()
@@ -51,6 +55,7 @@ class PostgresStore:
                 "Install productforge[postgres] to use the PostgreSQL backend"
             ) from exc
         self._lock = threading.RLock()
+        self._tx_depth = 0
         self._psycopg = psycopg
         raw_connection = psycopg.connect(dsn, row_factory=dict_row)
         self._conn = _CompatConnection(raw_connection)
@@ -117,6 +122,21 @@ class PostgresStore:
         with self._lock:
             self._conn.close()
 
+    @contextmanager
+    def transaction(self):
+        with self._lock:
+            self._tx_depth += 1
+            try:
+                yield self
+                if self._tx_depth == 1:
+                    self._conn.commit()
+            except Exception:
+                if self._tx_depth == 1:
+                    self._conn.rollback()
+                raise
+            finally:
+                self._tx_depth -= 1
+
     def migrate(self) -> list[int]:
         return []
 
@@ -154,7 +174,8 @@ class PostgresStore:
                  status or doc.get("status"), name or doc.get("name"),
                  json.dumps(blob), doc["updated_at"]),
             )
-            self._conn.commit()
+            if self._tx_depth == 0:
+                self._conn.commit()
         return doc
 
     def get(self, collection: str, entity_id: str) -> dict[str, Any]:
@@ -173,7 +194,8 @@ class PostgresStore:
                 "DELETE FROM pf_entities WHERE collection=%s AND id=%s",
                 (collection, entity_id),
             )
-            self._conn.commit()
+            if self._tx_depth == 0:
+                self._conn.commit()
         if cur.rowcount == 0:
             raise NotFoundError(f"{collection}/{entity_id} not found")
 

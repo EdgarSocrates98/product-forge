@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -23,24 +24,54 @@ from ..portal.adapter import ProductForgePortal
 
 
 def _assets_dir() -> Path:
-    # Angular is the canonical UI when a distribution provides its compiled
-    # bundle. This is an explicit packaging/development seam; the legacy HTML
-    # remains a recovery fallback until the wheel embeds the Angular output.
+    """Return the validated UI bundle shipped with the installed product.
+
+    Angular CLI emits ``browser/index.html`` in current application builds.
+    Older releases placed the file directly under ``angular`` and the legacy
+    server assets live directly under ``portal_assets``.  Keep those paths as
+    explicit compatibility fallbacks, but always prefer the production
+    Angular bundle and never silently select the legacy UI when a valid Angular
+    bundle is present.
+    """
+    def valid(candidate: Path) -> bool:
+        index = candidate / "index.html"
+        if not candidate.is_dir() or not index.is_file():
+            return False
+        # A compiled Angular bundle must be self-contained.  Fail at startup
+        # with a useful install error instead of serving a page that later
+        # fails with a cascade of opaque 404s.
+        if candidate.name == "browser":
+            manifest = candidate / "manifest.json"
+            if not manifest.is_file():
+                return False
+            try:
+                metadata = json.loads(manifest.read_text(encoding="utf-8"))
+                if metadata.get("schema") != "forge/ProductForgePortalManifest/v1":
+                    return False
+                html = index.read_text(encoding="utf-8")
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                return False
+            resources = [
+                resource for resource in re.findall(r'(?:src|href)="([^"?#]+)', html)
+                if resource not in {"/", ""}
+            ]
+            return all((candidate / resource.lstrip("/")).is_file() for resource in resources)
+        return True
+
     angular_override = os.environ.get("PRODUCT_FORGE_ANGULAR_ASSETS")
     if angular_override:
         candidate = Path(angular_override).expanduser().resolve()
-        if candidate.is_dir() and (candidate / "index.html").is_file():
+        if valid(candidate):
             return candidate
     bundled = Path(__file__).resolve().parents[1] / "portal_assets"
     embedded_angular = bundled / "angular"
-    if (embedded_angular / "index.html").is_file():
-        return embedded_angular
-    if bundled.is_dir():
-        return bundled
+    for candidate in (embedded_angular / "browser", embedded_angular):
+        if valid(candidate):
+            return candidate
     override = os.environ.get("PRODUCT_FORGE_PORTAL_ASSETS")
     if override:
         candidate = Path(override).expanduser().resolve()
-        if candidate.is_dir():
+        if valid(candidate):
             return candidate
     raise RuntimeError(
         "Product Forge portal assets are not installed; reinstall product-forge "
@@ -109,6 +140,23 @@ def _bridge_command(port: int) -> list[str]:
     return [sys.executable, "-m", "forge_agent_bridge.cli", "serve", "--port", str(port)]
 
 
+def _bridge_environment(env: dict[str, str]) -> dict[str, str]:
+    """Add the sibling checkout only for development worktrees.
+
+    Installed users use the ``forge-bridge`` console script or an installed
+    Python package.  In a three-repository checkout this fallback makes the
+    documented single-command portal smoke test work without a second manual
+    server command, while never downloading code or mutating the environment.
+    """
+    if shutil.which("forge-bridge"):
+        return env
+    sibling = Path(__file__).resolve().parents[4] / "forge-agent-bridge" / "src"
+    if sibling.is_dir():
+        existing = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(sibling), existing]))
+    return env
+
+
 def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         quiet: bool = True) -> None:
     """Start the Product Forge portal composition until interrupted."""
@@ -152,7 +200,7 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         # a self-contained composition instead of relying on port 8471.
         bridge_url = f"http://127.0.0.1:{bridge_port}"
         os.environ["FORGE_BRIDGE_URL"] = bridge_url
-        bridge_env = os.environ.copy()
+        bridge_env = _bridge_environment(os.environ.copy())
         bridge_env["FORGE_BRIDGE_URL"] = bridge_url
         bridge = subprocess.Popen(  # noqa: S603 - executable is fixed/discovered locally
             _bridge_command(bridge_port),

@@ -11,6 +11,7 @@ import os
 import sqlite3
 import threading
 from collections.abc import Iterable
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -149,6 +150,7 @@ class Store:
     def __init__(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
+        self._tx_depth = 0
         self._conn = sqlite3.connect(str(path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         if str(path) != ":memory:":
@@ -196,6 +198,22 @@ class Store:
         with self._lock:
             self._conn.close()
 
+    @contextmanager
+    def transaction(self):
+        """Group several document writes into one SQLite transaction."""
+        with self._lock:
+            self._tx_depth += 1
+            try:
+                yield self
+                if self._tx_depth == 1:
+                    self._conn.commit()
+            except Exception:
+                if self._tx_depth == 1:
+                    self._conn.rollback()
+                raise
+            finally:
+                self._tx_depth -= 1
+
     # -- generic CRUD -----------------------------------------------------
 
     def put(self, collection: str, entity: Entity) -> Entity:
@@ -219,7 +237,8 @@ class Store:
                     entity.updated_at,
                 ),
             )
-            self._conn.commit()
+            if self._tx_depth == 0:
+                self._conn.commit()
         return entity
 
     def put_doc(self, collection: str, doc: dict[str, Any], *,
@@ -238,7 +257,8 @@ class Store:
                  status or doc.get("status"), name or doc.get("name"),
                  blob, doc["updated_at"]),
             )
-            self._conn.commit()
+            if self._tx_depth == 0:
+                self._conn.commit()
         return doc
 
     def get(self, collection: str, entity_id: str) -> dict[str, Any]:
@@ -255,7 +275,8 @@ class Store:
             cur = self._conn.execute(
                 "DELETE FROM entities WHERE collection=? AND id=?", (collection, entity_id)
             )
-            self._conn.commit()
+            if self._tx_depth == 0:
+                self._conn.commit()
         if cur.rowcount == 0:
             raise NotFoundError(f"{collection}/{entity_id} not found")
 
