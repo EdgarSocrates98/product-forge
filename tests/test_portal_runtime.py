@@ -1,4 +1,4 @@
-from product_forge.portal.runtime import _assets_dir, _bridge_command
+from product_forge.portal.runtime import _assets_dir, _bridge_command, _free_loopback_port
 
 
 def test_product_portal_assets_are_bundled() -> None:
@@ -13,3 +13,8 @@ def test_product_portal_assets_are_bundled() -> None:
 def test_bridge_command_is_loopback_service_command() -> None:
     command = _bridge_command(8471)
     assert command[-3:] == ["serve", "--port", "8471"]
+
+
+def test_bridge_port_zero_is_ephemeral_and_bindable() -> None:
+    port = _free_loopback_port()
+    assert 0 < port <= 65535

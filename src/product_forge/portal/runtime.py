@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -94,9 +95,21 @@ def _pid_alive(pid: int) -> bool:
 
 
 def _terminate_pid(pid: int) -> None:
-    """Best-effort cleanup for a stale managed child after a hard stop."""
+    """Best-effort cleanup for a stale *bridge-owned* child.
+
+    A stale manifest can outlive the launcher, but a PID can be reused.  Never
+    kill a process merely because the old manifest contains its number: verify
+    the command is one of the bridge launch forms first.
+    """
     if not _pid_alive(pid):
         return
+    if os.name != "nt":
+        try:
+            command = Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ").decode()
+        except OSError:
+            return
+        if "forge_agent_bridge.cli" not in command and "forge-bridge" not in command:
+            return
     try:
         if os.name != "nt":
             os.killpg(pid, signal.SIGTERM)
@@ -140,6 +153,37 @@ def _bridge_command(port: int) -> list[str]:
     return [sys.executable, "-m", "forge_agent_bridge.cli", "serve", "--port", str(port)]
 
 
+def _free_loopback_port(preferred: int = 0) -> int:
+    """Pick a loopback port without making 8471 a hidden global singleton."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("127.0.0.1", preferred))
+        return int(sock.getsockname()[1])
+
+
+def _wait_bridge_ready(port: int, token_file: Path, timeout: float = 8.0) -> None:
+    """Wait for the managed bridge health endpoint, not just its PID."""
+    import urllib.request
+
+    token = token_file.read_text(encoding="utf-8").strip()
+    deadline = time.monotonic() + timeout
+    last_error = "not started"
+    while time.monotonic() < deadline:
+        try:
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{port}/status",
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=0.5) as response:  # noqa: S310 - loopback URL validated
+                if response.status == 200:
+                    return
+            last_error = "unexpected health status"
+        except Exception as exc:  # noqa: BLE001 - startup retry boundary
+            last_error = str(exc)
+        time.sleep(0.1)
+    raise RuntimeError(f"forge-bridge did not become ready on port {port}: {last_error}")
+
+
 def _bridge_environment(env: dict[str, str]) -> dict[str, str]:
     """Add the sibling checkout only for development worktrees.
 
@@ -179,6 +223,16 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
             _terminate_pid(bridge_pid)
 
     cfg = load_config(home)
+    # 0 means automatic.  Keep 8471 accepted for compatibility, but if it is
+    # already occupied choose a safe loopback port instead of attaching to an
+    # unrelated process or leaving an orphaned bridge behind.
+    if bridge_port == 0:
+        bridge_port = _free_loopback_port()
+    else:
+        try:
+            bridge_port = _free_loopback_port(bridge_port)
+        except OSError:
+            bridge_port = _free_loopback_port()
     from ..install.managed_runtime import ensure_postgres
     runtime_state = ensure_postgres(home, profile=str(cfg.get("install_profile", "recommended")))
     bridge = None
@@ -212,9 +266,10 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
             start_new_session=(os.name != "nt"),
             preexec_fn=_child_death_signal if os.name != "nt" else None,
         )
-        time.sleep(0.15)
         if bridge.poll() is not None:
             raise RuntimeError("forge-bridge exited before the portal could start")
+        _wait_bridge_ready(bridge_port, Path(os.environ.get(
+            "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token")).expanduser())
         adapter = ProductForgePortal()
         adapter.assets_dir = assets
         server = PortalServer(adapter, port=port, quiet=quiet)
