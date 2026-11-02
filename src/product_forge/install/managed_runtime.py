@@ -114,6 +114,15 @@ def ensure_postgres(home: Path, *, profile: str = "recommended") -> dict[str, ob
         save_config(cfg, home)
         return {"backend": "postgres", "managed": False, "dsn": "configured"}
 
+    # Local installs without a DSN stay zero-configuration SQLite. Docker is
+    # still supported as a first-class runtime, but must be requested
+    # explicitly so a transient local container cannot break the CLI or tests.
+    if os.environ.get("PRODUCT_FORGE_MANAGED_POSTGRES") != "1":
+        cfg.setdefault("store", {})["backend"] = "sqlite"
+        cfg.setdefault("store", {})["managed_by_docker"] = False
+        save_config(cfg, home)
+        return {"backend": "sqlite", "managed": False, "reason": "no DSN"}
+
     if os.environ.get("PRODUCT_FORGE_DISABLE_DOCKER") == "1":
         if os.environ.get("PRODUCT_FORGE_ALLOW_SQLITE_FALLBACK") == "1":
             cfg.setdefault("store", {})["backend"] = "sqlite"
