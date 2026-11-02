@@ -31,6 +31,8 @@ COLLECTIONS = (
     "data_sources",
     "query_runs",
     "dashboards",
+    "boards",
+    "tasks",
     "initiatives",
     "decisions",
     "agent_runs",

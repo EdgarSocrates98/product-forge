@@ -18,7 +18,7 @@ from typing import Any
 from .. import FORGE_ID, __version__
 from .._forge_portal import Operation, PortalAdapter, RequestContext, default_operations
 from ..config import db_path, home_dir, load_config
-from ..domain.models import Initiative, Product, Workspace, new_id
+from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id
 from ..store.sqlite import Store
 
 
@@ -81,6 +81,12 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("POST", "/products/{pid}/initiatives/{iid}/prioritize",
                                 self._initiative_prioritize, mutating=True, confirm="prioritize"))
         self.register(Operation("GET", "/products/{pid}/boards", self._board))
+        self.register(Operation("GET", "/products/{pid}/board", self._board))
+        self.register(Operation("POST", "/products/{pid}/tasks", self._task_create,
+                               mutating=True, confirm="create"))
+        self.register(Operation("GET", "/products/{pid}/tasks", self._tasks))
+        self.register(Operation("POST", "/products/{pid}/tasks/{tid}/move",
+                               self._task_move, mutating=True, confirm="move"))
         self.register(Operation("GET", "/notifications", self._notifications))
         self.register(Operation("GET", "/products/{pid}/alerts", self._alerts))
         self.register(Operation("GET", "/audit", self._audit))
@@ -305,12 +311,73 @@ class ProductForgePortal(PortalAdapter):
             st.close()
 
     def _board(self, ctx: RequestContext) -> dict[str, Any]:
-        items = self._initiatives(ctx)["items"]
-        columns = {key: [] for key in ("proposed", "prioritized", "in_progress", "done", "rejected")}
-        for item in items:
-            columns.setdefault(item.get("status", "proposed"), []).append(item)
-        return {"schema": "productforge/Board/v1", "product_id": ctx.params["pid"],
-                "columns": columns, "items": items}
+        st = _store()
+        try:
+            product = st.get("products", ctx.params["pid"])
+            boards = st.list("boards", product_id=ctx.params["pid"], limit=20)
+            board = boards[0] if boards else None
+            if board is None:
+                board = Board(id=new_id("brd"), workspace_id=product["workspace_id"],
+                              product_id=ctx.params["pid"],
+                              name=f"{product['name']} board")
+                st.put("boards", board)
+            tasks = st.list("tasks", product_id=ctx.params["pid"], limit=1000)
+            columns = {str(c.get("id")): [] for c in board.get("columns", [])}
+            for task in tasks:
+                columns.setdefault(str(task.get("column_id", "backlog")), []).append(task)
+            return {"schema": "productforge/Board/v1", "product_id": ctx.params["pid"],
+                    "board": board, "columns": columns, "tasks": tasks,
+                    "items": self._initiatives(ctx)["items"]}
+        finally:
+            st.close()
+
+    def _tasks(self, ctx: RequestContext) -> dict[str, Any]:
+        st = _store()
+        try:
+            return {"items": st.list("tasks", product_id=ctx.params["pid"], limit=1000)}
+        finally:
+            st.close()
+
+    def _task_create(self, ctx: RequestContext) -> dict[str, Any]:
+        body = ctx.body or {}
+        st = _store()
+        try:
+            product = st.get("products", ctx.params["pid"])
+            boards = st.list("boards", product_id=ctx.params["pid"], limit=1)
+            board = boards[0] if boards else Board(
+                id=new_id("brd"), workspace_id=product["workspace_id"],
+                product_id=ctx.params["pid"], name=f"{product['name']} board")
+            if not boards:
+                st.put("boards", board)
+            task = Task(id=new_id("tsk"), workspace_id=product["workspace_id"],
+                        product_id=ctx.params["pid"], board_id=board["id"],
+                        title=str(body.get("title", "")).strip(),
+                        description=str(body.get("description", "")),
+                        column_id=str(body.get("column_id", "backlog")),
+                        priority=str(body.get("priority", "medium")))
+            if not task.title:
+                raise ValueError("task title is required")
+            st.put("tasks", task)
+            ctx.emit("task.created", resource_id=task.id)
+            return task.model_dump(mode="json", by_alias=True)
+        finally:
+            st.close()
+
+    def _task_move(self, ctx: RequestContext) -> dict[str, Any]:
+        st = _store()
+        try:
+            doc = st.get("tasks", ctx.params["tid"])
+            if doc.get("product_id") != ctx.params["pid"]:
+                raise KeyError(ctx.params["tid"])
+            doc["column_id"] = str((ctx.body or {}).get("column_id", "backlog"))
+            doc["position"] = int((ctx.body or {}).get("position", doc.get("position", 0)))
+            doc["version"] = int(doc.get("version", 1)) + 1
+            st.put("tasks", Task.model_validate(doc))
+            ctx.emit("task.moved", resource_id=ctx.params["tid"],
+                     column_id=doc["column_id"])
+            return doc
+        finally:
+            st.close()
 
     def _notifications(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()

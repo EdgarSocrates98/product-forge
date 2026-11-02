@@ -56,6 +56,35 @@ def test_health_is_public_enveloped(client):
     assert resp.json()["data"]["status"] == "healthy"
 
 
+def test_task_board_persists_move_and_comment(tmp_path):
+    from product_forge.config import load_config
+    from product_forge.security import TokenStore
+
+    app = create_app(home=tmp_path)
+    client = TestClient(app)
+    cfg = load_config(tmp_path)
+    token = TokenStore(tmp_path / str(cfg["api"]["token_file"])).token
+    headers = {"Authorization": f"Bearer {token}"}
+    wid = client.post("/api/v1/workspaces", json={"name": "Tasks"}, headers=headers).json()["data"]["id"]
+    pid = client.post("/api/v1/products", json={"workspace_id": wid, "name": "Planner"},
+                      headers=headers).json()["data"]["id"]
+    created = client.post(f"/api/v1/products/{pid}/tasks", json={"title": "Ship board"},
+                          headers=headers)
+    assert created.status_code == 201
+    task = created.json()["data"]
+    assert task["workspace_id"] == wid and task["board_id"]
+    moved = client.post(f"/api/v1/products/{pid}/tasks/{task['id']}/move",
+                        json={"column_id": "doing", "position": 0}, headers=headers)
+    assert moved.status_code == 200
+    comment = client.post(f"/api/v1/products/{pid}/tasks/{task['id']}/comments",
+                          json={"text": "Ready for review"}, headers=headers)
+    assert comment.status_code == 201
+    board = client.get(f"/api/v1/products/{pid}/board", headers=headers).json()["data"]
+    refreshed = next(item for item in board["tasks"] if item["id"] == task["id"])
+    assert refreshed["column_id"] == "doing"
+    assert refreshed["comments"][0]["text"] == "Ready for review"
+
+
 def test_authenticated_route_error_matrix_is_enveloped(tmp_path):
     from product_forge.config import load_config
     from product_forge.security import TokenStore

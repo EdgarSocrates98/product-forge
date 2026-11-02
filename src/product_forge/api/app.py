@@ -23,6 +23,7 @@ from .. import API_PREFIX, ENVELOPE_SCHEMA, FORGE_ID, __version__
 from ..config import db_path, home_dir, load_config
 from ..domain.models import (
     AgentDefinition,
+    Board,
     Dashboard,
     DataSource,
     Decision,
@@ -32,6 +33,7 @@ from ..domain.models import (
     Meeting,
     Notebook,
     Product,
+    Task,
     Workspace,
     new_id,
     utcnow,
@@ -572,9 +574,20 @@ def create_app(home: Path | None = None) -> FastAPI:
     def _crud(path: str, collection: str, model: type, in_fields: set[str]) -> None:
         @app.post(f"{API_PREFIX}/products/{{pid}}/{path}", status_code=201)
         def _create(pid: str, body: ScopedIn, req: Request, p=path, c=collection, m=model) -> dict:  # type: ignore[misc]
-            ctx.store.get("products", pid)
+            product = ctx.store.get("products", pid)
             data = {k: v for k, v in body.model_dump(by_alias=True).items() if k in in_fields}
             data["product_id"] = pid
+            if "workspace_id" in m.model_fields:
+                data["workspace_id"] = product["workspace_id"]
+            if m is Task and not data.get("board_id"):
+                boards = ctx.store.list("boards", product_id=pid, limit=1)
+                if boards:
+                    data["board_id"] = boards[0]["id"]
+                else:
+                    board = Board(id=new_id("brd"), workspace_id=product["workspace_id"],
+                                  product_id=pid, name=f"{product['name']} board")
+                    ctx.store.put("boards", board)
+                    data["board_id"] = board.id
             ent = m(id=new_id(p.rstrip("s")[:3]), **data)
             ctx.store.put(c, ent)
             ctx.audit(req, f"{p}.create", c, ent.id, product_id=pid,
@@ -631,12 +644,77 @@ def create_app(home: Path | None = None) -> FastAPI:
           {"name", "connector", "locator", "dialect", "catalog_allowlist"})
     _crud("dashboards", "dashboards", Dashboard, {"name", "description", "widgets", "filters"})
     _crud("initiatives", "initiatives", Initiative, {"title", "hypothesis", "priority_score"})
+    _crud("tasks", "tasks", Task,
+          {"board_id", "column_id", "title", "description", "type", "priority",
+           "assignee", "labels", "due_date", "estimate", "position", "parent_id",
+           "initiative_id", "dependencies", "acceptance_criteria", "session_refs",
+           "archived", "version", "comments", "activities"})
     _crud("decisions", "decisions", Decision, {"title", "context", "decision", "alternatives"})
     _crud("experiments", "experiments", Experiment,
           {"title", "hypothesis", "design", "success_metrics", "guardrails",
            "baseline", "status", "results"})
     _crud("meetings", "meetings", Meeting, {"title", "transcript"})
     _crud("notebooks", "notebooks", Notebook, {"title"})
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/board")
+    def product_board(pid: str) -> dict:
+        product = ctx.store.get("products", pid)
+        boards = ctx.store.list("boards", product_id=pid, limit=20)
+        board = boards[0] if boards else None
+        if board is None:
+            board = Board(id=new_id("brd"), workspace_id=product["workspace_id"],
+                          product_id=pid, name=f"{product['name']} board")
+            ctx.store.put("boards", board)
+        tasks = ctx.store.list("tasks", product_id=pid, limit=1000)
+        board_doc = board.model_dump(mode="json", by_alias=True) if isinstance(board, Board) else board
+        return envelope({"board": board_doc, "tasks": tasks})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/board", status_code=201)
+    def create_product_board(pid: str, body: ScopedIn, req: Request) -> dict:
+        product = ctx.store.get("products", pid)
+        if ctx.store.list("boards", product_id=pid, limit=1):
+            raise ForgeError("PF-CONFLICT", "product already has a board", 409)
+        board = Board(id=new_id("brd"), workspace_id=product["workspace_id"],
+                      product_id=pid, name=str(body.name if hasattr(body, "name") else "Board"))
+        ctx.store.put("boards", board)
+        ctx.audit(req, "board.create", "boards", board.id, product_id=pid)
+        return envelope(board.model_dump(mode="json", by_alias=True))
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/tasks/{{tid}}/move")
+    def move_task(pid: str, tid: str, body: ScopedIn, req: Request) -> dict:
+        doc = ctx.store.get("tasks", tid)
+        if doc.get("product_id") != pid:
+            raise ForgeError("PF-NOT-FOUND", "task does not belong to product", 404)
+        column_id = str(getattr(body, "column_id", "") or "")
+        if not column_id:
+            raise ForgeError("PF-VALIDATION", "column_id is required", 422)
+        doc["column_id"] = column_id
+        doc["position"] = int(getattr(body, "position", doc.get("position", 0)) or 0)
+        doc["version"] = int(doc.get("version", 1)) + 1
+        doc["activities"] = [*(doc.get("activities") or []),
+                               {"action": "moved", "column_id": column_id,
+                                "at": utcnow(), "actor": "local"}]
+        ent = Task.model_validate(doc)
+        ctx.store.put("tasks", ent)
+        ctx.audit(req, "task.move", "tasks", tid, product_id=pid,
+                  details={"column_id": column_id})
+        return envelope(ent.model_dump(mode="json", by_alias=True))
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/tasks/{{tid}}/comments", status_code=201)
+    def task_comment(pid: str, tid: str, body: ScopedIn, req: Request) -> dict:
+        doc = ctx.store.get("tasks", tid)
+        if doc.get("product_id") != pid:
+            raise ForgeError("PF-NOT-FOUND", "task does not belong to product", 404)
+        text = str(getattr(body, "text", "") or "").strip()
+        if not text:
+            raise ForgeError("PF-VALIDATION", "comment text is required", 422)
+        comment = {"id": new_id("cmt"), "author": "local", "text": text,
+                   "created_at": utcnow()}
+        doc["comments"] = [*(doc.get("comments") or []), comment]
+        doc["version"] = int(doc.get("version", 1)) + 1
+        ctx.store.put("tasks", Task.model_validate(doc))
+        ctx.audit(req, "task.comment", "tasks", tid, product_id=pid)
+        return envelope(comment)
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/notebooks/{{nid}}/blocks", status_code=201)
     def notebook_add_block(pid: str, nid: str, body: dict[str, Any], req: Request) -> dict:

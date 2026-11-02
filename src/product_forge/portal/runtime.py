@@ -23,6 +23,14 @@ from ..portal.adapter import ProductForgePortal
 
 
 def _assets_dir() -> Path:
+    # Angular is the canonical UI when a distribution provides its compiled
+    # bundle. This is an explicit packaging/development seam; the legacy HTML
+    # remains a recovery fallback until the wheel embeds the Angular output.
+    angular_override = os.environ.get("PRODUCT_FORGE_ANGULAR_ASSETS")
+    if angular_override:
+        candidate = Path(angular_override).expanduser().resolve()
+        if candidate.is_dir() and (candidate / "index.html").is_file():
+            return candidate
     bundled = Path(__file__).resolve().parents[1] / "portal_assets"
     if bundled.is_dir():
         return bundled

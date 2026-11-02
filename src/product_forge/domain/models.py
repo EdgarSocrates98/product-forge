@@ -273,6 +273,49 @@ class Initiative(Entity):
     evidence: list[str] = Field(default_factory=list)
 
 
+class Board(Entity):
+    """Canonical product board; initiatives are roadmap inputs, not tasks."""
+
+    workspace_id: str
+    product_id: str
+    name: str
+    description: str = ""
+    columns: list[dict[str, Any]] = Field(default_factory=lambda: [
+        {"id": "backlog", "name": "Backlog", "position": 0},
+        {"id": "doing", "name": "Em andamento", "position": 1},
+        {"id": "review", "name": "Em revisão", "position": 2},
+        {"id": "done", "name": "Concluído", "position": 3},
+    ])
+    archived: bool = False
+
+
+class Task(Entity):
+    """Persisted work item linked to a product, board and optional initiative."""
+
+    workspace_id: str
+    product_id: str
+    board_id: str
+    column_id: str = "backlog"
+    title: str
+    description: str = ""
+    type: Literal["epic", "story", "task", "bug", "research", "spike"] = "task"
+    priority: Literal["low", "medium", "high", "urgent"] = "medium"
+    assignee: str | None = None
+    labels: list[str] = Field(default_factory=list)
+    due_date: str | None = None
+    estimate: float | None = None
+    position: int = 0
+    parent_id: str | None = None
+    initiative_id: str | None = None
+    dependencies: list[str] = Field(default_factory=list)
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    session_refs: list[str] = Field(default_factory=list)
+    archived: bool = False
+    version: int = 1
+    comments: list[dict[str, Any]] = Field(default_factory=list)
+    activities: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class Decision(Entity):
     product_id: str
     title: str

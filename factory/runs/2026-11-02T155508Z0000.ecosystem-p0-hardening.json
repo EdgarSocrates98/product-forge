@@ -1,0 +1,15 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat /home/edgar/Documentos/projetos/forjas/product-forge/factory/prompts/ecosystem-p0-hardening.implement.codex.md)"
+  ],
+  "created_at": "2026-11-02T15:55:08+00:00",
+  "id": "ecosystem-p0-hardening",
+  "prompt_path": "/home/edgar/Documentos/projetos/forjas/product-forge/factory/prompts/ecosystem-p0-hardening.implement.codex.md",
+  "spec_path": "/home/edgar/Documentos/projetos/forjas/product-forge/factory/specs/active/ecosystem-p0-hardening.md",
+  "spec_sha256": "6ff510d23a722883ee5b145df12f261287f22d2d35d70f7ba386cf59661fb856",
+  "status": "planned",
+  "title": "Ecosystem P0 hardening \u2014 authorization, durable sessions and canonical gateway UX"
+}
