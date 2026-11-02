@@ -145,3 +145,8 @@ As specs concluídas foram arquivadas formalmente em
 inbox até o login Claude ser concluído. O PostgreSQL permanece disponível como
 backend gerenciado no perfil recomendado/full e SQLite continua sendo o modo
 local sem DSN.
+
+O runtime agora aceita `PRODUCT_FORGE_ANGULAR_ASSETS` como seam explícito de
+distribuição e prioriza esse bundle no `productforge portal`; sem o bundle
+Angular, mantém o HTML apenas como recuperação. A incorporação automática do
+build Angular no wheel continua sendo o próximo gate de distribuição.
