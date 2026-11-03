@@ -104,13 +104,20 @@ def test_chat_task_proposal_requires_approval_and_is_idempotent(tmp_path):
     assert proposal["state"] == "proposed"
     assert client.get(f"/api/v1/products/{pid}/tasks", headers=headers).json()["data"]["items"] == []
     approved = client.post(f"/api/v1/products/{pid}/task-proposals/{proposal['id']}/approve",
-                           json={"approved": True}, headers=headers)
+                           json={"approved": True, "tasks": [{
+                               "title": "Validate onboarding copy",
+                               "description": "Review the welcome flow",
+                               "priority": "low",
+                           }]}, headers=headers)
     assert approved.status_code == 200 and approved.json()["data"]["state"] == "approved"
     retry = client.post(f"/api/v1/products/{pid}/task-proposals/{proposal['id']}/approve",
                         json={"approved": True}, headers=headers)
     assert retry.status_code == 200
     tasks = client.get(f"/api/v1/products/{pid}/tasks", headers=headers).json()["data"]["items"]
-    assert len(tasks) == 1 and tasks[0]["title"] == "Validate onboarding"
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "Validate onboarding copy"
+    assert tasks[0]["description"] == "Review the welcome flow"
+    assert tasks[0]["priority"] == "low"
 
 
 def test_authenticated_route_error_matrix_is_enveloped(tmp_path):

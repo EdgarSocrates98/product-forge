@@ -70,3 +70,21 @@ def approve_proposal(store: Store, proposal_id: str, *, reviewer: str = "api",
                              "approval_idempotency_key": idempotency_key,
                              "updated_at": utcnow()})
             return store.put_doc("task_proposals", proposal, status="approved")
+
+
+def revise_proposal(store: Store, proposal_id: str, tasks: list[dict[str, Any]]) -> dict[str, Any]:
+    """Replace the still-pending review payload before approval.
+
+    Reviews are optimistic: an approved/rejected proposal is immutable, while
+    a pending proposal receives a new ``updated_at`` so stale review screens
+    can reload before applying the decision.
+    """
+    if not tasks or any(not str(item.get("title", "")).strip() for item in tasks):
+        raise ValueError("at least one task title is required")
+    with _APPROVAL_LOCKS[proposal_id]:
+        proposal = store.get("task_proposals", proposal_id)
+        if proposal.get("state") != "proposed":
+            raise UnsafeOperationError(f"proposal {proposal_id} is no longer editable")
+        proposal["tasks"] = [dict(item) for item in tasks]
+        proposal["updated_at"] = utcnow()
+        return store.put_doc("task_proposals", proposal, status="proposed")

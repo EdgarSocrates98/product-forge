@@ -161,15 +161,39 @@ def _free_loopback_port(preferred: int = 0) -> int:
         return int(sock.getsockname()[1])
 
 
-def _wait_bridge_ready(port: int, token_file: Path, timeout: float = 8.0) -> None:
-    """Wait for the managed bridge health endpoint, not just its PID."""
+def _wait_bridge_ready(
+    port: int,
+    token_file: Path,
+    timeout: float = 8.0,
+    process: subprocess.Popen[bytes] | subprocess.Popen[str] | None = None,
+) -> None:
+    """Wait for managed Bridge storage, credentials and authenticated health.
+
+    ``pair.token`` is created by the Bridge after its storage is initialized,
+    so reading it before entering the retry loop creates a first-run race.  A
+    missing token is therefore a readiness state, not an immediate failure.
+    """
+    import urllib.error
     import urllib.request
 
-    token = token_file.read_text(encoding="utf-8").strip()
     deadline = time.monotonic() + timeout
     last_error = "not started"
     while time.monotonic() < deadline:
+        if process is not None and process.poll() is not None:
+            raise RuntimeError("forge-bridge exited during startup")
         try:
+            if not token_file.is_file():
+                last_error = "pair.token is not available yet"
+                time.sleep(0.05)
+                continue
+            mode = token_file.stat().st_mode & 0o777
+            if mode & 0o077:
+                raise PermissionError("pair.token permissions are too broad")
+            token = token_file.read_text(encoding="utf-8").strip()
+            if not token:
+                last_error = "pair.token is empty"
+                time.sleep(0.05)
+                continue
             request = urllib.request.Request(
                 f"http://127.0.0.1:{port}/status",
                 headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
@@ -178,9 +202,9 @@ def _wait_bridge_ready(port: int, token_file: Path, timeout: float = 8.0) -> Non
                 if response.status == 200:
                     return
             last_error = "unexpected health status"
-        except Exception as exc:  # noqa: BLE001 - startup retry boundary
+        except (OSError, ValueError, urllib.error.URLError, PermissionError) as exc:
             last_error = str(exc)
-        time.sleep(0.1)
+        time.sleep(0.05)
     raise RuntimeError(f"forge-bridge did not become ready on port {port}: {last_error}")
 
 
@@ -268,8 +292,11 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         )
         if bridge.poll() is not None:
             raise RuntimeError("forge-bridge exited before the portal could start")
-        _wait_bridge_ready(bridge_port, Path(os.environ.get(
-            "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token")).expanduser())
+        _wait_bridge_ready(
+            bridge_port,
+            Path(os.environ.get("FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token")).expanduser(),
+            process=bridge,
+        )
         adapter = ProductForgePortal()
         adapter.assets_dir = assets
         server = PortalServer(adapter, port=port, quiet=quiet)

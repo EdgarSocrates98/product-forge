@@ -442,7 +442,7 @@ class ProductForgePortal(PortalAdapter):
             st.close()
 
     def _task_proposal_decide(self, ctx: RequestContext) -> dict[str, Any]:
-        from ..operations.proposals import approve_proposal
+        from ..operations.proposals import approve_proposal, revise_proposal
 
         body = ctx.body or {}
         st = _store()
@@ -450,6 +450,8 @@ class ProductForgePortal(PortalAdapter):
             proposal = st.get("task_proposals", ctx.params["proposal_id"])
             if proposal.get("product_id") != ctx.params["pid"]:
                 raise KeyError(ctx.params["proposal_id"])
+            if body.get("tasks") is not None:
+                proposal = revise_proposal(st, ctx.params["proposal_id"], list(body["tasks"]))
             if body.get("approved", True) is False:
                 proposal["state"] = "rejected"
                 proposal["updated_at"] = utcnow()
@@ -554,8 +556,30 @@ class ProductForgePortal(PortalAdapter):
                 http=503,
                 retryable=True,
             )
+        query = ""
+        if ctx.query:
+            allowed_query = {"after_seq", "limit"}
+            pairs: list[tuple[str, str]] = []
+            for key, values in ctx.query.items():
+                if key not in allowed_query:
+                    continue
+                for value in values[:1]:
+                    if key == "after_seq" and (not value.isdigit() or int(value) < 0):
+                        raise PortalError(
+                            "BRIDGE-BAD-CURSOR",
+                            "after_seq must be a non-negative integer",
+                            http=422,
+                        )
+                    pairs.append((key, value))
+            if pairs:
+                query = "?" + urllib.parse.urlencode(pairs)
         if method == "GET" and path.endswith("/stream"):
-            return self._bridge_stream(path, token_override=gateway_token)
+            last_event_id = ctx.handler.headers.get("Last-Event-ID", "").strip()
+            if last_event_id and not last_event_id.isdigit():
+                raise PortalError("BRIDGE-BAD-CURSOR", "Last-Event-ID must be numeric", http=422)
+            if last_event_id and "after_seq" not in query:
+                query = "?" + urllib.parse.urlencode({"after_seq": last_event_id})
+            return self._bridge_stream(path + query, token_override=gateway_token)
         result = self._bridge_request(
             path,
             method=method,
@@ -620,13 +644,32 @@ class ProductForgePortal(PortalAdapter):
                             except json.JSONDecodeError:
                                 event = {"type": "bridge.raw", "payload": {"data": data}}
                             if isinstance(event, dict):
+                                # Keep the native SSE cursor/type available to
+                                # same-origin clients even when the upstream
+                                # JSON payload does not repeat them.
+                                sse_id = current.get("id")
+                                sse_event = current.get("event")
+                                if sse_id and "seq" not in event and sse_id.isdigit():
+                                    event["seq"] = int(sse_id)
+                                if sse_event and "type" not in event:
+                                    event["type"] = sse_event
+                                if sse_id:
+                                    event["sse_id"] = sse_id
+                                if sse_event:
+                                    event["sse_event"] = sse_event
+                                if "retry" in current:
+                                    event["sse_retry"] = current["retry"]
                                 yield event
                         current = {}
                         continue
                     if line.startswith(":"):
                         continue
                     key, _, value = line.partition(":")
-                    current[key] = value.lstrip()
+                    value = value.lstrip()
+                    if key == "data" and key in current:
+                        current[key] += "\n" + value
+                    else:
+                        current[key] = value
             finally:
                 response.close()
 

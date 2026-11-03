@@ -29,7 +29,7 @@ configuration.
 - [x] Product Forge Angular API defaults to the gateway origin and does not
       persist bearer tokens in localStorage; explicit service URLs remain an
       advanced override.
-- [ ] Product Forge runtime serves the Angular bundle as the canonical UI and
+- [x] Product Forge runtime serves the Angular bundle as the canonical UI and
       exposes same-origin API/Bridge gateway routes without manual pairing.
 - [ ] Complete board/task domain and chat↔board approval workflow are
       persisted and covered by integrated browser tests.
@@ -61,6 +61,13 @@ configuration.
 
 # Review Notes
 
-Implemented increment in the 2026-11-02 working pass. Remaining unchecked
-criteria intentionally stay active; they require cross-repository gateway and
-domain work rather than documentation-only closure.
+Implemented increment in the 2026-11-02 working pass. The runtime now starts
+the bundled Agent Bridge from the Product Forge wheel, waits for its delayed
+pair token, validates authenticated health, and serves the compiled Angular
+bundle from the same-origin portal gateway. The browser relay forwards and
+preserves SSE cursors and event metadata; proposal review can edit the full
+task payload before approval.
+
+Remaining unchecked criteria intentionally stay active: integrated browser
+coverage for the complete board/chat flow and a real OIDC/PKCE tenant boundary
+still require their external/runtime homologation gates.
