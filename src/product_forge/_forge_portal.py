@@ -798,7 +798,10 @@ class PortalHandler(BaseHTTPRequestHandler):
             )
             return
         except Exception as e:  # noqa: BLE001 — outermost boundary; never leak internals
-            self.server.log(f"handler error on {rel}: {type(e).__name__}")
+            # Keep client envelopes deliberately generic, but retain the
+            # exception detail in the local operator log so an installed
+            # composition can be diagnosed without reproducing it in-process.
+            self.server.log(f"handler error on {rel}: {type(e).__name__}: {e}")
             self._end_op(cid, span_id, op_target, t0, "failed", code="PORTAL-INTERNAL")
             self._send_json(
                 500,

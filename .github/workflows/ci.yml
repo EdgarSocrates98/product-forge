@@ -30,3 +30,17 @@ jobs:
         run: .venv/bin/python -m pytest tests/ --cov=product_forge.api --cov=product_forge.analytics.engine --cov-fail-under=80 -q
       - name: Lint regression scope
         run: .venv/bin/python -m ruff check src/product_forge/api src/product_forge/jobs tests/test_contract_sweep.py tests/test_regression_methods.py tests/test_negative.py
+  installed-system:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install test environment
+        run: |
+          uv venv .venv --python 3.11
+          uv pip install -p .venv/bin/python -e ".[dev]"
+      - name: Exercise installed wheel composition
+        env:
+          PRODUCT_FORGE_SYSTEM_HARNESS: "1"
+        run: .venv/bin/python -m pytest tests/system/test_installed_composition.py -q -s
