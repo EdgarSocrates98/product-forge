@@ -1487,12 +1487,14 @@ def create_app(home: Path | None = None) -> FastAPI:
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/task-proposals/{{proposal_id}}/approve")
     def task_proposal_approve(pid: str, proposal_id: str, body: ScopedIn, req: Request) -> dict:
-        from ..operations.proposals import approve_proposal
+        from ..operations.proposals import approve_proposal, revise_proposal
         ctx.store.get("products", pid)
         proposal = ctx.store.get("task_proposals", proposal_id)
         if proposal.get("product_id") != pid:
             raise ForgeError("PF-NOT-FOUND", "proposal does not belong to product", 404)
         values = body.model_dump()
+        if values.get("tasks") is not None:
+            revise_proposal(ctx.store, proposal_id, list(values["tasks"]))
         if values.get("approved", True) is False:
             proposal["state"] = "rejected"
             proposal["updated_at"] = utcnow()
