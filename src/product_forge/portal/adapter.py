@@ -39,6 +39,23 @@ def _q1(ctx: RequestContext, key: str) -> str | None:
     return vals[0] if vals else None
 
 
+def _record_audit(st: Store, ctx: RequestContext, action: str, resource_type: str,
+                  resource_id: str, *, product_id: str | None = None,
+                  workspace_id: str | None = None) -> None:
+    """Persist the same mutation trail exposed by the Portal audit route."""
+    st.audit({
+        "id": new_id("aud"),
+        "action": action,
+        "resource_type": resource_type,
+        "resource_id": resource_id,
+        "product_id": product_id,
+        "workspace_id": workspace_id,
+        "actor": "local",
+        "correlation_id": ctx.correlation_id,
+        "created_at": utcnow(),
+    })
+
+
 class _BridgeProxyOperation(Operation):
     """Match the typed same-origin Bridge gateway without exposing its port."""
 
@@ -174,6 +191,8 @@ class ProductForgePortal(PortalAdapter):
             ws = Workspace(id=new_id("ws"), name=body.get("name", "workspace"),
                            description=body.get("description", ""))
             st.put("workspaces", ws)
+            _record_audit(st, ctx, "workspace.create", "workspaces", ws.id,
+                          workspace_id=ws.id)
             ctx.emit("workspace.created", resource_id=ws.id)
             return ws.model_dump(mode="json", by_alias=True)
         finally:
@@ -202,6 +221,8 @@ class ProductForgePortal(PortalAdapter):
                       if k in {"workspace_id", "name", "description", "domain", "tags"}}
             p = Product(id=new_id("prd"), status="active", **fields)
             st.put("products", p)
+            _record_audit(st, ctx, "product.create", "products", p.id,
+                          product_id=p.id, workspace_id=p.workspace_id)
             ctx.emit("product.created", resource_id=p.id)
             return p.model_dump(mode="json", by_alias=True)
         finally:
@@ -380,8 +401,9 @@ class ProductForgePortal(PortalAdapter):
                 product_id=ctx.params["pid"], name=f"{product['name']} board")
             if not boards:
                 st.put("boards", board)
+            board_id = board.id if isinstance(board, Board) else board["id"]
             task = Task(id=new_id("tsk"), workspace_id=product["workspace_id"],
-                        product_id=ctx.params["pid"], board_id=board["id"],
+                        product_id=ctx.params["pid"], board_id=board_id,
                         title=str(body.get("title", "")).strip(),
                         description=str(body.get("description", "")),
                         column_id=str(body.get("column_id", "backlog")),
@@ -389,6 +411,8 @@ class ProductForgePortal(PortalAdapter):
             if not task.title:
                 raise ValueError("task title is required")
             st.put("tasks", task)
+            _record_audit(st, ctx, "task.create", "tasks", task.id,
+                          product_id=task.product_id, workspace_id=task.workspace_id)
             ctx.emit("task.created", resource_id=task.id)
             return task.model_dump(mode="json", by_alias=True)
         finally:

@@ -202,6 +202,16 @@ def _path_product(path: str) -> str | None:
         return None
 
 
+def _path_workspace(path: str) -> str | None:
+    """Extract workspace id from /api/v1/workspaces/<wid> paths."""
+    parts = path.split("/")
+    try:
+        i = parts.index("workspaces")
+        return parts[i + 1] if len(parts) > i + 1 and parts[i + 1] else None
+    except ValueError:
+        return None
+
+
 def _principal_allows(cfg: dict[str, Any], token: str, workspace_id: str) -> bool:
     """Workspace scope check; empty principals = local single-user wildcard."""
     principals = cfg.get("principals") or []
@@ -211,6 +221,41 @@ def _principal_allows(cfg: dict[str, Any], token: str, workspace_id: str) -> boo
         if p.get("token") == token:
             return workspace_id in (p.get("workspaces") or [])
     return False
+
+
+def _oidc_workspaces(claims: dict[str, Any] | None) -> set[str]:
+    """Return the explicit workspace boundary from a verified OIDC claim.
+
+    OIDC mode is multi-tenant by definition: a valid identity without an
+    explicit workspace claim must not become an all-workspaces wildcard.
+    """
+    if not claims:
+        return set()
+    raw = claims.get("workspaces") or claims.get("workspace_ids")
+    if not isinstance(raw, (list, tuple, set)):
+        return set()
+    return {str(item) for item in raw if str(item).strip()}
+
+
+_ROLE_ORDER = {"viewer": 0, "editor": 1, "admin": 2}
+
+
+def _principal_role(cfg: dict[str, Any], token: str) -> str:
+    for principal in cfg.get("principals") or []:
+        if principal.get("token") == token:
+            return str(principal.get("role") or "viewer")
+    return "admin" if not cfg.get("principals") else "viewer"
+
+
+def _oidc_role(claims: dict[str, Any] | None) -> str:
+    if not claims:
+        return "viewer"
+    roles = claims.get("roles") or claims.get("role")
+    if isinstance(roles, str):
+        roles = [roles]
+    if not isinstance(roles, (list, tuple, set)):
+        return "viewer"
+    return max((str(role) for role in roles), key=lambda role: _ROLE_ORDER.get(role, -1), default="viewer")
 
 
 def create_app(home: Path | None = None) -> FastAPI:
@@ -289,16 +334,38 @@ def create_app(home: Path | None = None) -> FastAPI:
             # §3.2 authorization: product routes are workspace-scoped per
             # principal (config.principals; empty = local single-user wildcard).
             pid = _path_product(req.url.path)
+            wid = _path_workspace(req.url.path)
+            req.state.oidc_claims = oidc_claims
+            req.state.workspace_scope = (
+                _oidc_workspaces(oidc_claims) if oidc_enabled
+                else None
+            )
             if pid:
                 try:
                     ws = ctx.store.get("products", pid)["workspace_id"]
                 except Exception:
                     ws = None  # missing product → 404 downstream, no leak
-                claimed_workspaces = ((oidc_claims or {}).get("workspaces")
-                                      or (oidc_claims or {}).get("workspace_ids"))
-                scoped = ws in claimed_workspaces if claimed_workspaces else True
-                if ws and (not scoped or (oidc_claims is None and not _principal_allows(ctx.cfg, token, ws))):
+                claimed_workspaces = _oidc_workspaces(oidc_claims)
+                scoped = ws in claimed_workspaces if oidc_enabled else True
+                if ws and (not scoped or (not oidc_enabled and not _principal_allows(ctx.cfg, token, ws))):
                     err = {"code": "PF-FORBIDDEN", "message": "workspace not in principal scope",
+                           "severity": "error", "retryable": False}
+                    return JSONResponse(status_code=403, content=envelope(error=err, cid=req.state.cid))
+            if wid:
+                allowed = (
+                    wid in _oidc_workspaces(oidc_claims)
+                    if oidc_enabled
+                    else _principal_allows(ctx.cfg, token, wid)
+                )
+                if not allowed:
+                    err = {"code": "PF-FORBIDDEN", "message": "workspace not in principal scope",
+                           "severity": "error", "retryable": False}
+                    return JSONResponse(status_code=403, content=envelope(error=err, cid=req.state.cid))
+            if req.method not in {"GET", "HEAD", "OPTIONS"}:
+                role = _oidc_role(oidc_claims) if oidc_enabled else _principal_role(ctx.cfg, token)
+                required = "admin" if req.url.path.endswith(("/auth/rotate", "/auth/revoke")) else "editor"
+                if _ROLE_ORDER.get(role, -1) < _ROLE_ORDER[required]:
+                    err = {"code": "PF-FORBIDDEN", "message": f"{required} role required",
                            "severity": "error", "retryable": False}
                     return JSONResponse(status_code=403, content=envelope(error=err, cid=req.state.cid))
             if int(req.headers.get("content-length", 0)) > MAX_BODY:
@@ -413,8 +480,12 @@ def create_app(home: Path | None = None) -> FastAPI:
         return envelope(ws.model_dump(mode="json", by_alias=True))
 
     @app.get(f"{API_PREFIX}/workspaces")
-    def list_ws(limit: int = 100, offset: int = 0) -> dict:
-        return envelope({"items": ctx.store.list("workspaces", limit=limit, offset=offset)})
+    def list_ws(req: Request, limit: int = 100, offset: int = 0) -> dict:
+        scope = getattr(req.state, "workspace_scope", None)
+        items = ctx.store.list("workspaces", limit=limit, offset=offset)
+        if scope is not None:
+            items = [item for item in items if item.get("id") in scope]
+        return envelope({"items": items})
 
     @app.get(f"{API_PREFIX}/workspaces/{{wid}}")
     def get_ws(wid: str) -> dict:
@@ -441,9 +512,16 @@ def create_app(home: Path | None = None) -> FastAPI:
         return envelope(p.model_dump(mode="json", by_alias=True))
 
     @app.get(f"{API_PREFIX}/products")
-    def list_products(workspace_id: str | None = None, limit: int = 100, offset: int = 0) -> dict:
-        return envelope({"items": ctx.store.list("products", workspace_id=workspace_id,
-                                                 limit=limit, offset=offset)})
+    def list_products(req: Request, workspace_id: str | None = None,
+                      limit: int = 100, offset: int = 0) -> dict:
+        scope = getattr(req.state, "workspace_scope", None)
+        if scope is not None and workspace_id and workspace_id not in scope:
+            return envelope({"items": []})
+        items = ctx.store.list("products", workspace_id=workspace_id,
+                               limit=limit, offset=offset)
+        if scope is not None:
+            items = [item for item in items if item.get("workspace_id") in scope]
+        return envelope({"items": items})
 
     @app.get(f"{API_PREFIX}/products/{{pid}}")
     def get_product(pid: str) -> dict:
@@ -517,7 +595,13 @@ def create_app(home: Path | None = None) -> FastAPI:
             raise NotFoundError(f"workspace {ws} not found") from exc
         token = req.headers.get("authorization", "") \
             .removeprefix("Bearer ").strip()
-        if not _principal_allows(ctx.cfg, token, ws):
+        claims = getattr(req.state, "oidc_claims", None)
+        in_scope = (
+            ws in _oidc_workspaces(claims)
+            if (ctx.cfg.get("oidc") or {}).get("enabled")
+            else _principal_allows(ctx.cfg, token, ws)
+        )
+        if not in_scope:
             raise PermissionDeniedError("workspace not in principal scope")
         if p.get("status") not in (None, "active"):
             raise ValidationError(f"product status {p.get('status')!r} "
@@ -526,10 +610,11 @@ def create_app(home: Path | None = None) -> FastAPI:
         cid = new_id("ctx")
         issued = utcnow()
         exp_ts = now + body.ttl_s
+        principal = str((claims or {}).get("sub") or body.principal)
         rec: dict[str, Any] = {
             "id": cid,
             "schema": "forge/ProductAgentSessionContext/v2",
-            "principal": body.principal,
+            "principal": principal,
             "workspace_id": ws,
             "product_id": body.product_id,
             "provider": body.provider,
