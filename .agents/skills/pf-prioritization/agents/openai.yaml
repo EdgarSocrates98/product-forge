@@ -1,4 +1,4 @@
 interface:
   display_name: "PF Prioritization"
   short_description: "Deterministic initiative prioritization scores"
-  default_prompt: "Use the pf-prioritization skill on this Product Forge product"
+  default_prompt: "Use $pf-prioritization to score and place product initiatives reproducibly."
