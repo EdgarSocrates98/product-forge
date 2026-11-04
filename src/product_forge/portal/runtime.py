@@ -388,6 +388,11 @@ class _BridgeSupervisor:
                     os.killpg(self.proc.pid, signal.SIGTERM)
                 except ProcessLookupError:
                     pass  # died between poll() and killpg — already gone
+                except PermissionError:
+                    # A supervisor may not own a detached process group (for
+                    # example after a handoff or under a restricted runner).
+                    # Fall back to terminating the child itself.
+                    self.proc.terminate()
             try:
                 self.proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
