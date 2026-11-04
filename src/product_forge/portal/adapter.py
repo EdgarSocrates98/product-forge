@@ -611,8 +611,16 @@ class ProductForgePortal(PortalAdapter):
         finally:
             st.close()
 
-    @staticmethod
-    def _bridge_call(path: str, *, method: str = "GET",
+    def _gateway_token(self) -> str:
+        """Return the short-lived gateway token, if the supervisor paired.
+
+        The master pair token is intentionally only a bootstrap credential.
+        All typed Portal operations must use the scoped gateway token so the
+        Bridge records one consistent principal for create, read and stream.
+        """
+        return str(getattr(self, "_gateway_bridge_token", "") or "")
+
+    def _bridge_call(self, path: str, *, method: str = "GET",
                      body: dict[str, Any] | None = None,
                      timeout: float = 2.0) -> dict[str, Any]:
         """_bridge_request that fails honestly instead of returning an error dict.
@@ -622,7 +630,8 @@ class ProductForgePortal(PortalAdapter):
         envelope errors (HTTP status + typed code), never 200-wrapped.
         """
         result = ProductForgePortal._bridge_request(
-            path, method=method, body=body, timeout=timeout)
+            path, method=method, body=body,
+            token_override=self._gateway_token(), timeout=timeout)
         status = result.get("status")
         if result.get("state") == "error" or (isinstance(status, int) and status >= 400):
             detail = result.get("error") or result
@@ -685,9 +694,9 @@ class ProductForgePortal(PortalAdapter):
         except (OSError, ValueError, urllib.error.URLError) as exc:
             return {"state": "unavailable", "reason": type(exc).__name__}
 
-    @staticmethod
-    def _bridge_get(path: str) -> dict[str, Any]:
-        return ProductForgePortal._bridge_request(path)
+    def _bridge_get(self, path: str) -> dict[str, Any]:
+        return ProductForgePortal._bridge_request(
+            path, token_override=self._gateway_token())
 
     def _bridge_proxy(self, ctx: RequestContext) -> dict[str, Any]:
         """Forward a Bridge contract through this process' same-origin API.
@@ -746,7 +755,14 @@ class ProductForgePortal(PortalAdapter):
             method=method,
             body=body or None,
             token_override=gateway_token,
-            timeout=280.0 if path.endswith("/prompt") else 2.0,
+            # Provider discovery and diagnostics may inspect local CLIs and
+            # credentials.  Two seconds is below the observed cold-start
+            # latency on Windows and turns a healthy Bridge into a false
+            # "unavailable" state.  Keep mutating/prompt calls bounded while
+            # giving read-only discovery a realistic local budget.
+            timeout=280.0 if path.endswith("/prompt") else (15.0 if path in {
+                "/status", "/providers", "/diagnostics", "/mcp/doctor"
+            } else 5.0),
         )
         status = result.get("status")
         if isinstance(status, int) and status >= 400:
@@ -784,6 +800,18 @@ class ProductForgePortal(PortalAdapter):
         )
         try:
             response = urllib.request.urlopen(request, timeout=65)  # noqa: S310 - validated loopback
+        except urllib.error.HTTPError as exc:
+            try:
+                detail = json.loads(exc.read().decode("utf-8"))
+            except (OSError, ValueError):
+                detail = {"status": exc.code}
+            raise PortalError(
+                "BRIDGE-UPSTREAM",
+                "Agent Bridge stream is unavailable",
+                http=exc.code if exc.code in {401, 403, 404, 409, 429, 503} else 503,
+                retryable=exc.code in {408, 429, 500, 502, 503, 504},
+                details=detail if isinstance(detail, dict) else {"status": exc.code},
+            ) from exc
         except (OSError, urllib.error.URLError) as exc:
             raise PortalError(
                 "BRIDGE-UPSTREAM",
@@ -1017,7 +1045,9 @@ class ProductForgePortal(PortalAdapter):
             if item.get("state") == "active" and not include_active:
                 kept.append(sid)
                 continue
-            result = self._bridge_request(f"/agent-sessions/{sid}", method="DELETE")
+            result = self._bridge_request(
+                f"/agent-sessions/{sid}", method="DELETE",
+                token_override=self._gateway_token())
             if result.get("archived"):
                 closed.append(sid)
             else:

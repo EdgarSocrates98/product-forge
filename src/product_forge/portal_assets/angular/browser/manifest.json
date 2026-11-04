@@ -4,7 +4,7 @@
   "bridge_contract": "forge/AgentBridge/1",
   "build_mode": "production",
   "integrity": "verified-by-package-build",
-  "portal_commit": "4bfeb84cd96a80c9",
+  "portal_commit": "9c6f8bc024298bff",
   "portal_version": "1.1.0",
   "product_forge_version": "0.2.0",
   "schema": "forge/ProductForgePortalManifest/v1"

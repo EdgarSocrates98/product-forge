@@ -11,7 +11,7 @@ def test_product_portal_exposes_pm_pa_navigation_and_chat() -> None:
 
 def test_bridge_unavailable_is_honest(monkeypatch) -> None:
     monkeypatch.setenv("FORGE_BRIDGE_URL", "http://127.0.0.1:1")
-    result = ProductForgePortal._bridge_get("/status")
+    result = ProductForgePortal()._bridge_get("/status")
     assert result["state"] == "unavailable"
 
 
@@ -447,7 +447,7 @@ def test_bridge_call_surfaces_upstream_error_as_envelope(monkeypatch) -> None:
     monkeypatch.setattr(
         ProductForgePortal, "_bridge_request", staticmethod(fake_request))
     try:
-        ProductForgePortal._bridge_call("/x", method="POST", timeout=280.0)
+        ProductForgePortal()._bridge_call("/x", method="POST", timeout=280.0)
     except Exception as exc:
         assert getattr(exc, "code", "") == "BRIDGE-UPSTREAM"
         assert getattr(exc, "http", 0) == 422
@@ -462,7 +462,7 @@ def test_bridge_call_maps_unavailable_to_503(monkeypatch) -> None:
         staticmethod(lambda *a, **k: {"state": "unavailable",
                                       "reason": "connection refused"}))
     try:
-        ProductForgePortal._bridge_call("/status")
+        ProductForgePortal()._bridge_call("/status")
     except Exception as exc:
         assert getattr(exc, "code", "") == "BRIDGE-UPSTREAM"
         assert getattr(exc, "http", 0) == 503
@@ -475,4 +475,4 @@ def test_bridge_call_passes_success_through(monkeypatch) -> None:
     monkeypatch.setattr(
         ProductForgePortal, "_bridge_request",
         staticmethod(lambda *a, **k: {"accepted": True}))
-    assert ProductForgePortal._bridge_call("/ok") == {"accepted": True}
+    assert ProductForgePortal()._bridge_call("/ok") == {"accepted": True}
