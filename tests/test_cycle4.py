@@ -55,6 +55,7 @@ def test_tool_not_allowed_denied(home):
     run = run_agent(st, a, "check sources")
     denied = [s for s in run["steps"] if s["status"] == "denied"]
     assert denied and any("tool-not-allowed" in v for s in denied for v in s["violations"])
+    assert run["status"] == "partial"
     st.close()
 
 
@@ -107,7 +108,7 @@ def test_api_agent_flow(home):
     assert r.status_code == 200
     # configure permissions
     c.patch(f"/api/v1/products/{pid}/agents/{aid}",
-            json={"tools_allowed": ["knowledge_query"]}, headers=h)
+            json={"tools_allowed": ["knowledge_query", "entities"]}, headers=h)
     r = c.post(f"/api/v1/products/{pid}/agents/{aid}/run", json={"input": "policy?"}, headers=h)
     assert r.json()["data"]["status"] == "completed"
     # eval then publish

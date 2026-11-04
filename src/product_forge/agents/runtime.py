@@ -95,7 +95,11 @@ def run_agent(store: Store, agent: Any, user_input: str, *, actor: str = "api",
                 n = len(out.get("items", out.get("nodes", [])))
                 findings.append(f"{step}: {n} item(s)")
 
-    run["status"] = "completed" if not run["violations"] or run["steps"] else "partial"
+    # A run is terminally complete only when every attempted step succeeded
+    # and no policy/budget violation was recorded.  Previously, any recorded
+    # step made a run look completed even when all of its steps were denied.
+    failed_steps = any(step.get("status") != "ok" for step in run["steps"])
+    run["status"] = "partial" if run["violations"] or failed_steps else "completed"
     run["output"] = {
         "summary": "; ".join(findings) if findings else "no findings — empty knowledge base",
         "citations": citations[:20],

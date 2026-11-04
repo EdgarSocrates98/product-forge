@@ -4,6 +4,8 @@ import json
 import re
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -47,3 +49,30 @@ def test_portal_manifest_version_matches_package() -> None:
         .read_text(encoding="utf-8")
     )
     assert manifest["product_forge_version"] == _package_version()
+
+
+def test_embedded_bridge_manifest_and_version_are_packaged_contracts() -> None:
+    init = (REPO / "src" / "forge_agent_bridge" / "__init__.py").read_text(encoding="utf-8")
+    match = re.search(r'__version__\s*=\s*"([^"]+)"', init)
+    assert match, "embedded Bridge __version__ not found"
+    version = match.group(1)
+    manifest = json.loads(
+        (REPO / "src" / "forge_agent_bridge" / "forge.json").read_text(encoding="utf-8")
+    )
+    agentic = json.loads(
+        (REPO / "src" / "forge_agent_bridge" / "forge.agentic.json").read_text(encoding="utf-8")
+    )
+    assert manifest["forge_id"] == "forge-agent-bridge"
+    assert manifest["version"] == version == agentic["version"] == "0.2.1"
+
+
+def test_embedded_bridge_python_sources_match_standalone_checkout() -> None:
+    standalone = REPO.parent / "forge-agent-bridge" / "src" / "forge_agent_bridge"
+    embedded = REPO / "src" / "forge_agent_bridge"
+    if not standalone.is_dir():
+        pytest.skip("standalone Bridge checkout is not present")
+    for source in standalone.rglob("*.py"):
+        relative = source.relative_to(standalone)
+        bundled = embedded / relative
+        assert bundled.is_file(), f"embedded Bridge source missing: {relative}"
+        assert bundled.read_bytes() == source.read_bytes(), f"embedded Bridge drift: {relative}"

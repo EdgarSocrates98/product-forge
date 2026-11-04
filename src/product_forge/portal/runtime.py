@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import signal
 import socket
 import subprocess
@@ -171,9 +170,9 @@ def _write_manifest(path: Path, doc: dict[str, Any]) -> None:
 
 
 def _bridge_command(port: int) -> list[str]:
-    executable = shutil.which("forge-bridge")
-    if executable:
-        return [executable, "serve", "--port", str(port)]
+    # Product Forge ships the Bridge package in the same wheel.  Resolving a
+    # console script from PATH could silently run a different Bridge version
+    # than the one whose contracts the portal was built against.
     return [sys.executable, "-m", "forge_agent_bridge.cli", "serve", "--port", str(port)]
 
 
@@ -260,15 +259,12 @@ def _log_event(home: Path, event: str, **fields: Any) -> None:
 
 
 def _bridge_environment(env: dict[str, str]) -> dict[str, str]:
-    """Add the sibling checkout only for development worktrees.
+    """Make the embedded Bridge importable in a source checkout.
 
-    Installed users use the ``forge-bridge`` console script or an installed
-    Python package.  In a three-repository checkout this fallback makes the
-    documented single-command portal smoke test work without a second manual
-    server command, while never downloading code or mutating the environment.
+    The child is always launched with ``sys.executable -m`` so this path is
+    only a development fallback; an unrelated ``forge-bridge`` on PATH is
+    never allowed to shadow the bundled package.
     """
-    if shutil.which("forge-bridge"):
-        return env
     sibling = Path(__file__).resolve().parents[4] / "forge-agent-bridge" / "src"
     if sibling.is_dir():
         existing = env.get("PYTHONPATH", "")

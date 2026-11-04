@@ -13,6 +13,8 @@ def test_product_portal_assets_are_bundled() -> None:
 def test_bridge_command_is_loopback_service_command() -> None:
     command = _bridge_command(8471)
     assert command[-3:] == ["serve", "--port", "8471"]
+    import sys
+    assert command[:2] == [sys.executable, "-m"]
 
 
 def test_bridge_port_zero_is_ephemeral_and_bindable() -> None:
