@@ -97,6 +97,8 @@ packages = ["src/product_forge", "src/forge_agent_bridge"]
 # install` can place them under each host's dirs without a repo checkout.
 "skills" = "product_forge/skills"
 "agents" = "product_forge/agents"
+"src/product_forge/forge.json" = "product_forge/forge.json"
+"src/product_forge/forge.agentic.json" = "product_forge/forge.agentic.json"
 
 [tool.hatch.build.targets.sdist]
 include = ["src", "tests", "schemas", "knowledge", "docs", "skills", "agents", "rules", "factory", "README.md", "CHANGELOG.md", "LICENSE", "AGENTS.md", "CLAUDE.md", "forge.json", "forge.agentic.json"]

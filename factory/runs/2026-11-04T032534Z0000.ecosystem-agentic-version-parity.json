@@ -1,0 +1,15 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat E:\\projetos\\FORJAS\\product-forge\\factory\\prompts\\ecosystem-agentic-version-parity.implement.codex.md)"
+  ],
+  "created_at": "2026-11-04T03:25:34+00:00",
+  "id": "ecosystem-agentic-version-parity",
+  "prompt_path": "E:\\projetos\\FORJAS\\product-forge\\factory\\prompts\\ecosystem-agentic-version-parity.implement.codex.md",
+  "spec_path": "E:\\projetos\\FORJAS\\product-forge\\factory\\specs\\active\\ecosystem-agentic-version-parity.md",
+  "spec_sha256": "bc4457dcea46ea3738c243958db0bc28f3e50230372f82e289611fdd4fc51e71",
+  "status": "planned",
+  "title": "Agentic manifest version parity"
+}

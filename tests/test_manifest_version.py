@@ -23,6 +23,24 @@ def test_forge_json_version_matches_package() -> None:
     )
 
 
+def test_agentic_manifest_version_matches_package() -> None:
+    manifest = json.loads((REPO / "forge.agentic.json").read_text(encoding="utf-8"))
+    version = _package_version()
+    assert manifest["version"] == version, (
+        f"forge.agentic.json version {manifest['version']} diverges from "
+        f"package __version__ {version}"
+    )
+
+
+def test_packaged_manifests_match_root_manifests() -> None:
+    for name in ("forge.json", "forge.agentic.json"):
+        root = json.loads((REPO / name).read_text(encoding="utf-8"))
+        packaged = json.loads(
+            (REPO / "src" / "product_forge" / name).read_text(encoding="utf-8")
+        )
+        assert packaged == root, f"packaged {name} diverges from root manifest"
+
+
 def test_portal_manifest_version_matches_package() -> None:
     manifest = json.loads(
         (REPO / "src" / "product_forge" / "portal_assets" / "angular" / "browser" / "manifest.json")
