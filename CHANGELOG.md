@@ -5,6 +5,12 @@ All notable changes. Format follows the evolution cycles (see
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-04
+
+### Changed
+
+- Prepared the release after `0.2.1` was already present on PyPI.
+
 ## [0.2.1] - 2026-11-04
 
 ### Fixed
