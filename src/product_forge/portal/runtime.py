@@ -384,7 +384,10 @@ class _BridgeSupervisor:
             if os.name == "nt":
                 self.proc.terminate()
             else:
-                os.killpg(self.proc.pid, signal.SIGTERM)
+                try:
+                    os.killpg(self.proc.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass  # died between poll() and killpg — already gone
             try:
                 self.proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
