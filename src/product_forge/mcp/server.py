@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from .. import __version__
 from ..config import db_path, home_dir, load_config
 from ..store.sqlite import Store
 
@@ -55,7 +56,7 @@ def tool_specs() -> list[dict[str, Any]]:
 
 
 def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
-    from .. import FORGE_ID, __version__
+    from .. import FORGE_ID
 
     st = _store()
     try:
@@ -126,7 +127,7 @@ def dispatch(req: dict[str, Any]) -> dict[str, Any] | None:
         return {"jsonrpc": "2.0", "id": rid, "result": {
             "protocolVersion": "2024-11-05",
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": "product-forge", "version": "0.1.0"}}}
+            "serverInfo": {"name": "product-forge", "version": __version__}}}
     if method == "notifications/initialized":
         return None
     if method == "tools/list":

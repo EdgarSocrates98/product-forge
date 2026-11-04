@@ -21,3 +21,11 @@ def test_forge_json_version_matches_package() -> None:
         f"forge.json version {manifest['version']} diverges from "
         f"package __version__ {version}"
     )
+
+
+def test_portal_manifest_version_matches_package() -> None:
+    manifest = json.loads(
+        (REPO / "src" / "product_forge" / "portal_assets" / "angular" / "browser" / "manifest.json")
+        .read_text(encoding="utf-8")
+    )
+    assert manifest["product_forge_version"] == _package_version()

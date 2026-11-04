@@ -1,0 +1,15 @@
+{
+  "agent": "codex",
+  "command": [
+    "codex",
+    "exec",
+    "$(cat E:\\projetos\\FORJAS\\product-forge\\factory\\prompts\\ecosystem-version-contract.implement.codex.md)"
+  ],
+  "created_at": "2026-11-04T02:50:35+00:00",
+  "id": "ecosystem-version-contract",
+  "prompt_path": "E:\\projetos\\FORJAS\\product-forge\\factory\\prompts\\ecosystem-version-contract.implement.codex.md",
+  "spec_path": "E:\\projetos\\FORJAS\\product-forge\\factory\\specs\\active\\ecosystem-version-contract.md",
+  "spec_sha256": "076975830d9aebea3a18a5f38865d485a0a285cca2e5f66e2bb632dab27ec488",
+  "status": "planned",
+  "title": "Keep Product Forge distribution version coherent across public surfaces"
+}

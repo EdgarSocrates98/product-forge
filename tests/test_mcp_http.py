@@ -8,10 +8,12 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_dispatch_shared_shape():
+    from product_forge import __version__
     from product_forge.mcp.server import dispatch, tool_specs
 
     r = dispatch({"jsonrpc": "2.0", "id": 1, "method": "initialize"})
     assert r["result"]["protocolVersion"] == "2024-11-05"
+    assert r["result"]["serverInfo"]["version"] == __version__
     assert dispatch({"jsonrpc": "2.0", "method": "notifications/initialized"}) is None
     assert dispatch({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
                     )["result"]["tools"] == tool_specs()
