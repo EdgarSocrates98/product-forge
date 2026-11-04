@@ -22,6 +22,7 @@ import time
 from typing import Any
 
 from ..errors import ForgeError
+from ..security import subprocess_env
 from ..store.sqlite import Store
 from . import policy
 from .tools import REGISTRY, ToolCtx
@@ -37,7 +38,7 @@ def _provider_cmd(cfg: dict[str, Any]) -> list[str] | None:
 def _call(cmd: list[str], req: dict[str, Any], timeout_s: int) -> dict[str, Any]:
     proc = subprocess.run(  # noqa: S603 — operator-configured provider
         cmd, input=json.dumps(req), capture_output=True, text=True,
-        timeout=timeout_s, env={"PATH": "/usr/bin:/bin:/usr/local/bin"}, check=False)
+        timeout=timeout_s, env=subprocess_env(), check=False)
     if proc.returncode != 0:
         raise ForgeError("PF-PROVIDER", (proc.stderr or "provider failed")[:200],
                          retryable=True)

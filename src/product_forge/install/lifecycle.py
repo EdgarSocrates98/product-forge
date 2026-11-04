@@ -68,7 +68,10 @@ def _bundle_files(root: Path, glob_pat: str) -> dict[str, bytes]:
     for d in sorted(root.glob(glob_pat)):
         for f in d.rglob("*"):
             if f.is_file():
-                files[str(f.relative_to(root))] = f.read_bytes()
+                # Asset keys are posix rel paths — str() would leak the
+                # OS separator into ledger keys on Windows (_safe_rel
+                # rejects backslashes).
+                files[f.relative_to(root).as_posix()] = f.read_bytes()
     return files
 
 
@@ -103,7 +106,7 @@ def _render_assets(ctx: kit.InstallContext) -> dict[str, bytes]:
     skills_root = _skills_root()
     skill_files = _bundle_files(skills_root, "pf-*/") if skills_root else {}
     agents_root = _agents_root()
-    agent_files = {str(f.relative_to(agents_root)): f.read_bytes()
+    agent_files = {f.relative_to(agents_root).as_posix(): f.read_bytes()
                    for f in agents_root.rglob("*.md")} if agents_root else {}
     for host in ctx.hosts:
         for host_dir in kit._host_dirs(host, ctx.scope):
@@ -151,6 +154,22 @@ def _ctx(scope: str, profile: str, hosts: tuple[str, ...],
         options=kit.component_options(profile, components))
 
 
+def _bridge_install(*, dry_run: bool, yes: bool) -> dict[str, Any]:
+    """Provision the vendored Agent Bridge runtime state
+    (``~/.forge-bridge``: dirs, pair.token 0600, providers snapshot,
+    ledger). The bridge ships inside product-forge, so its install runs
+    in-process — `productforge install` IS the bridge install. A bridge
+    failure degrades to ``unverified:*`` instead of crashing the
+    forge install."""
+    try:
+        from forge_agent_bridge.install import lifecycle as bridge
+        return bridge.install(scope="user", profile="recommended",
+                              dry_run=dry_run, yes=yes)
+    except Exception as exc:  # noqa: BLE001 - degraded, never fatal
+        return {"forge": "forge-agent-bridge", "status": "unverified",
+                "error": str(exc)}
+
+
 def _source() -> dict[str, Any]:
     try:
         from importlib import metadata as ilm
@@ -182,12 +201,22 @@ def install(*, scope: str = "user", profile: str = "recommended",
     selected = tuple(HOSTS) if hosts == ("all",) else hosts
     ctx = _ctx(scope, profile, selected, root, dry_run, components)
     if ctx.dry_run:
-        return kit.plan(ctx)
+        doc = kit.plan(ctx)
+        bridge_doc = _bridge_install(dry_run=True, yes=yes)
+        doc["bridge"] = bridge_doc
+        planned = doc.get("planned_files")
+        if isinstance(planned, list):
+            planned.extend(
+                {"path": f"bridge:{s['component']} → {s['target']}",
+                 "kind": "bridge", "action": s["action"]}
+                for s in bridge_doc.get("plan", []))
+        return doc
     with kit.acquire_lock(ctx.state_dir):
         result = kit.apply_install(ctx, approved=yes)
     _persist_components(ctx, gateway_profile)
     _register(ctx.spec, ctx.root)
     result["app_home"] = _init_app_home(gateway_profile)
+    result["bridge"] = _bridge_install(dry_run=False, yes=yes)
     return result
 
 
@@ -218,9 +247,46 @@ def doctor(*, scope: str = "project", root: Path | None = None,
            verify_mcp: bool = False) -> dict[str, Any]:
     ctx = _ctx(scope, "recommended", tuple(HOSTS), root, False)
     doc = kit.doctor(ctx)
+    try:
+        from forge_agent_bridge.install import lifecycle as _bridge_lc
+        doc["bridge"] = _bridge_lc.doctor(scope="user")
+    except Exception as exc:  # noqa: BLE001 - honest degraded state
+        doc["bridge"] = {"status": "unverified", "error": str(exc)}
+    doc["portal"] = _portal_composition()
     if verify_mcp:
         doc["mcp_verify"] = kit.mcp_verify(ctx.spec)
     return doc
+
+
+def _portal_composition() -> dict[str, Any]:
+    """Reconcile the last portal composition manifest with live processes.
+
+    ``stale`` means the manifest still claims ``running`` but the recorded
+    portal pid is gone (terminal killed, crash).  Absent manifests and
+    unreadable state are named states, not failures.
+    """
+    try:
+        from ..config import home_dir
+        from ..portal import runtime as _rt
+        manifest = _rt._read_manifest(_rt._manifest_path(home_dir()))
+    except Exception as exc:  # noqa: BLE001 - honest degraded state
+        return {"state": "unverified", "error": str(exc)}
+    if not isinstance(manifest, dict):
+        return {"state": "unavailable:no_composition"}
+    portal_alive = _rt._pid_alive(int(manifest.get("portal", {}).get("pid", 0) or 0))
+    bridge_pid = int(manifest.get("bridge", {}).get("pid", 0) or 0)
+    state = str(manifest.get("state", "unknown"))
+    stale = state == "running" and not portal_alive
+    return {
+        "state": "stale" if stale else state,
+        "portal_alive": portal_alive,
+        "bridge_alive": _rt._pid_alive(bridge_pid),
+        "url": manifest.get("portal", {}).get("url"),
+        "bridge_state": manifest.get("bridge", {}).get("state"),
+        "bridge_restarts": manifest.get("bridge", {}).get("restarts", 0),
+        "lifecycle_log": manifest.get("lifecycle_log"),
+        "stale": stale,
+    }
 
 
 def repair(*, scope: str = "project", root: Path | None = None,
@@ -245,6 +311,7 @@ def update(*, scope: str = "project", profile: str = "recommended",
     with kit.acquire_lock(ctx.state_dir):
         result = kit.apply_install(ctx, approved=yes)
     _persist_components(ctx, gateway_profile)
+    result["bridge"] = _bridge_install(dry_run=False, yes=yes)
     return result
 
 
@@ -252,7 +319,15 @@ def uninstall(*, scope: str = "project", root: Path | None = None,
               purge_state: bool = False) -> dict[str, Any]:
     ctx = _ctx(scope, "recommended", (), root, False)
     with kit.acquire_lock(ctx.state_dir):
-        return kit.uninstall(ctx, purge_state=purge_state)
+        doc = kit.uninstall(ctx, purge_state=purge_state)
+    try:
+        from forge_agent_bridge.install import lifecycle as _bridge_lc
+        # Bridge uninstall is state-preserving by contract (pair.token,
+        # events, backups kept) — `purge_state` here only purges PF state.
+        doc["bridge"] = _bridge_lc.uninstall(scope="user")
+    except Exception as exc:  # noqa: BLE001 - honest degraded state
+        doc["bridge"] = {"status": "unverified", "error": str(exc)}
+    return doc
 
 
 def _init_app_home(gateway_profile: str | None = None) -> dict[str, Any]:

@@ -15,6 +15,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
 from .. import FORGE_ID, __version__
 from .._forge_portal import (
     Operation,
@@ -37,6 +39,61 @@ def _store() -> Store:
 def _q1(ctx: RequestContext, key: str) -> str | None:
     vals = ctx.query.get(key)
     return vals[0] if vals else None
+
+
+def _require(st: Store, collection: str, key: str) -> dict[str, Any]:
+    """Entity lookup that fails with a typed 404 instead of a generic 500.
+
+    ``Store.get`` raises bare ``KeyError``; the vendored server maps any
+    non-PortalError to ``PORTAL-INTERNAL``, so missing entities must be
+    translated at the adapter boundary to keep ``not found`` honest.
+    """
+    try:
+        return st.get(collection, key)
+    except KeyError:
+        raise PortalError(
+            "PORTAL-NOT-FOUND",
+            f"{collection} '{key}' not found",
+            http=404,
+        ) from None
+
+
+def _translate_handler_errors(handler: Any) -> Any:
+    """Map residual store/validation errors to typed envelope errors.
+
+    Ops should prefer ``_require``/``ctx.require``; this guard is the safety
+    net so a ``ValueError`` (bad int, model coercion) still lands as 422 and a
+    stray ``KeyError`` as 404 — never as ``PORTAL-INTERNAL`` 500.
+    """
+    import functools
+
+    @functools.wraps(handler)
+    def wrapper(ctx: RequestContext) -> Any:
+        try:
+            return handler(ctx)
+        except PortalError:
+            raise
+        except ValidationError as exc:
+            raise PortalError(
+                "PORTAL-VALIDATION",
+                f"invalid document payload: {exc.errors()[0].get('msg', 'validation failed')}",
+                http=422,
+            ) from exc
+        except ValueError as exc:
+            raise PortalError(
+                "PORTAL-VALIDATION",
+                str(exc) or "invalid request payload",
+                http=422,
+            ) from exc
+        except KeyError as exc:
+            missing = exc.args[0] if exc.args else "?"
+            raise PortalError(
+                "PORTAL-NOT-FOUND",
+                f"required field or resource not found: {missing}",
+                http=404,
+            ) from exc
+
+    return wrapper
 
 
 def _record_audit(st: Store, ctx: RequestContext, action: str, resource_type: str,
@@ -62,6 +119,10 @@ class _BridgeProxyOperation(Operation):
     def __init__(self, method: str, handler: Any) -> None:
         super().__init__(method, "/bridge/**", handler)
         self.proxy_method = method
+        # Proxied POSTs can be agent turns (prompt/resume) that drain
+        # synchronously on the Bridge — they need a real turn budget.
+        if method == "POST":
+            self.timeout = 300.0
 
     def match(self, path: str) -> dict[str, str] | None:
         prefix = "/bridge/"
@@ -86,6 +147,9 @@ class ProductForgePortal(PortalAdapter):
         # intentionally stays minimal and its dataclass field is also exposed
         # as a class attribute for compatibility with the sibling forges.
         self.ops = list(default_operations(self))
+        # Wired by portal.runtime when the managed Bridge is supervised.
+        # Without it, health() reports the honest `unverified` state.
+        self.bridge_status: Any = None
         self.register(Operation("GET", "/workspaces", self._ws_list))
         self.register(Operation("POST", "/workspaces", self._ws_create, mutating=True, confirm="create"))
         self.register(Operation("GET", "/products", self._products))
@@ -107,10 +171,22 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/chat/sessions", self._chat_sessions))
         self.register(Operation("POST", "/chat/sessions", self._chat_create,
                                 mutating=True, confirm="create"))
+        self.register(Operation("POST", "/chat/sessions/cleanup", self._chat_cleanup,
+                                mutating=True, confirm="cleanup"))
+        self.register(Operation("GET", "/chat/sessions/{sid}/stream", self._chat_stream))
         self.register(Operation("POST", "/chat/sessions/{sid}/prompt", self._chat_prompt,
-                                mutating=True, confirm="send"))
+                                mutating=True, confirm="send", timeout=300.0))
         self.register(Operation("POST", "/chat/sessions/{sid}/events", self._chat_events))
-        self.register(Operation("DELETE", "/chat/sessions/{sid}", self._chat_close,
+        self.register(Operation("POST", "/chat/sessions/{sid}/cancel", self._chat_cancel,
+                                mutating=True, confirm="cancel"))
+        self.register(Operation("POST", "/chat/sessions/{sid}/approve", self._chat_approve,
+                                mutating=True, confirm="approve"))
+        self.register(Operation("POST", "/chat/sessions/{sid}/resume", self._chat_resume,
+                                mutating=True, confirm="resume", timeout=120.0))
+        # POST, not DELETE: the portal server only parses bodies (and thus
+        # enforces `confirm`) on POST — a DELETE route would bypass the
+        # mutation gate entirely.
+        self.register(Operation("POST", "/chat/sessions/{sid}/close", self._chat_close,
                                 mutating=True, confirm="close"))
         self.register(Operation("POST", "/products/{pid}/queries/execute", self._q_exec,
                                 mutating=True, confirm="execute"))
@@ -139,9 +215,25 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}/alerts", self._alerts))
         self.register(Operation("GET", "/audit", self._audit))
 
+    def register(self, op: Operation) -> None:
+        # Every op passes through the error translator so store/validation
+        # failures become typed envelope errors instead of PORTAL-INTERNAL.
+        op.handler = _translate_handler_errors(op.handler)
+        super().register(op)
+
     # -- capability surface -------------------------------------------------
 
     def capabilities(self) -> list[dict[str, Any]]:
+        bridge_state = ((self.bridge_status() or {}).get("state")
+                        if self.bridge_status is not None else None)
+        chat_state = "unverified"
+        agent_bridge = "unverified"
+        if bridge_state == "running":
+            chat_state = agent_bridge = "supported"
+        elif bridge_state in {"restarting", "degraded", "starting"}:
+            chat_state = agent_bridge = "degraded"
+        elif bridge_state is not None:
+            agent_bridge = bridge_state
         return [
             {"id": "workspaces", "state": "supported"},
             {"id": "products", "state": "supported"},
@@ -152,8 +244,8 @@ class ProductForgePortal(PortalAdapter):
             {"id": "analytics", "state": "unverified"},
             {"id": "dashboards", "state": "unverified"},
             {"id": "planning", "state": "unverified"},
-            {"id": "chat", "state": "unverified"},
-            {"id": "agent-bridge", "state": "unverified"},
+            {"id": "chat", "state": chat_state},
+            {"id": "agent-bridge", "state": agent_bridge},
         ]
 
     def nav(self) -> list[dict[str, Any]]:
@@ -173,7 +265,10 @@ class ProductForgePortal(PortalAdapter):
         ]
 
     def health(self) -> dict[str, Any]:
-        return {"forge_id": FORGE_ID, "version": __version__, "status": "healthy"}
+        bridge = (self.bridge_status() if self.bridge_status is not None
+                  else {"state": "unverified"})
+        return {"forge_id": FORGE_ID, "version": __version__, "status": "healthy",
+                "bridge": bridge}
 
     # -- ops ------------------------------------------------------------------
 
@@ -188,8 +283,8 @@ class ProductForgePortal(PortalAdapter):
         body = ctx.body or {}
         st = _store()
         try:
-            ws = Workspace(id=new_id("ws"), name=body.get("name", "workspace"),
-                           description=body.get("description", ""))
+            ws = Workspace(id=new_id("ws"), name=ctx.require("name").strip(),
+                           description=str(body.get("description", "")))
             st.put("workspaces", ws)
             _record_audit(st, ctx, "workspace.create", "workspaces", ws.id,
                           workspace_id=ws.id)
@@ -208,15 +303,17 @@ class ProductForgePortal(PortalAdapter):
     def _product_get(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()
         try:
-            return st.get("products", ctx.params["pid"])
+            return _require(st, "products", ctx.params["pid"])
         finally:
             st.close()
 
     def _product_create(self, ctx: RequestContext) -> dict[str, Any]:
-        body = ctx.body or {}
+        body = dict(ctx.body or {})
+        body["workspace_id"] = ctx.require("workspace_id")
+        body["name"] = ctx.require("name")
         st = _store()
         try:
-            st.get("workspaces", body["workspace_id"])
+            _require(st, "workspaces", body["workspace_id"])
             fields = {k: v for k, v in body.items()
                       if k in {"workspace_id", "name", "description", "domain", "tags"}}
             p = Product(id=new_id("prd"), status="active", **fields)
@@ -233,7 +330,7 @@ class ProductForgePortal(PortalAdapter):
         st = _store()
         try:
             return {"schema": "productforge/ProductContextPackage/v1",
-                    "product": st.get("products", pid),
+                    "product": _require(st, "products", pid),
                     "sources": st.list("knowledge_sources", product_id=pid, limit=200),
                     "entities": st.list("entities", product_id=pid, limit=200),
                     "agents": st.list("agents", product_id=pid, limit=100),
@@ -257,7 +354,7 @@ class ProductForgePortal(PortalAdapter):
 
     def _kn_query(self, ctx: RequestContext) -> dict[str, Any]:
         pid = ctx.params["pid"]
-        question = (ctx.body or {}).get("question", "")
+        question = ctx.require("question")
         st = _store()
         try:
             hits = st.search_fts(pid, question, limit=10)
@@ -290,11 +387,18 @@ class ProductForgePortal(PortalAdapter):
         from ..analytics.engine import compile_spec, execute_query
 
         body = ctx.body or {}
+        source_id = ctx.require("source_id")
         statement = body.get("statement") or (
             compile_spec(body["spec"]) if body.get("spec") else None)
+        if not statement:
+            raise PortalError(
+                "PORTAL-VALIDATION",
+                "either 'statement' or 'spec' is required to execute a query",
+                http=422,
+            )
         st = _store()
         try:
-            run = execute_query(st, ctx.params["pid"], body["source_id"], statement)
+            run = execute_query(st, ctx.params["pid"], source_id, statement)
             ctx.emit("query.executed", resource_id=run["id"], status=run["status"])
             return run
         finally:
@@ -306,7 +410,8 @@ class ProductForgePortal(PortalAdapter):
 
         st = _store()
         try:
-            agent = AgentDefinition.model_validate(st.get("agents", ctx.params["aid"]))
+            agent = AgentDefinition.model_validate(
+                _require(st, "agents", ctx.params["aid"]))
             run = run_agent(st, agent, (ctx.body or {}).get("input", ""), actor="portal")
             ctx.emit("agent.run", resource_id=run["id"], status=run["status"])
             return run
@@ -331,15 +436,14 @@ class ProductForgePortal(PortalAdapter):
 
     def _initiative_create(self, ctx: RequestContext) -> dict[str, Any]:
         body = ctx.body or {}
+        title = ctx.require("title").strip()
         st = _store()
         try:
-            st.get("products", ctx.params["pid"])
+            _require(st, "products", ctx.params["pid"])
             item = Initiative(id=new_id("ini"), product_id=ctx.params["pid"],
-                              title=str(body.get("title", "")).strip(),
+                              title=title,
                               hypothesis=str(body.get("hypothesis", "")),
                               status=str(body.get("status", "proposed")))
-            if not item.title:
-                raise ValueError("initiative title is required")
             st.put("initiatives", item)
             ctx.emit("initiative.created", resource_id=item.id)
             return item.model_dump(mode="json", by_alias=True)
@@ -350,7 +454,7 @@ class ProductForgePortal(PortalAdapter):
         from ..planning.prioritize import score_initiative
         st = _store()
         try:
-            doc = st.get("initiatives", ctx.params["iid"])
+            doc = _require(st, "initiatives", ctx.params["iid"])
             if doc.get("product_id") != ctx.params["pid"]:
                 raise KeyError(ctx.params["iid"])
             result = score_initiative(doc, (ctx.body or {}).get("factors", {}))
@@ -365,7 +469,7 @@ class ProductForgePortal(PortalAdapter):
     def _board(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()
         try:
-            product = st.get("products", ctx.params["pid"])
+            product = _require(st, "products", ctx.params["pid"])
             boards = st.list("boards", product_id=ctx.params["pid"], limit=20)
             board = boards[0] if boards else None
             if board is None:
@@ -392,9 +496,10 @@ class ProductForgePortal(PortalAdapter):
 
     def _task_create(self, ctx: RequestContext) -> dict[str, Any]:
         body = ctx.body or {}
+        title = ctx.require("title").strip()
         st = _store()
         try:
-            product = st.get("products", ctx.params["pid"])
+            product = _require(st, "products", ctx.params["pid"])
             boards = st.list("boards", product_id=ctx.params["pid"], limit=1)
             board = boards[0] if boards else Board(
                 id=new_id("brd"), workspace_id=product["workspace_id"],
@@ -404,12 +509,10 @@ class ProductForgePortal(PortalAdapter):
             board_id = board.id if isinstance(board, Board) else board["id"]
             task = Task(id=new_id("tsk"), workspace_id=product["workspace_id"],
                         product_id=ctx.params["pid"], board_id=board_id,
-                        title=str(body.get("title", "")).strip(),
+                        title=title,
                         description=str(body.get("description", "")),
                         column_id=str(body.get("column_id", "backlog")),
                         priority=str(body.get("priority", "medium")))
-            if not task.title:
-                raise ValueError("task title is required")
             st.put("tasks", task)
             _record_audit(st, ctx, "task.create", "tasks", task.id,
                           product_id=task.product_id, workspace_id=task.workspace_id)
@@ -421,7 +524,7 @@ class ProductForgePortal(PortalAdapter):
     def _task_move(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()
         try:
-            doc = st.get("tasks", ctx.params["tid"])
+            doc = _require(st, "tasks", ctx.params["tid"])
             if doc.get("product_id") != ctx.params["pid"]:
                 raise KeyError(ctx.params["tid"])
             expected = (ctx.body or {}).get("expected_version")
@@ -443,7 +546,7 @@ class ProductForgePortal(PortalAdapter):
         body = ctx.body or {}
         st = _store()
         try:
-            st.get("products", ctx.params["pid"])
+            _require(st, "products", ctx.params["pid"])
             rec = create_proposal(
                 st,
                 ctx.params["pid"],
@@ -471,7 +574,7 @@ class ProductForgePortal(PortalAdapter):
         body = ctx.body or {}
         st = _store()
         try:
-            proposal = st.get("task_proposals", ctx.params["proposal_id"])
+            proposal = _require(st, "task_proposals", ctx.params["proposal_id"])
             if proposal.get("product_id") != ctx.params["pid"]:
                 raise KeyError(ctx.params["proposal_id"])
             if body.get("tasks") is not None:
@@ -509,9 +612,43 @@ class ProductForgePortal(PortalAdapter):
             st.close()
 
     @staticmethod
+    def _bridge_call(path: str, *, method: str = "GET",
+                     body: dict[str, Any] | None = None,
+                     timeout: float = 2.0) -> dict[str, Any]:
+        """_bridge_request that fails honestly instead of returning an error dict.
+
+        Read ops keep the ``{"state": "unavailable"|"error"}`` shape for the UI
+        to render; mutating/typed ops must surface upstream failures as real
+        envelope errors (HTTP status + typed code), never 200-wrapped.
+        """
+        result = ProductForgePortal._bridge_request(
+            path, method=method, body=body, timeout=timeout)
+        status = result.get("status")
+        if result.get("state") == "error" or (isinstance(status, int) and status >= 400):
+            detail = result.get("error") or result
+            http = status if status in {400, 401, 403, 404, 409, 422, 429} else 502
+            raise PortalError(
+                "BRIDGE-UPSTREAM",
+                "Agent Bridge rejected the request",
+                http=http,
+                retryable=status in {408, 429, 500, 502, 503, 504},
+                details=detail if isinstance(detail, dict) else None,
+            )
+        if result.get("state") == "unavailable":
+            raise PortalError(
+                "BRIDGE-UPSTREAM",
+                "Agent Bridge is unavailable",
+                http=503,
+                retryable=True,
+                details={"reason": result.get("reason")},
+            )
+        return result
+
+    @staticmethod
     def _bridge_request(path: str, *, method: str = "GET",
                         body: dict[str, Any] | None = None,
-                        token_override: str = "") -> dict[str, Any]:
+                        token_override: str = "",
+                        timeout: float = 2.0) -> dict[str, Any]:
         base = os.environ.get("FORGE_BRIDGE_URL", "http://127.0.0.1:8471").rstrip("/")
         parsed = urllib.parse.urlsplit(base)
         if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
@@ -536,7 +673,7 @@ class ProductForgePortal(PortalAdapter):
         request = urllib.request.Request(  # noqa: S310 - URL validated above
             f"{base}{path}", data=data, headers=headers, method=method)
         try:
-            with urllib.request.urlopen(request, timeout=2) as response:  # noqa: S310 - loopback validated above
+            with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 - loopback validated above
                 payload = json.loads(response.read().decode("utf-8"))
                 return payload if isinstance(payload, dict) else {"items": payload}
         except urllib.error.HTTPError as exc:
@@ -609,6 +746,7 @@ class ProductForgePortal(PortalAdapter):
             method=method,
             body=body or None,
             token_override=gateway_token,
+            timeout=280.0 if path.endswith("/prompt") else 2.0,
         )
         status = result.get("status")
         if isinstance(status, int) and status >= 400:
@@ -700,7 +838,10 @@ class ProductForgePortal(PortalAdapter):
         return SseResult(events())
 
     def _agent_health(self, ctx: RequestContext) -> dict[str, Any]:
-        return self._bridge_get("/status")
+        upstream = self._bridge_get("/status")
+        if self.bridge_status is not None:
+            upstream["managed"] = self.bridge_status()
+        return upstream
 
     def _agent_providers(self, ctx: RequestContext) -> dict[str, Any]:
         return self._bridge_get("/providers")
@@ -739,11 +880,43 @@ class ProductForgePortal(PortalAdapter):
         }
 
     def _claude_auth(self, ctx: RequestContext) -> dict[str, Any]:
-        return self._bridge_request("/providers/claude-code/auth", method="POST",
-                                    body=dict(ctx.body or {}))
+        return self._bridge_call("/providers/claude-code/auth", method="POST",
+                                 body=dict(ctx.body or {}), timeout=30.0)
 
     def _chat_sessions(self, ctx: RequestContext) -> dict[str, Any]:
-        return self._bridge_get("/agent-sessions")
+        listing = self._bridge_get("/agent-sessions")
+        items = listing.get("items")
+        if isinstance(items, list):
+            self._attach_product_names(items)
+        return listing
+
+    @staticmethod
+    def _attach_product_names(items: list[Any]) -> None:
+        """Enrich session items with the product name the meta points at.
+
+        Best-effort and bounded: one lookup per distinct product id; absent or
+        unreadable products simply leave the field out (honest absence).
+        """
+        names: dict[str, str | None] = {}
+        st = _store()
+        try:
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                pid = ((item.get("meta") or {}).get("product_id")
+                       or item.get("product_id"))
+                if not pid:
+                    continue
+                pid = str(pid)
+                if pid not in names:
+                    try:
+                        names[pid] = st.get("products", pid).get("name")
+                    except Exception:  # noqa: BLE001 - enrichment never fails the listing
+                        names[pid] = None
+                if names[pid]:
+                    item["product_name"] = names[pid]
+        finally:
+            st.close()
 
     def _chat_create(self, ctx: RequestContext) -> dict[str, Any]:
         body = dict(ctx.body or {})
@@ -754,18 +927,104 @@ class ProductForgePortal(PortalAdapter):
                 http=422,
                 action="connect-provider",
             )
-        return self._bridge_request("/agent-sessions", method="POST", body=body)
+        return self._bridge_call("/agent-sessions", method="POST", body=body,
+                                 timeout=30.0)
+
+    def _chat_stream(self, ctx: RequestContext) -> SseResult:
+        """Typed SSE route for chat — delegates to the gateway proxy so cursor
+        handling (``after_seq``/``Last-Event-ID``) and the server-side gateway
+        token stay in exactly one place."""
+        ctx.params["bridge_path"] = f"/agent-sessions/{ctx.params['sid']}/stream"
+        ctx.params["__method"] = "GET"
+        return self._bridge_proxy(ctx)
 
     def _chat_prompt(self, ctx: RequestContext) -> dict[str, Any]:
-        return self._bridge_request(
+        body = dict(ctx.body or {})
+        if not str(body.get("text", "")).strip():
+            raise PortalError(
+                "PROMPT-REQUIRED",
+                "chat prompt text is required",
+                http=422,
+            )
+        return self._bridge_call(
             f"/agent-sessions/{ctx.params['sid']}/prompt",
-            method="POST", body=dict(ctx.body or {}))
+            method="POST", body=body, timeout=280.0)
+
+    def _chat_cancel(self, ctx: RequestContext) -> dict[str, Any]:
+        return self._bridge_call(
+            f"/agent-sessions/{ctx.params['sid']}/cancel",
+            method="POST", body={}, timeout=15.0)
+
+    def _chat_approve(self, ctx: RequestContext) -> dict[str, Any]:
+        body = dict(ctx.body or {})
+        approval_id = str(body.get("approval_id", "")).strip()
+        if not approval_id:
+            raise PortalError(
+                "APPROVAL-REQUIRED",
+                "approval_id is required to decide an approval",
+                http=422,
+            )
+        if not isinstance(body.get("approved"), bool):
+            raise PortalError(
+                "APPROVAL-REQUIRED",
+                "approved must be true or false",
+                http=422,
+            )
+        return self._bridge_call(
+            f"/agent-sessions/{ctx.params['sid']}/approve",
+            method="POST", timeout=15.0,
+            body={"approval_id": approval_id, "approved": body["approved"]})
+
+    def _chat_resume(self, ctx: RequestContext) -> dict[str, Any]:
+        body = dict(ctx.body or {})
+        if not str(body.get("session_ref", "")).strip():
+            raise PortalError(
+                "SESSION-REF-REQUIRED",
+                "session_ref is required to resume a chat session",
+                http=422,
+            )
+        return self._bridge_call(
+            f"/agent-sessions/{ctx.params['sid']}/resume",
+            method="POST", body=body, timeout=90.0)
 
     def _chat_events(self, ctx: RequestContext) -> dict[str, Any]:
-        return self._bridge_request(
+        return self._bridge_call(
             f"/agent-sessions/{ctx.params['sid']}/events",
-            method="POST", body=dict(ctx.body or {}))
+            method="POST", body=dict(ctx.body or {}), timeout=15.0)
+
+    def _chat_cleanup(self, ctx: RequestContext) -> dict[str, Any]:
+        """Archive bridge chat sessions that are no longer active.
+
+        Orphaned sessions accumulate whenever a portal dies between prompt and
+        close.  Closing is idempotent on the Bridge side (DELETE returns
+        ``closed: false`` for an already-closed session and archives the meta
+        record), so re-running cleanup is safe.  ``include_active: true`` also
+        archives live sessions; the default keeps them.
+        """
+        include_active = bool((ctx.body or {}).get("include_active", False))
+        listing = self._bridge_get("/agent-sessions")
+        items = listing.get("items")
+        if not isinstance(items, list):
+            return {"state": "unavailable", "bridge": listing,
+                    "closed": [], "kept": [], "errors": []}
+        closed: list[str] = []
+        kept: list[str] = []
+        errors: list[dict[str, Any]] = []
+        for item in items:
+            if not isinstance(item, dict) or not item.get("id"):
+                continue
+            sid = str(item["id"])
+            if item.get("state") == "active" and not include_active:
+                kept.append(sid)
+                continue
+            result = self._bridge_request(f"/agent-sessions/{sid}", method="DELETE")
+            if result.get("archived"):
+                closed.append(sid)
+            else:
+                errors.append({"id": sid, "result": result})
+        ctx.emit("chat.sessions_cleaned", closed=len(closed))
+        return {"closed": closed, "kept": kept, "errors": errors}
 
     def _chat_close(self, ctx: RequestContext) -> dict[str, Any]:
-        return self._bridge_request(
-            f"/agent-sessions/{ctx.params['sid']}", method="DELETE")
+        return self._bridge_call(
+            f"/agent-sessions/{ctx.params['sid']}", method="DELETE", timeout=15.0)

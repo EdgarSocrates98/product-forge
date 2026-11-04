@@ -1,6 +1,6 @@
 """Cycle 15 — real LLM agent runtime (provider subprocess+JSON loop)."""
 
-
+import sys
 
 
 def _env(tmp_path, monkeypatch, provider_text):
@@ -15,7 +15,7 @@ def _env(tmp_path, monkeypatch, provider_text):
     if provider_text is not None:
         prov = tmp_path / "provider.py"
         prov.write_text(provider_text)
-        cfg["gateway"] = {"provider_cmd": ["python3", str(prov)], "timeout_s": 15}
+        cfg["gateway"] = {"provider_cmd": [sys.executable, str(prov)], "timeout_s": 15}
     st = Store(db_path(home, cfg))
     st.put("products", Product(id="p1", workspace_id="w1", name="Pay"))
     return st, cfg

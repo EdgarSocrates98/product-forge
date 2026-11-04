@@ -1,11 +1,11 @@
 {
-  "schema": "forge/ProductForgePortalManifest/v1",
-  "product_forge_version": "0.1.0",
-  "portal_version": "1.0.0",
-  "portal_commit": "1d9ef36-local-changes",
   "angular_version": "22.2.2",
   "api_schema": "forge/PortalApi/1",
   "bridge_contract": "forge/AgentBridge/1",
   "build_mode": "production",
-  "integrity": "verified-by-package-build"
+  "integrity": "verified-by-package-build",
+  "portal_commit": "8ba370d9d6565130",
+  "portal_version": "1.0.0",
+  "product_forge_version": "0.1.0",
+  "schema": "forge/ProductForgePortalManifest/v1"
 }

@@ -85,8 +85,32 @@ def _manifest_path(home: Path) -> Path:
 
 
 def _pid_alive(pid: int) -> bool:
+    """Liveness probe that is honest on Windows too.
+
+    ``os.kill(pid, 0)`` is not a reliable liveness check there — its signal-0
+    behaviour has changed across CPython versions and can either error out on
+    a live process or terminate it.  ``OpenProcess`` +
+    ``GetExitCodeProcess`` (STILL_ACTIVE) is the stable contract.
+    """
     if pid <= 0:
         return False
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
+            if not handle:
+                return False
+            try:
+                code = ctypes.c_ulong()
+                if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+                    return False
+                return code.value == 259  # STILL_ACTIVE
+            finally:
+                kernel32.CloseHandle(handle)
+        except (AttributeError, OSError):
+            return False
     try:
         os.kill(pid, 0)
     except (OSError, ProcessLookupError):
@@ -186,9 +210,14 @@ def _wait_bridge_ready(
                 last_error = "pair.token is not available yet"
                 time.sleep(0.05)
                 continue
-            mode = token_file.stat().st_mode & 0o777
-            if mode & 0o077:
-                raise PermissionError("pair.token permissions are too broad")
+            if os.name == "posix":
+                # POSIX mode check only: on Windows chmod() is a no-op
+                # (read-only bit only) and stat() reports 0o666 regardless,
+                # so the check can never pass there. Token privacy on
+                # Windows comes from the user-profile ACL instead.
+                mode = token_file.stat().st_mode & 0o777
+                if mode & 0o077:
+                    raise PermissionError("pair.token permissions are too broad")
             token = token_file.read_text(encoding="utf-8").strip()
             if not token:
                 last_error = "pair.token is empty"
@@ -208,6 +237,28 @@ def _wait_bridge_ready(
     raise RuntimeError(f"forge-bridge did not become ready on port {port}: {last_error}")
 
 
+def _lifecycle_log(home: Path) -> Path:
+    return home / "portal" / "lifecycle.jsonl"
+
+
+def _log_event(home: Path, event: str, **fields: Any) -> None:
+    """Append one structured lifecycle record to the portal JSONL log.
+
+    Bounded by a single rotation at 512 KiB.  Logging failures are swallowed:
+    observability must never take the composition down.
+    """
+    path = _lifecycle_log(home)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.is_file() and path.stat().st_size > 512 * 1024:
+            path.replace(path.with_name("lifecycle.1.jsonl"))
+        record = {"ts": round(time.time(), 3), "event": event, **fields}
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
 def _bridge_environment(env: dict[str, str]) -> dict[str, str]:
     """Add the sibling checkout only for development worktrees.
 
@@ -223,6 +274,122 @@ def _bridge_environment(env: dict[str, str]) -> dict[str, str]:
         existing = env.get("PYTHONPATH", "")
         env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(sibling), existing]))
     return env
+
+
+class _BridgeSupervisor:
+    """Restart the managed Bridge on unexpected exit, then re-pair the gateway.
+
+    Bounded: at most ``MAX_RESTARTS`` respawns per composition.  Beyond the cap
+    the portal keeps serving with an honest ``degraded`` bridge state instead
+    of crash-looping a child that cannot stay up.  Every transition lands in
+    the structured lifecycle log and in the composition manifest.
+    """
+
+    MAX_RESTARTS = 3
+    RETRY_DELAY_S = 2.0
+
+    def __init__(self, *, port: int, home: Path, env: dict[str, str],
+                 quiet: bool, token_file: Path) -> None:
+        self._port = port
+        self._home = home
+        self._env = env
+        self._quiet = quiet
+        self._token_file = token_file
+        self.proc: subprocess.Popen[Any] | None = None
+        self.restarts = 0
+        self.last_exit: int | None = None
+        self.state = "stopped"
+        self.gateway = "unpaired"
+        self._not_before = 0.0
+
+    def _spawn(self) -> subprocess.Popen[Any]:
+        return subprocess.Popen(  # noqa: S603 - executable is fixed/discovered locally
+            _bridge_command(self._port),
+            cwd=str(self._home),
+            env=self._env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL if self._quiet else None,
+            stderr=subprocess.DEVNULL if self._quiet else None,
+            start_new_session=(os.name != "nt"),
+            preexec_fn=_child_death_signal if os.name != "nt" else None,
+        )
+
+    def start(self) -> None:
+        self.proc = self._spawn()
+        self.state = "starting"
+        if self.proc.poll() is not None:
+            raise RuntimeError("forge-bridge exited before the portal could start")
+        _wait_bridge_ready(self._port, self._token_file, process=self.proc)
+        self.state = "running"
+        _log_event(self._home, "bridge.started", pid=self.proc.pid, port=self._port)
+
+    def check(self, *, adapter: ProductForgePortal | None = None) -> dict[str, Any]:
+        """One supervision step; returns the manifest-friendly status."""
+        if self.proc is None or self.proc.poll() is None:
+            return self.status()
+        self.last_exit = self.proc.returncode
+        self.proc = None
+        _log_event(self._home, "bridge.exited", exit_code=self.last_exit,
+                   restarts=self.restarts)
+        if self.restarts >= self.MAX_RESTARTS:
+            self.state = "degraded"
+            _log_event(self._home, "bridge.restart_cap", max=self.MAX_RESTARTS)
+            return self.status()
+        if time.monotonic() < self._not_before:
+            self.state = "restarting"
+            return self.status()
+        self.restarts += 1
+        self.state = "restarting"
+        try:
+            self.proc = self._spawn()
+            _wait_bridge_ready(self._port, self._token_file, process=self.proc)
+        except Exception as exc:  # noqa: BLE001 - retry on the next check
+            self.proc = None
+            self._not_before = time.monotonic() + self.RETRY_DELAY_S
+            _log_event(self._home, "bridge.restart_failed", error=str(exc),
+                       restarts=self.restarts)
+            return self.status()
+        self.state = "running"
+        _log_event(self._home, "bridge.restarted", pid=self.proc.pid,
+                   restarts=self.restarts)
+        self._repair_gateway(adapter)
+        return self.status()
+
+    def _repair_gateway(self, adapter: ProductForgePortal | None) -> None:
+        if adapter is None:
+            return
+        try:
+            bootstrap = adapter._bridge_bootstrap(ctx=None)
+            self.gateway = (
+                "paired" if bootstrap.get("connected")
+                else f"unpaired:{bootstrap.get('bridge', {}).get('reason', '?')}")
+        except Exception as exc:  # noqa: BLE001 - pairing stays retryable
+            self.gateway = f"unpaired:{type(exc).__name__}"
+            _log_event(self._home, "bridge.repair_failed", error=str(exc))
+
+    def status(self) -> dict[str, Any]:
+        pid = self.proc.pid if self.proc is not None and self.proc.poll() is None else None
+        return {
+            "state": self.state,
+            "pid": pid,
+            "port": self._port,
+            "url": f"http://127.0.0.1:{self._port}",
+            "restarts": self.restarts,
+            "last_exit": self.last_exit,
+            "gateway": self.gateway,
+        }
+
+    def stop(self) -> None:
+        if self.proc is not None and self.proc.poll() is None:
+            if os.name == "nt":
+                self.proc.terminate()
+            else:
+                os.killpg(self.proc.pid, signal.SIGTERM)
+            try:
+                self.proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+        self.state = "stopped"
 
 
 def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
@@ -259,7 +426,7 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
             bridge_port = _free_loopback_port()
     from ..install.managed_runtime import ensure_postgres
     runtime_state = ensure_postgres(home, profile=str(cfg.get("install_profile", "recommended")))
-    bridge = None
+    supervisor: _BridgeSupervisor | None = None
     server = None
     manifest = {
         "schema": "productforge/PortalComposition/1",
@@ -269,10 +436,23 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         "provider_credentials": "deferred_until_first_use",
         "profile": cfg.get("install_profile", "recommended"),
         "database": runtime_state,
+        "lifecycle_log": str(_lifecycle_log(home)),
         "state": "starting",
     }
     _write_manifest(manifest_path, manifest)
+    _log_event(home, "portal.starting", pid=os.getpid(), requested_port=port)
     try:
+        # Provision ~/.forge-bridge in-process through the vendored package —
+        # idempotent (write-if-absent), so `productforge portal` stays a
+        # single-command entry even when `productforge install` was skipped.
+        try:
+            from forge_agent_bridge.install import lifecycle as _bridge_lc
+            manifest["bridge"]["provision"] = _bridge_lc.install(
+                scope="user", profile="recommended", yes=True)
+        except Exception as exc:  # noqa: BLE001 - serve creates the minimum anyway
+            manifest["bridge"]["provision"] = {
+                "state": "unverified", "error": str(exc)}
+
         # The adapter and the child bridge must agree on the dynamically
         # selected port.  This is what makes `productforge portal --port ...`
         # a self-contained composition instead of relying on port 8471.
@@ -280,32 +460,34 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         os.environ["FORGE_BRIDGE_URL"] = bridge_url
         bridge_env = _bridge_environment(os.environ.copy())
         bridge_env["FORGE_BRIDGE_URL"] = bridge_url
-        bridge = subprocess.Popen(  # noqa: S603 - executable is fixed/discovered locally
-            _bridge_command(bridge_port),
-            cwd=str(home),
-            env=bridge_env,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL if quiet else None,
-            stderr=subprocess.DEVNULL if quiet else None,
-            start_new_session=(os.name != "nt"),
-            preexec_fn=_child_death_signal if os.name != "nt" else None,
-        )
-        if bridge.poll() is not None:
-            raise RuntimeError("forge-bridge exited before the portal could start")
-        _wait_bridge_ready(
-            bridge_port,
-            Path(os.environ.get("FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token")).expanduser(),
-            process=bridge,
-        )
+        token_file = Path(os.environ.get(
+            "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token")).expanduser()
+        supervisor = _BridgeSupervisor(
+            port=bridge_port, home=home, env=bridge_env, quiet=quiet,
+            token_file=token_file)
+        supervisor.start()
         adapter = ProductForgePortal()
         adapter.assets_dir = assets
+        adapter.bridge_status = supervisor.status
+        # Pre-pair the gateway session (pair.token → /pair/exchange) so the
+        # first browser request hits a ready bridge — no bootstrap round-trip.
+        try:
+            bootstrap = adapter._bridge_bootstrap(ctx=None)
+            supervisor.gateway = (
+                "paired" if bootstrap.get("connected")
+                else f"unpaired:{bootstrap.get('bridge', {}).get('reason', '?')}")
+        except Exception as exc:  # noqa: BLE001 - bootstrap stays retryable client-side
+            supervisor.gateway = f"unpaired:{type(exc).__name__}"
         server = PortalServer(adapter, port=port, quiet=quiet)
         thread = server.serve_in_thread()
         manifest["portal"].update({"port": server.port, "url": server.url})
-        manifest["bridge"].update({"pid": bridge.pid, "url": bridge_url})
+        manifest["bridge"].update(supervisor.status())
         manifest["state"] = "running"
         _write_manifest(manifest_path, manifest)
+        _log_event(home, "portal.running", url=server.url,
+                   bridge_url=bridge_url, gateway=supervisor.gateway)
         print(f"Product Forge portal: {server.url}")
+        print(f"Agent Bridge: {bridge_url} ({supervisor.gateway})")
         if open_browser:
             try:
                 import webbrowser
@@ -313,7 +495,15 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
                 webbrowser.open(server.url)
             except Exception as exc:  # noqa: BLE001 - browser open is best effort
                 print(f"could not open browser: {exc}")
+        last_sig: tuple[Any, ...] | None = None
         while thread.is_alive():
+            status = supervisor.check(adapter=adapter)
+            sig = (status["state"], status["pid"], status["restarts"],
+                   status["gateway"])
+            if sig != last_sig:
+                manifest["bridge"].update(status)
+                _write_manifest(manifest_path, manifest)
+                last_sig = sig
             thread.join(timeout=0.5)
     except KeyboardInterrupt:
         pass
@@ -321,15 +511,9 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         if server is not None:
             server.shutdown()
             server.server_close()
-        if bridge is not None and bridge.poll() is None:
-            if os.name == "nt":
-                bridge.terminate()
-            else:
-                os.killpg(bridge.pid, signal.SIGTERM)
-            try:
-                bridge.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                bridge.kill()
+        if supervisor is not None:
+            supervisor.stop()
         manifest["state"] = "stopped"
         manifest["stopped_at"] = time.time()
         _write_manifest(manifest_path, manifest)
+        _log_event(home, "portal.stopped", pid=os.getpid())

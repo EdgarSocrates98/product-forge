@@ -1,6 +1,22 @@
 """Cycle 13 — security, persistence, delegate audit fixes."""
 
+import sys
+
 import pytest
+
+
+def _fake_cli(tmp_path, body: str) -> str:
+    """Executable fake forge CLI: shebang script on POSIX, .cmd shim on
+    Windows (CreateProcess cannot exec a bare script file)."""
+    if sys.platform == "win32":
+        (tmp_path / "fake.py").write_text(body)
+        cmd = tmp_path / "fake.cmd"
+        cmd.write_text(f'@"{sys.executable}" "%~dp0fake.py" %*\r\n')
+        return str(cmd)
+    fake = tmp_path / "fake"
+    fake.write_text("#!/usr/bin/env python3\n" + body)
+    fake.chmod(0o755)
+    return str(fake)
 
 
 def test_gets_require_auth(tmp_path, monkeypatch):
@@ -81,13 +97,11 @@ def test_delegate_audit_ids_unique(tmp_path, monkeypatch):
     from product_forge.delegates.runner import call
     from product_forge.store.sqlite import Store
 
-    fake = tmp_path / "fake"
-    fake.write_text("#!/usr/bin/env python3\nimport json\nprint(json.dumps({'ok':1}))\n")
-    fake.chmod(0o755)
+    cli = _fake_cli(tmp_path, "import json\nprint(json.dumps({'ok':1}))\n")
     home = home_dir("user")
     (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
     cfg = load_config(home)
-    cfg["delegates"] = [{"id": "d", "cli": str(fake), "workflows": ["w"]}]
+    cfg["delegates"] = [{"id": "d", "cli": cli, "workflows": ["w"]}]
     st = Store(db_path(home, cfg))
     call(cfg, st, "p1", "d", "w")
     call(cfg, st, "p1", "d", "w")  # second call must NOT overwrite first audit

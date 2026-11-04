@@ -1,6 +1,8 @@
 """Spec: llm-gateway-integration — contract + routing, provider via subprocess+JSON."""
 
 
+import sys
+
 import pytest
 
 
@@ -33,7 +35,7 @@ def test_synthesis_with_provider_and_budget(tmp_path, monkeypatch):
     home = home_dir("user")
     (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
     cfg = load_config(home)
-    cfg["gateway"] = {"provider_cmd": ["python3", str(provider)], "timeout_s": 15}
+    cfg["gateway"] = {"provider_cmd": [sys.executable, str(provider)], "timeout_s": 15}
     st = Store(db_path(home, cfg))
     r = synthesize(st, "p1", "why?", [{"chunk_id": "c1"}], cfg)
     assert r["status"] == "ok" and "answer grounded in 1 citations" in r["text"]
@@ -54,7 +56,7 @@ def test_synthesis_provider_failure_is_error(tmp_path, monkeypatch):
     home = home_dir("user")
     (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
     cfg = load_config(home)
-    cfg["gateway"] = {"provider_cmd": ["python3", str(bad)], "timeout_s": 10}
+    cfg["gateway"] = {"provider_cmd": [sys.executable, str(bad)], "timeout_s": 10}
     st = Store(db_path(home, cfg))
     r = synthesize(st, "p1", "q?", [], cfg)
     assert r["status"] == "error"

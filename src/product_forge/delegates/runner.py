@@ -13,7 +13,7 @@ import json
 import subprocess
 from typing import Any
 
-from ..security import redact
+from ..security import redact, subprocess_env
 from .catalog import find
 
 
@@ -36,7 +36,7 @@ def call(cfg: dict[str, Any], store: Any, product_id: str | None,
     try:
         proc = subprocess.run(  # noqa: S603 — operator-declared allowlist, not user input
             cmd, capture_output=True, text=True, timeout=timeout_s,
-            env={"PATH": "/usr/bin:/bin:/usr/local/bin"}, check=False)
+            env=subprocess_env(), check=False)
     except subprocess.TimeoutExpired:
         return {"status": "error", "error": f"timeout after {timeout_s}s",
                 "delegate": delegate_id, "workflow": workflow}

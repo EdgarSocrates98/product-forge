@@ -215,6 +215,22 @@ def doctor() -> None:
          "required for recommended/full PostgreSQL runtime"),
     ]:
         checks.append({"check": name, "ok": ok, "detail": detail})
+    try:
+        from forge_agent_bridge.install import lifecycle as _bridge_lc
+        _b = _bridge_lc.doctor(scope="user")
+        # The composition uses the vendored package (`python -m
+        # forge_agent_bridge.cli`), not the standalone console script —
+        # so the meaningful gate is: module importable + state provisioned.
+        _by = {c["check"]: c.get("state") for c in _b.get("checks", [])}
+        checks.append({
+            "check": "agent-bridge",
+            "ok": importlib.util.find_spec("forge_agent_bridge") is not None
+                  and _by.get("state-root") == "ok",
+            "detail": _b.get("overall", "unknown"),
+        })
+    except Exception as exc:  # noqa: BLE001 - vendored bridge is expected but degrade honestly
+        checks.append({"check": "agent-bridge", "ok": False,
+                       "detail": f"unavailable:{type(exc).__name__}"})
     _out({"forge_id": FORGE_ID, "version": __version__, "checks": checks,
           "database_runtime": postgres_status(home),
           "ok": all(c["ok"] for c in checks if c["check"] in {"python>=3.11", "pydantic", "typer"})})

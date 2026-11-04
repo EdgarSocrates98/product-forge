@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import secrets
 from pathlib import Path
 from typing import Any, TypeVar
@@ -71,6 +72,26 @@ def redact(obj: _T) -> _T:
     if isinstance(obj, (list, tuple)):
         return [redact(v) for v in obj]  # type: ignore[return-value]
     return obj
+
+
+def subprocess_env() -> dict[str, str]:
+    """Minimal env for provider/delegate subprocesses.
+
+    Credentials never reach spawned commands: an allowlist, never the full
+    inherited environment.  Windows additionally needs SYSTEMROOT/PATHEXT/
+    COMSPEC just to spawn (DLL resolution, .cmd shims); PATH is kept per-OS
+    so declared CLIs outside ``/usr/bin`` still resolve.
+    """
+    keep = (
+        {"PATH", "SYSTEMROOT", "WINDIR", "PATHEXT", "COMSPEC", "USERPROFILE",
+         "HOMEDRIVE", "HOMEPATH", "TEMP", "TMP", "PYTHONUTF8",
+         "PYTHONIOENCODING"}
+        if os.name == "nt"
+        else {"PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TZ"}
+    )
+    env = {k: v for k, v in os.environ.items() if k.upper() in keep}
+    env.setdefault("PATH", os.defpath)
+    return env
 
 
 def safe_path(raw: str | Path, roots: list[Path]) -> Path:

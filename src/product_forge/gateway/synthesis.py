@@ -24,6 +24,7 @@ import subprocess
 from typing import Any
 
 from ..agents.routing import GATEWAY_PROFILES, record_usage
+from ..security import subprocess_env
 
 REQ_SCHEMA = "productforge/SynthesisRequest/v1"
 RES_SCHEMA = "productforge/SynthesisResult/v1"
@@ -58,7 +59,7 @@ def synthesize(store: Any, product_id: str, question: str,
         proc = subprocess.run(  # noqa: S603 — provider cmd is operator config, not user input
             cmd, input=json.dumps(request), capture_output=True, text=True,
             timeout=int((cfg.get("gateway") or {}).get("timeout_s", 30)),
-            env={"PATH": "/usr/bin:/bin:/usr/local/bin"}, check=False)
+            env=subprocess_env(), check=False)
     except (OSError, subprocess.TimeoutExpired) as e:
         return {"status": "unavailable", "reason": "provider-unreachable",
                 "error": str(e)[:200], "profile": profile}

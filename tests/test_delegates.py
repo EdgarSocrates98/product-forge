@@ -1,6 +1,22 @@
 """Spec: inter-forge-delegation — own delegate mechanism (subprocess+JSON)."""
 
+import sys
+
 import pytest
+
+
+def _fake_cli(tmp_path, body: str) -> str:
+    """Executable fake forge CLI: shebang script on POSIX, .cmd shim on
+    Windows (CreateProcess cannot exec a bare script file)."""
+    if sys.platform == "win32":
+        (tmp_path / "fake.py").write_text(body)
+        cmd = tmp_path / "fake.cmd"
+        cmd.write_text(f'@"{sys.executable}" "%~dp0fake.py" %*\r\n')
+        return str(cmd)
+    fake = tmp_path / "fake"
+    fake.write_text("#!/usr/bin/env python3\n" + body)
+    fake.chmod(0o755)
+    return str(fake)
 
 
 def _store(tmp_path, monkeypatch):
@@ -38,14 +54,13 @@ def test_delegate_cli_not_found(tmp_path, monkeypatch):
 
 def test_delegate_call_success(tmp_path, monkeypatch):
     st, cfg = _store(tmp_path, monkeypatch)
-    fake = tmp_path / "fake-forge"
-    fake.write_text(
-        "#!/usr/bin/env python3\n"
+    cli = _fake_cli(
+        tmp_path,
         "import json,sys\n"
         "assert sys.argv[1] == 'inventory'\n"
-        "print(json.dumps({'forge':'data-sentinel','inventory':['table_a','table_b']}))\n")
-    fake.chmod(0o755)
-    cfg["delegates"] = [{"id": "ds", "cli": str(fake), "workflows": ["inventory"]}]
+        "print(json.dumps({'forge':'data-sentinel','inventory':['table_a','table_b']}))\n",
+    )
+    cfg["delegates"] = [{"id": "ds", "cli": cli, "workflows": ["inventory"]}]
     from product_forge.delegates.runner import call
 
     r = call(cfg, st, "p1", "ds", "inventory", [])
@@ -56,7 +71,7 @@ def test_delegate_call_success(tmp_path, monkeypatch):
 
 def test_delegate_workflow_refused(tmp_path, monkeypatch):
     st, cfg = _store(tmp_path, monkeypatch)
-    cfg["delegates"] = [{"id": "ds", "cli": "python3", "workflows": ["inventory"]}]
+    cfg["delegates"] = [{"id": "ds", "cli": sys.executable, "workflows": ["inventory"]}]
     from product_forge.delegates.runner import call
 
     r = call(cfg, st, None, "ds", "rm-everything")
