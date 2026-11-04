@@ -9,6 +9,35 @@ def test_product_portal_exposes_pm_pa_navigation_and_chat() -> None:
     assert {"chat", "agent-bridge"} <= capabilities
 
 
+def test_product_portal_exposes_workspace_discovery_and_preview(tmp_path) -> None:
+    from product_forge._forge_portal import RequestContext
+
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    (repo / "docs").mkdir()
+    (repo / "docs" / "prd.md").write_text("# Product requirements\n", encoding="utf-8")
+    portal = ProductForgePortal()
+    portal.workspace = str(repo)
+
+    discovery = portal._workspace_discovery(RequestContext(None, {}, {}, None, "cid"))  # type: ignore[arg-type]
+    preview = portal._workspace_preview(
+        RequestContext(None, {}, {"path": ["docs/prd.md"]}, None, "cid")  # type: ignore[arg-type]
+    )
+
+    assert discovery["schema"] == "productforge/WorkspaceDiscovery/v1"
+    assert discovery["documents"][0]["kind"] == "prd"
+    assert preview["path"] == "docs/prd.md"
+    assert "Product requirements" in preview["preview"]
+
+
+def test_workspace_routes_are_registered_with_explicit_import_gate() -> None:
+    portal = ProductForgePortal()
+    routes = {(op.method, op.path, op.confirm) for op in portal.ops}
+    assert ("GET", "/workspace/discovery", None) in routes
+    assert ("GET", "/workspace/discovery/preview", None) in routes
+    assert ("POST", "/products/{pid}/documents/from-workspace", "import") in routes
+
+
 def test_bridge_unavailable_is_honest(monkeypatch) -> None:
     monkeypatch.setenv("FORGE_BRIDGE_URL", "http://127.0.0.1:1")
     result = ProductForgePortal()._bridge_get("/status")

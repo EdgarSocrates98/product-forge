@@ -41,6 +41,12 @@ from ..domain.models import (
 from ..errors import ForgeError
 from ..security import TokenStore, redact, verify_oidc_token
 from ..store.sqlite import Store
+from ..workspace.discovery import (
+    WorkspaceDiscoveryError,
+    discover_workspace,
+    import_workspace_document,
+    preview_workspace_document,
+)
 
 MAX_BODY = 1 << 20
 RATE_WINDOW = 60.0
@@ -490,6 +496,21 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.get(f"{API_PREFIX}/workspaces/{{wid}}")
     def get_ws(wid: str) -> dict:
         return envelope(ctx.store.get("workspaces", wid))
+
+    # -- local workspace context discovery ---------------------------------
+
+    @app.get(f"{API_PREFIX}/workspace/discovery")
+    def workspace_discovery() -> dict:
+        """Metadata-only discovery for the workspace hosting this API."""
+        return envelope(discover_workspace(Path.cwd()))
+
+    @app.get(f"{API_PREFIX}/workspace/discovery/preview")
+    def workspace_discovery_preview(path: str) -> dict:
+        try:
+            root = discover_workspace(Path.cwd())["workspace"]["path"]
+            return envelope(preview_workspace_document(root, path))
+        except WorkspaceDiscoveryError as exc:
+            raise ForgeError("PF-WORKSPACE-DOCUMENT", str(exc), 422) from exc
 
     @app.patch(f"{API_PREFIX}/workspaces/{{wid}}")
     def patch_ws(wid: str, body: WorkspaceIn, req: Request) -> dict:
@@ -1016,6 +1037,45 @@ def create_app(home: Path | None = None) -> FastAPI:
     def list_docs(pid: str) -> dict:
         ctx.store.get("products", pid)
         return envelope({"items": ctx.store.list("documents", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-workspace", status_code=201)
+    def import_workspace_doc(pid: str, body: ScopedIn, req: Request) -> dict:
+        """Import one explicitly selected local context file idempotently."""
+        from ..domain.models import Document, DocumentStatus
+        from ..errors import ValidationError
+        from ..knowledge.ingest import chunk_text
+
+        product = ctx.store.get("products", pid)
+        raw_path = str(body.model_dump().get("path", "")).strip()
+        if not raw_path:
+            raise ValidationError("path is required")
+        try:
+            root = discover_workspace(Path.cwd())["workspace"]["path"]
+            imported = import_workspace_document(root, raw_path)
+        except WorkspaceDiscoveryError as exc:
+            raise ForgeError("PF-WORKSPACE-DOCUMENT", str(exc), 422) from exc
+        existing = [doc for doc in ctx.store.list("documents", product_id=pid)
+                    if (doc.get("metadata") or {}).get("workspace_path") == imported["path"]
+                    and doc.get("content_hash") == imported["content_hash"]]
+        if existing:
+            return envelope({**existing[0], "state": "already_imported",
+                             "source_path": imported["path"], "source_kind": imported["kind"]})
+        doc = Document(
+            id=new_id("doc"), product_id=pid,
+            title=str(body.model_dump().get("title") or imported["title"]),
+            content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
+            metadata={"source": "workspace", "workspace_path": imported["path"],
+                      "classification": imported["kind"], "size": imported["size"]},
+        )
+        ctx.store.put("documents", doc)
+        doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(imported["content"]))
+        doc.status = DocumentStatus.INDEXED
+        ctx.store.put("documents", doc)
+        ctx.audit(req, "workspace.document.import", "documents", doc.id, product_id=pid,
+                  workspace_id=product.get("workspace_id", ""))
+        return envelope({**doc.model_dump(mode="json", by_alias=True),
+                         "state": "imported", "source_path": imported["path"],
+                         "source_kind": imported["kind"]})
 
     # -- agents runtime (Cycle 4) ---------------------------------------------
 

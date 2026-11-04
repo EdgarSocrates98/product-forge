@@ -5,6 +5,13 @@ All notable changes. Format follows the evolution cycles (see
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-04
+
+### Fixed
+
+- Added dynamic workspace context discovery for PRDs, briefs, knowledge and
+  repository documents, with refreshed portal assets.
+
 ### Added
 - **Guided install parity with sparkforge-aws** — bare `productforge install`
   on a TTY opens the shared wizard: scope (`project`/`workspace`/`user`),

@@ -29,6 +29,12 @@ from .._forge_portal import (
 from ..config import db_path, home_dir, load_config
 from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id, utcnow
 from ..store.sqlite import Store
+from ..workspace.discovery import (
+    WorkspaceDiscoveryError,
+    discover_workspace,
+    import_workspace_document,
+    preview_workspace_document,
+)
 
 
 def _store() -> Store:
@@ -156,6 +162,11 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("POST", "/products", self._product_create, mutating=True, confirm="create"))
         self.register(Operation("GET", "/products/{pid}", self._product_get))
         self.register(Operation("GET", "/products/{pid}/context", self._product_context))
+        self.register(Operation("GET", "/workspace/discovery", self._workspace_discovery))
+        self.register(Operation("GET", "/workspace/discovery/preview", self._workspace_preview))
+        self.register(Operation("POST", "/products/{pid}/documents/from-workspace",
+                                self._workspace_document_import,
+                                mutating=True, confirm="import"))
         self.register(Operation("GET", "/products/{pid}/agents", self._agents))
         self.register(Operation("POST", "/products/{pid}/knowledge/query", self._kn_query))
         self.register(Operation("GET", "/products/{pid}/graph", self._graph))
@@ -238,6 +249,7 @@ class ProductForgePortal(PortalAdapter):
             {"id": "workspaces", "state": "supported"},
             {"id": "products", "state": "supported"},
             {"id": "context", "state": "supported"},
+            {"id": "workspace.discovery", "state": "supported"},
             {"id": "audit", "state": "supported"},
             {"id": "knowledge", "state": "unverified"},
             {"id": "agents", "state": "unverified"},
@@ -335,6 +347,73 @@ class ProductForgePortal(PortalAdapter):
                     "entities": st.list("entities", product_id=pid, limit=200),
                     "agents": st.list("agents", product_id=pid, limit=100),
                     "data_sources": st.list("data_sources", product_id=pid, limit=100)}
+        finally:
+            st.close()
+
+    def _workspace_start(self) -> Path:
+        """Return the portal's local launch boundary, never a user-provided path."""
+        return Path(self.workspace).expanduser() if self.workspace else Path.cwd()
+
+    def _workspace_discovery(self, ctx: RequestContext) -> dict[str, Any]:
+        """Discover projects and eligible context files without reading contents."""
+        return discover_workspace(self._workspace_start())
+
+    def _workspace_preview(self, ctx: RequestContext) -> dict[str, Any]:
+        raw_path = _q1(ctx, "path")
+        if not raw_path:
+            raise PortalError("WORKSPACE-PATH-REQUIRED", "path query parameter is required", http=422)
+        discovery = discover_workspace(self._workspace_start())
+        try:
+            return preview_workspace_document(discovery["workspace"]["path"], raw_path)
+        except WorkspaceDiscoveryError as exc:
+            raise PortalError("WORKSPACE-DOCUMENT-REFUSED", str(exc), http=422) from exc
+
+    def _workspace_document_import(self, ctx: RequestContext) -> dict[str, Any]:
+        """Import one explicitly selected workspace document into product knowledge."""
+        pid = ctx.params["pid"]
+        body = ctx.body or {}
+        raw_path = str(body.get("path") or "").strip()
+        if not raw_path:
+            raise PortalError("WORKSPACE-PATH-REQUIRED", "path is required", http=422)
+        st = _store()
+        try:
+            product = _require(st, "products", pid)
+            root = discover_workspace(self._workspace_start())["workspace"]["path"]
+            try:
+                imported = import_workspace_document(root, raw_path)
+            except WorkspaceDiscoveryError as exc:
+                raise PortalError("WORKSPACE-DOCUMENT-REFUSED", str(exc), http=422) from exc
+            existing = [doc for doc in st.list("documents", product_id=pid)
+                        if (doc.get("metadata") or {}).get("workspace_path") == imported["path"]
+                        and doc.get("content_hash") == imported["content_hash"]]
+            if existing:
+                return {**existing[0], "state": "already_imported",
+                        "source_path": imported["path"], "source_kind": imported["kind"]}
+            from ..domain.models import Document, DocumentStatus
+            from ..knowledge.ingest import chunk_text
+
+            title = str(body.get("title") or imported["title"])
+            doc = Document(
+                id=new_id("doc"), product_id=pid, title=title,
+                content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
+                metadata={
+                    "source": "workspace",
+                    "workspace_path": imported["path"],
+                    "classification": imported["kind"],
+                    "size": imported["size"],
+                },
+            )
+            st.put("documents", doc)
+            doc.chunk_count = st.put_chunks(doc.id, pid, chunk_text(imported["content"]))
+            doc.status = DocumentStatus.INDEXED
+            st.put("documents", doc)
+            _record_audit(st, ctx, "workspace.document.import", "documents", doc.id,
+                          product_id=pid, workspace_id=product.get("workspace_id"))
+            ctx.emit("workspace.document.imported", resource_id=doc.id,
+                     product_id=pid, path=imported["path"], kind=imported["kind"])
+            return {**doc.model_dump(mode="json", by_alias=True),
+                    "state": "imported", "source_path": imported["path"],
+                    "source_kind": imported["kind"]}
         finally:
             st.close()
 

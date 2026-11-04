@@ -472,6 +472,11 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         supervisor.start()
         adapter = ProductForgePortal()
         adapter.assets_dir = assets
+        # The portal is installed/launched in a local project or workspace.
+        # Keep the launch location as the discovery boundary; the discovery
+        # service may widen this only to a nearby workspace container with
+        # multiple repositories, never to an arbitrary browser-supplied path.
+        adapter.workspace = str(Path.cwd().resolve())
         adapter.bridge_status = supervisor.status
         # Pre-pair the gateway session (pair.token → /pair/exchange) so the
         # first browser request hits a ready bridge — no bootstrap round-trip.
