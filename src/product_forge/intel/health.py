@@ -109,8 +109,19 @@ def evidence_graph(store: Any, product_id: str, limit: int = 2000) -> dict[str, 
             nodes.append({"id": d["id"], "kind": kind,
                           "name": d.get("name") or d.get("title") or d["id"],
                           "source": "collection"})
-    edges = [{"from": r["src_id"], "to": r["dst_id"], "kind": r.get("kind", "rel")}
-             for r in rels]
+    # Knowledge extraction persists the versioned Relation model as
+    # ``from_entity``/``to_entity``; older imported rows may still use the
+    # compact ``src_id``/``dst_id`` names.  Normalize both at the API boundary
+    # so one stale row cannot make the evidence graph unusable.
+    edges = [
+        {
+            "from": r.get("from_entity", r.get("src_id")),
+            "to": r.get("to_entity", r.get("dst_id")),
+            "kind": r.get("kind", "rel"),
+        }
+        for r in rels
+        if r.get("from_entity", r.get("src_id")) and r.get("to_entity", r.get("dst_id"))
+    ]
     return {"schema": "productforge/EvidenceGraph/v1", "product_id": product_id,
             "nodes": nodes, "edges": edges,
             "counts": {"nodes": len(nodes), "edges": len(edges)}}

@@ -39,7 +39,14 @@ from ..domain.models import (
     new_id,
     utcnow,
 )
-from ..errors import ForgeError, UrlCaptureForgeError
+from ..errors import (
+    ConflictError,
+    ForgeError,
+    NotFoundError,
+    ReviewRequiredError,
+    UrlCaptureForgeError,
+    ValidationError,
+)
 from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
 from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..knowledge.versions import explorer_versions, prepare_version
@@ -563,7 +570,7 @@ def create_app(home: Path | None = None) -> FastAPI:
             root = discover_workspace(Path.cwd())["workspace"]["path"]
             return envelope(preview_workspace_document(root, path))
         except WorkspaceDiscoveryError as exc:
-            raise ForgeError("PF-WORKSPACE-DOCUMENT", str(exc), 422) from exc
+            raise ValidationError(str(exc), details={"code": "PF-WORKSPACE-DOCUMENT"}) from exc
 
     @app.patch(f"{API_PREFIX}/workspaces/{{wid}}")
     def patch_ws(wid: str, body: WorkspaceIn, req: Request) -> dict:
@@ -900,7 +907,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     def create_product_board(pid: str, body: ScopedIn, req: Request) -> dict:
         product = ctx.store.get("products", pid)
         if ctx.store.list("boards", product_id=pid, limit=1):
-            raise ForgeError("PF-CONFLICT", "product already has a board", 409)
+            raise ConflictError("product already has a board")
         board = Board(
             id=new_id("brd"),
             workspace_id=product["workspace_id"],
@@ -915,13 +922,13 @@ def create_app(home: Path | None = None) -> FastAPI:
     def move_task(pid: str, tid: str, body: ScopedIn, req: Request) -> dict:
         doc = ctx.store.get("tasks", tid)
         if doc.get("product_id") != pid:
-            raise ForgeError("PF-NOT-FOUND", "task does not belong to product", 404)
+            raise NotFoundError("task does not belong to product")
         expected = getattr(body, "expected_version", None)
         if expected is not None and int(expected) != int(doc.get("version", 1)):
-            raise ForgeError("PF-CONFLICT", "task changed; reload before moving", 409)
+            raise ConflictError("task changed; reload before moving")
         column_id = str(getattr(body, "column_id", "") or "")
         if not column_id:
-            raise ForgeError("PF-VALIDATION", "column_id is required", 422)
+            raise ValidationError("column_id is required")
         doc["column_id"] = column_id
         doc["position"] = int(getattr(body, "position", doc.get("position", 0)) or 0)
         doc["version"] = int(doc.get("version", 1)) + 1
@@ -938,10 +945,10 @@ def create_app(home: Path | None = None) -> FastAPI:
     def task_comment(pid: str, tid: str, body: ScopedIn, req: Request) -> dict:
         doc = ctx.store.get("tasks", tid)
         if doc.get("product_id") != pid:
-            raise ForgeError("PF-NOT-FOUND", "task does not belong to product", 404)
+            raise NotFoundError("task does not belong to product")
         text = str(getattr(body, "text", "") or "").strip()
         if not text:
-            raise ForgeError("PF-VALIDATION", "comment text is required", 422)
+            raise ValidationError("comment text is required")
         comment = {"id": new_id("cmt"), "author": "local", "text": text, "created_at": utcnow()}
         doc["comments"] = [*(doc.get("comments") or []), comment]
         doc["version"] = int(doc.get("version", 1)) + 1
@@ -955,11 +962,11 @@ def create_app(home: Path | None = None) -> FastAPI:
 
         nb = ctx.store.get("notebooks", nid)
         if nb.get("product_id") != pid:
-            raise ForgeError("PF-404", "notebook not in product", 404)
+            raise NotFoundError("notebook not in product")
         try:
             blk = add_block(nb, body.get("kind", "markdown"), body.get("content", ""), body.get("source_id"))
         except ValueError as exc:
-            raise ForgeError("PF-VALIDATION", str(exc), 422) from exc
+            raise ValidationError(str(exc)) from exc
         ctx.store.put_doc("notebooks", nb)
         ctx.audit(req, "notebooks.block-add", "notebooks", nid, product_id=pid)
         return envelope(blk)
@@ -971,10 +978,10 @@ def create_app(home: Path | None = None) -> FastAPI:
 
         nb = ctx.store.get("notebooks", nid)
         if nb.get("product_id") != pid:
-            raise ForgeError("PF-404", "notebook not in product", 404)
+            raise NotFoundError("notebook not in product")
         block = next((b for b in nb.get("blocks", []) if b["id"] == bid), None)
         if not block:
-            raise ForgeError("PF-404", "block not found", 404)
+            raise NotFoundError("block not found")
         if block["kind"] != "sql":
             block["version"] += 1
             ctx.store.put_doc("notebooks", nb)
@@ -1007,7 +1014,7 @@ def create_app(home: Path | None = None) -> FastAPI:
 
         nb = ctx.store.get("notebooks", nid)
         if nb.get("product_id") != pid:
-            raise ForgeError("PF-404", "notebook not in product", 404)
+            raise NotFoundError("notebook not in product")
         return envelope(render(nb))
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/experiments/{{eid}}/conclude")
@@ -1016,7 +1023,7 @@ def create_app(home: Path | None = None) -> FastAPI:
 
         exp = ctx.store.get("experiments", eid)
         if exp.get("product_id") != pid:
-            raise ForgeError("PF-404", "experiment not in product", 404)
+            raise NotFoundError("experiment not in product")
         upd = conclude_experiment(exp, body.get("results") or {}, body.get("verdict", ""))
         exp.update(upd)
         ctx.store.put_doc("experiments", exp)
@@ -1041,7 +1048,7 @@ def create_app(home: Path | None = None) -> FastAPI:
 
         dec = ctx.store.get("decisions", did)
         if dec.get("product_id") != pid:
-            raise ForgeError("PF-404", "decision not in product", 404)
+            raise NotFoundError("decision not in product")
         return envelope(decision_completeness(dec))
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/meetings/{{mid}}/extract")
@@ -1050,7 +1057,7 @@ def create_app(home: Path | None = None) -> FastAPI:
 
         mtg = ctx.store.get("meetings", mid)
         if mtg.get("product_id") != pid:
-            raise ForgeError("PF-404", "meeting not in product", 404)
+            raise NotFoundError("meeting not in product")
         mtg["draft_items"] = extract_drafts(mtg.get("transcript") or "")
         mtg["status"] = "draft"
         ctx.store.put_doc("meetings", mtg)
@@ -1068,9 +1075,9 @@ def create_app(home: Path | None = None) -> FastAPI:
     def meeting_publish(pid: str, mid: str, body: dict[str, Any], req: Request) -> dict:
         mtg = ctx.store.get("meetings", mid)
         if mtg.get("product_id") != pid:
-            raise ForgeError("PF-404", "meeting not in product", 404)
+            raise NotFoundError("meeting not in product")
         if not body.get("reviewed"):
-            raise ForgeError("PF-REVIEW-REQUIRED", "human review required: resubmit with reviewed=true", 409)
+            raise ReviewRequiredError("human review required: resubmit with reviewed=true")
         refs: list[str] = []
         for item in body.get("items") or mtg.get("draft_items") or []:
             if item.get("kind") == "decision":
@@ -1280,7 +1287,7 @@ def create_app(home: Path | None = None) -> FastAPI:
             root = discover_workspace(Path.cwd())["workspace"]["path"]
             imported = import_workspace_document(root, raw_path)
         except WorkspaceDiscoveryError as exc:
-            raise ForgeError("PF-WORKSPACE-DOCUMENT", str(exc), 422) from exc
+            raise ValidationError(str(exc), details={"code": "PF-WORKSPACE-DOCUMENT"}) from exc
         existing = [
             doc
             for doc in ctx.store.list("documents", product_id=pid)
@@ -1602,17 +1609,6 @@ def create_app(home: Path | None = None) -> FastAPI:
         agent.status = agent.status.ARCHIVED
         ctx.store.put("agents", agent)
         ctx.audit(req, "agent.archive", "agents", aid, product_id=pid)
-        return envelope(agent.model_dump(mode="json", by_alias=True))
-
-    @app.patch(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}")
-    def agent_patch(pid: str, aid: str, body: ScopedIn, req: Request) -> dict:
-        agent = _agent(pid, aid)
-        data = body.model_dump(exclude_unset=True)
-        for k in ("mission", "tools_allowed", "knowledge_scope", "policies", "name"):
-            if k in data:
-                setattr(agent, k, data[k])
-        ctx.store.put("agents", agent)
-        ctx.audit(req, "agent.update", "agents", aid, product_id=pid)
         return envelope(agent.model_dump(mode="json", by_alias=True))
 
     # -- analytics (Cycle 5) ---------------------------------------------------
@@ -2146,7 +2142,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.store.get("products", pid)
         proposal = ctx.store.get("task_proposals", proposal_id)
         if proposal.get("product_id") != pid:
-            raise ForgeError("PF-NOT-FOUND", "proposal does not belong to product", 404)
+            raise NotFoundError("proposal does not belong to product")
         values = body.model_dump()
         if values.get("tasks") is not None:
             revise_proposal(ctx.store, proposal_id, list(values["tasks"]))
