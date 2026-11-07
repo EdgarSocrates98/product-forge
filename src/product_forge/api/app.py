@@ -153,8 +153,15 @@ def _surface_to_paths(surface: dict[str, Any]) -> dict[str, Any]:
         paths.setdefault(op["path"], {})[op["method"].lower()] = {
             "operationId": op.get("operation_id"),
             "summary": op.get("summary", ""),
-            "parameters": [{"name": p["name"], "in": p["in"], "required": p["required"],
-                            "schema": {"type": p.get("type")}} for p in op.get("params", [])],
+            "parameters": [
+                {
+                    "name": p["name"],
+                    "in": p["in"],
+                    "required": p["required"],
+                    "schema": {"type": p.get("type")},
+                }
+                for p in op.get("params", [])
+            ],
             "requestBody": {"required": op.get("request_body_required", False)},
             "responses": {c: {} for c in op.get("responses", [])},
         }
@@ -173,6 +180,7 @@ class Ctx:
         self._lock = threading.Lock()
         self.started = time.time()
         from ..jobs.registry import JobRegistry
+
         self.jobs = JobRegistry(self.store)
         self.jobs_recovered = self.jobs.recover()
 
@@ -288,10 +296,13 @@ def create_app(home: Path | None = None) -> FastAPI:
 
     @app.exception_handler(HTTPException)
     async def _http_err(_req: Request, exc: HTTPException) -> JSONResponse:
-        code = ("PF-NOT-FOUND" if exc.status_code == 404
-                else f"PF-HTTP-{exc.status_code}")
-        err = {"code": code, "message": str(exc.detail),
-               "severity": "error", "retryable": exc.status_code >= 500}
+        code = "PF-NOT-FOUND" if exc.status_code == 404 else f"PF-HTTP-{exc.status_code}"
+        err = {
+            "code": code,
+            "message": str(exc.detail),
+            "severity": "error",
+            "retryable": exc.status_code >= 500,
+        }
         return JSONResponse(status_code=exc.status_code, content=envelope(error=err))
 
     @app.exception_handler(RequestValidationError)
@@ -308,20 +319,21 @@ def create_app(home: Path | None = None) -> FastAPI:
     from starlette.exceptions import HTTPException as _StarletteHTTPException
 
     @app.exception_handler(_StarletteHTTPException)
-    async def _starlette_http_err(
-            _req: Request, exc: _StarletteHTTPException) -> JSONResponse:
+    async def _starlette_http_err(_req: Request, exc: _StarletteHTTPException) -> JSONResponse:
         # route-miss (404) and method-miss raise the starlette base class —
         # without this they leak {"detail": ...} outside the envelope.
-        code = ("PF-NOT-FOUND" if exc.status_code == 404
-                else f"PF-HTTP-{exc.status_code}")
-        err = {"code": code, "message": str(exc.detail),
-               "severity": "error", "retryable": exc.status_code >= 500}
+        code = "PF-NOT-FOUND" if exc.status_code == 404 else f"PF-HTTP-{exc.status_code}"
+        err = {
+            "code": code,
+            "message": str(exc.detail),
+            "severity": "error",
+            "retryable": exc.status_code >= 500,
+        }
         return JSONResponse(status_code=exc.status_code, content=envelope(error=err))
 
     @app.exception_handler(Exception)
     async def _exc(_req: Request, exc: Exception) -> JSONResponse:
-        err = {"code": "PF-INTERNAL", "message": "internal error",
-               "severity": "error", "retryable": True}
+        err = {"code": "PF-INTERNAL", "message": "internal error", "severity": "error", "retryable": True}
         return JSONResponse(status_code=500, content=envelope(error=err))
 
     @app.middleware("http")
@@ -329,8 +341,12 @@ def create_app(home: Path | None = None) -> FastAPI:
         req.state.cid = _cid()
         if req.url.path.startswith(API_PREFIX) and req.url.path != f"{API_PREFIX}/health":
             if not ctx.rate_ok():
-                err = {"code": "PF-RATE-LIMIT", "message": "rate limit",
-                       "severity": "warning", "retryable": True}
+                err = {
+                    "code": "PF-RATE-LIMIT",
+                    "message": "rate limit",
+                    "severity": "warning",
+                    "retryable": True,
+                }
                 return JSONResponse(status_code=429, content=envelope(error=err, cid=req.state.cid))
             # §3.2: every private route requires bearer — GETs included.
             # Only /health is public (it discloses forge_id/version only).
@@ -345,18 +361,19 @@ def create_app(home: Path | None = None) -> FastAPI:
             oidc_enabled = bool((ctx.cfg.get("oidc") or {}).get("enabled"))
             valid_token = bool(oidc_claims) if oidc_enabled else ctx.tokens.check(token)
             if not valid_token:
-                err = {"code": "PF-UNAUTHORIZED", "message": "invalid or missing token",
-                       "severity": "error", "retryable": False}
+                err = {
+                    "code": "PF-UNAUTHORIZED",
+                    "message": "invalid or missing token",
+                    "severity": "error",
+                    "retryable": False,
+                }
                 return JSONResponse(status_code=401, content=envelope(error=err, cid=req.state.cid))
             # §3.2 authorization: product routes are workspace-scoped per
             # principal (config.principals; empty = local single-user wildcard).
             pid = _path_product(req.url.path)
             wid = _path_workspace(req.url.path)
             req.state.oidc_claims = oidc_claims
-            req.state.workspace_scope = (
-                _oidc_workspaces(oidc_claims) if oidc_enabled
-                else None
-            )
+            req.state.workspace_scope = _oidc_workspaces(oidc_claims) if oidc_enabled else None
             if pid:
                 try:
                     ws = ctx.store.get("products", pid)["workspace_id"]
@@ -365,8 +382,12 @@ def create_app(home: Path | None = None) -> FastAPI:
                 claimed_workspaces = _oidc_workspaces(oidc_claims)
                 scoped = ws in claimed_workspaces if oidc_enabled else True
                 if ws and (not scoped or (not oidc_enabled and not _principal_allows(ctx.cfg, token, ws))):
-                    err = {"code": "PF-FORBIDDEN", "message": "workspace not in principal scope",
-                           "severity": "error", "retryable": False}
+                    err = {
+                        "code": "PF-FORBIDDEN",
+                        "message": "workspace not in principal scope",
+                        "severity": "error",
+                        "retryable": False,
+                    }
                     return JSONResponse(status_code=403, content=envelope(error=err, cid=req.state.cid))
             if wid:
                 allowed = (
@@ -375,19 +396,31 @@ def create_app(home: Path | None = None) -> FastAPI:
                     else _principal_allows(ctx.cfg, token, wid)
                 )
                 if not allowed:
-                    err = {"code": "PF-FORBIDDEN", "message": "workspace not in principal scope",
-                           "severity": "error", "retryable": False}
+                    err = {
+                        "code": "PF-FORBIDDEN",
+                        "message": "workspace not in principal scope",
+                        "severity": "error",
+                        "retryable": False,
+                    }
                     return JSONResponse(status_code=403, content=envelope(error=err, cid=req.state.cid))
             if req.method not in {"GET", "HEAD", "OPTIONS"}:
                 role = _oidc_role(oidc_claims) if oidc_enabled else _principal_role(ctx.cfg, token)
                 required = "admin" if req.url.path.endswith(("/auth/rotate", "/auth/revoke")) else "editor"
                 if _ROLE_ORDER.get(role, -1) < _ROLE_ORDER[required]:
-                    err = {"code": "PF-FORBIDDEN", "message": f"{required} role required",
-                           "severity": "error", "retryable": False}
+                    err = {
+                        "code": "PF-FORBIDDEN",
+                        "message": f"{required} role required",
+                        "severity": "error",
+                        "retryable": False,
+                    }
                     return JSONResponse(status_code=403, content=envelope(error=err, cid=req.state.cid))
             if int(req.headers.get("content-length", 0)) > MAX_BODY:
-                err = {"code": "PF-PAYLOAD-TOO-LARGE", "message": "payload too large",
-                       "severity": "warning", "retryable": False}
+                err = {
+                    "code": "PF-PAYLOAD-TOO-LARGE",
+                    "message": "payload too large",
+                    "severity": "warning",
+                    "retryable": False,
+                }
                 return JSONResponse(status_code=413, content=envelope(error=err, cid=req.state.cid))
         resp = await call_next(req)
         resp.headers["X-Correlation-Id"] = req.state.cid
@@ -404,18 +437,24 @@ def create_app(home: Path | None = None) -> FastAPI:
 
     @app.get(f"{API_PREFIX}/health")
     def health() -> dict:
-        return envelope({"forge_id": FORGE_ID, "version": __version__,
-                         "status": "healthy", "uptime_s": round(time.time() - ctx.started, 2)})
+        return envelope(
+            {
+                "forge_id": FORGE_ID,
+                "version": __version__,
+                "status": "healthy",
+                "uptime_s": round(time.time() - ctx.started, 2),
+            }
+        )
 
     @app.get(f"{API_PREFIX}/jobs")
     def jobs_list(status: str | None = None, product_id: str | None = None) -> dict:
-        return envelope({"items": ctx.jobs.list(status, product_id),
-                         "recovered_on_boot": ctx.jobs_recovered})
+        return envelope({"items": ctx.jobs.list(status, product_id), "recovered_on_boot": ctx.jobs_recovered})
 
     @app.post(f"{API_PREFIX}/jobs")
     def jobs_enqueue(body: JobIn, req: Request) -> dict:
-        job = ctx.jobs.enqueue(body.kind, body.payload, body.product_id,
-                               body.idempotency_key, body.expires_at)
+        job = ctx.jobs.enqueue(
+            body.kind, body.payload, body.product_id, body.idempotency_key, body.expires_at
+        )
         ctx.audit(req, "job.enqueue", "job", job["id"], product_id=body.product_id or "")
         return envelope(job)
 
@@ -438,22 +477,25 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.get(f"{API_PREFIX}/delegates")
     def delegates_list() -> dict:
         from ..delegates.catalog import catalog
+
         return envelope({"delegates": catalog(ctx.cfg)})
 
     @app.post(f"{API_PREFIX}/delegates/{{did}}/call")
     def delegate_call(did: str, body: DelegateCallIn, req: Request) -> dict:
         from ..agents.routing import record_usage
         from ..delegates.runner import call
-        result = call(ctx.cfg, ctx.store, body.product_id, did,
-                      body.workflow, body.args or [])
-        ctx.audit(req, "delegate.call", "delegate", did,
-                  product_id=body.product_id or "", workflow=body.workflow)
+
+        result = call(ctx.cfg, ctx.store, body.product_id, did, body.workflow, body.args or [])
+        ctx.audit(
+            req, "delegate.call", "delegate", did, product_id=body.product_id or "", workflow=body.workflow
+        )
         record_usage(ctx.store, body.product_id or "global", {"tool_calls": 1})
         return envelope(result)
 
     @app.get(f"{API_PREFIX}/agent-templates")
     def agent_templates() -> dict:
         from ..agents.tools import list_templates
+
         return envelope({"items": list_templates()})
 
     @app.get(f"{API_PREFIX}/capabilities")
@@ -539,18 +581,17 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.store.get("workspaces", body.workspace_id)  # 404 if missing
         p = Product(id=new_id("prd"), status="active", **body.model_dump())
         ctx.store.put("products", p)
-        ctx.audit(req, "product.create", "product", p.id,
-                  product_id=p.id, workspace_id=p.workspace_id)
+        ctx.audit(req, "product.create", "product", p.id, product_id=p.id, workspace_id=p.workspace_id)
         return envelope(p.model_dump(mode="json", by_alias=True))
 
     @app.get(f"{API_PREFIX}/products")
-    def list_products(req: Request, workspace_id: str | None = None,
-                      limit: int = 100, offset: int = 0) -> dict:
+    def list_products(
+        req: Request, workspace_id: str | None = None, limit: int = 100, offset: int = 0
+    ) -> dict:
         scope = getattr(req.state, "workspace_scope", None)
         if scope is not None and workspace_id and workspace_id not in scope:
             return envelope({"items": []})
-        items = ctx.store.list("products", workspace_id=workspace_id,
-                               limit=limit, offset=offset)
+        items = ctx.store.list("products", workspace_id=workspace_id, limit=limit, offset=offset)
         if scope is not None:
             items = [item for item in items if item.get("workspace_id") in scope]
         return envelope({"items": items})
@@ -571,16 +612,21 @@ def create_app(home: Path | None = None) -> FastAPI:
         doc.update(data)
         product = Product.model_validate(doc)
         ctx.store.put("products", product)
-        ctx.audit(req, "product.update", "product", pid,
-                  product_id=pid, workspace_id=product.workspace_id)
+        ctx.audit(req, "product.update", "product", pid, product_id=pid, workspace_id=product.workspace_id)
         return envelope(product.model_dump(mode="json", by_alias=True))
 
     @app.delete(f"{API_PREFIX}/products/{{pid}}")
     def delete_product(pid: str, req: Request) -> dict:
         product = ctx.store.get("products", pid)
         ctx.store.delete("products", pid)
-        ctx.audit(req, "product.delete", "product", pid,
-                  product_id=pid, workspace_id=product.get("workspace_id", ""))
+        ctx.audit(
+            req,
+            "product.delete",
+            "product",
+            pid,
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
         return envelope({"deleted": True, "id": pid})
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/context")
@@ -616,17 +662,16 @@ def create_app(home: Path | None = None) -> FastAPI:
         resolves permissions server-side — client-supplied ids are never
         trusted on their own."""
         from ..errors import NotFoundError, PermissionDeniedError, ValidationError
+
         p = ctx.store.get("products", body.product_id)  # 404 if missing
         ws = str(p.get("workspace_id") or "")
         if body.workspace_id and body.workspace_id != ws:
-            raise ValidationError(
-                "workspace_id does not match product workspace")
+            raise ValidationError("workspace_id does not match product workspace")
         try:
             ctx.store.get("workspaces", ws)  # exists?
         except Exception as exc:
             raise NotFoundError(f"workspace {ws} not found") from exc
-        token = req.headers.get("authorization", "") \
-            .removeprefix("Bearer ").strip()
+        token = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
         claims = getattr(req.state, "oidc_claims", None)
         in_scope = (
             ws in _oidc_workspaces(claims)
@@ -636,8 +681,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         if not in_scope:
             raise PermissionDeniedError("workspace not in principal scope")
         if p.get("status") not in (None, "active"):
-            raise ValidationError(f"product status {p.get('status')!r} "
-                                  "cannot be authorized")
+            raise ValidationError(f"product status {p.get('status')!r} cannot be authorized")
         now = time.time()
         cid = new_id("ctx")
         issued = utcnow()
@@ -670,12 +714,18 @@ def create_app(home: Path | None = None) -> FastAPI:
             "status": "active",
         }
         from datetime import datetime
-        rec["expires_at"] = datetime.fromtimestamp(
-            exp_ts, tz=UTC).isoformat()
+
+        rec["expires_at"] = datetime.fromtimestamp(exp_ts, tz=UTC).isoformat()
         ctx.store.put_doc("session_contexts", rec)
-        ctx.audit(req, "context.authorize", "session_context", cid,
-                  product_id=body.product_id, workspace_id=ws,
-                  actor_name=body.principal)
+        ctx.audit(
+            req,
+            "context.authorize",
+            "session_context",
+            cid,
+            product_id=body.product_id,
+            workspace_id=ws,
+            actor_name=body.principal,
+        )
         out = dict(rec)
         out["state"] = "active"
         return envelope(out)
@@ -692,8 +742,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         rec["status"] = "revoked"
         rec["revoked_at"] = utcnow()
         ctx.store.put_doc("session_contexts", rec)
-        ctx.audit(req, "context.revoke", "session_context", cid,
-                  product_id=rec.get("product_id") or "")
+        ctx.audit(req, "context.revoke", "session_context", cid, product_id=rec.get("product_id") or "")
         rec["state"] = "revoked"
         return envelope(rec)
 
@@ -712,14 +761,24 @@ def create_app(home: Path | None = None) -> FastAPI:
                 if boards:
                     data["board_id"] = boards[0]["id"]
                 else:
-                    board = Board(id=new_id("brd"), workspace_id=product["workspace_id"],
-                                  product_id=pid, name=f"{product['name']} board")
+                    board = Board(
+                        id=new_id("brd"),
+                        workspace_id=product["workspace_id"],
+                        product_id=pid,
+                        name=f"{product['name']} board",
+                    )
                     ctx.store.put("boards", board)
                     data["board_id"] = board.id
             ent = m(id=new_id(p.rstrip("s")[:3]), **data)
             ctx.store.put(c, ent)
-            ctx.audit(req, f"{p}.create", c, ent.id, product_id=pid,
-                      workspace_id=ctx.store.get("products", pid).get("workspace_id"))
+            ctx.audit(
+                req,
+                f"{p}.create",
+                c,
+                ent.id,
+                product_id=pid,
+                workspace_id=ctx.store.get("products", pid).get("workspace_id"),
+            )
             return envelope(ent.model_dump(mode="json", by_alias=True))
 
         @app.get(f"{API_PREFIX}/products/{{pid}}/{path}")
@@ -732,19 +791,18 @@ def create_app(home: Path | None = None) -> FastAPI:
             doc = ctx.store.get(c, rid)
             if doc.get("product_id") != pid:
                 from ..errors import NotFoundError
+
                 raise NotFoundError(f"{c}/{rid} not in product {pid}")
             return envelope(doc)
 
         @app.patch(f"{API_PREFIX}/products/{{pid}}/{path}/{{rid}}")
-        def _patch(pid: str, rid: str, body: ScopedIn, req: Request,
-                   p=path, c=collection, m=model) -> dict:  # type: ignore[misc]
+        def _patch(pid: str, rid: str, body: ScopedIn, req: Request, p=path, c=collection, m=model) -> dict:  # type: ignore[misc]
             from ..errors import NotFoundError, ValidationError
 
             doc = ctx.store.get(c, rid)
             if doc.get("product_id") != pid:
                 raise NotFoundError(f"{c}/{rid} not in product {pid}")
-            data = {k: v for k, v in body.model_dump(exclude_unset=True).items()
-                    if k in in_fields}
+            data = {k: v for k, v in body.model_dump(exclude_unset=True).items() if k in in_fields}
             if not data:
                 raise ValidationError("at least one entity field is required")
             doc.update(data)
@@ -764,23 +822,60 @@ def create_app(home: Path | None = None) -> FastAPI:
             ctx.audit(req, f"{p}.delete", c, rid, product_id=pid)
             return envelope({"deleted": True, "id": rid})
 
-    _crud("sources", "knowledge_sources", KnowledgeSource,
-          {"name", "type", "locator", "classification", "metadata"})
-    _crud("agents", "agents", AgentDefinition,
-          {"name", "mission", "template", "knowledge_scope", "tools_allowed", "policies"})
-    _crud("data-sources", "data_sources", DataSource,
-          {"name", "connector", "locator", "dialect", "catalog_allowlist"})
+    _crud(
+        "sources",
+        "knowledge_sources",
+        KnowledgeSource,
+        {"name", "type", "locator", "classification", "metadata"},
+    )
+    _crud(
+        "agents",
+        "agents",
+        AgentDefinition,
+        {"name", "mission", "template", "knowledge_scope", "tools_allowed", "policies"},
+    )
+    _crud(
+        "data-sources",
+        "data_sources",
+        DataSource,
+        {"name", "connector", "locator", "dialect", "catalog_allowlist"},
+    )
     _crud("dashboards", "dashboards", Dashboard, {"name", "description", "widgets", "filters"})
     _crud("initiatives", "initiatives", Initiative, {"title", "hypothesis", "priority_score"})
-    _crud("tasks", "tasks", Task,
-          {"board_id", "column_id", "title", "description", "type", "priority",
-           "assignee", "labels", "due_date", "estimate", "position", "parent_id",
-           "initiative_id", "dependencies", "acceptance_criteria", "session_refs",
-           "archived", "version", "comments", "activities"})
+    _crud(
+        "tasks",
+        "tasks",
+        Task,
+        {
+            "board_id",
+            "column_id",
+            "title",
+            "description",
+            "type",
+            "priority",
+            "assignee",
+            "labels",
+            "due_date",
+            "estimate",
+            "position",
+            "parent_id",
+            "initiative_id",
+            "dependencies",
+            "acceptance_criteria",
+            "session_refs",
+            "archived",
+            "version",
+            "comments",
+            "activities",
+        },
+    )
     _crud("decisions", "decisions", Decision, {"title", "context", "decision", "alternatives"})
-    _crud("experiments", "experiments", Experiment,
-          {"title", "hypothesis", "design", "success_metrics", "guardrails",
-           "baseline", "status", "results"})
+    _crud(
+        "experiments",
+        "experiments",
+        Experiment,
+        {"title", "hypothesis", "design", "success_metrics", "guardrails", "baseline", "status", "results"},
+    )
     _crud("meetings", "meetings", Meeting, {"title", "transcript"})
     _crud("notebooks", "notebooks", Notebook, {"title"})
 
@@ -790,8 +885,12 @@ def create_app(home: Path | None = None) -> FastAPI:
         boards = ctx.store.list("boards", product_id=pid, limit=20)
         board = boards[0] if boards else None
         if board is None:
-            board = Board(id=new_id("brd"), workspace_id=product["workspace_id"],
-                          product_id=pid, name=f"{product['name']} board")
+            board = Board(
+                id=new_id("brd"),
+                workspace_id=product["workspace_id"],
+                product_id=pid,
+                name=f"{product['name']} board",
+            )
             ctx.store.put("boards", board)
         tasks = ctx.store.list("tasks", product_id=pid, limit=1000)
         board_doc = board.model_dump(mode="json", by_alias=True) if isinstance(board, Board) else board
@@ -802,8 +901,12 @@ def create_app(home: Path | None = None) -> FastAPI:
         product = ctx.store.get("products", pid)
         if ctx.store.list("boards", product_id=pid, limit=1):
             raise ForgeError("PF-CONFLICT", "product already has a board", 409)
-        board = Board(id=new_id("brd"), workspace_id=product["workspace_id"],
-                      product_id=pid, name=str(body.name if hasattr(body, "name") else "Board"))
+        board = Board(
+            id=new_id("brd"),
+            workspace_id=product["workspace_id"],
+            product_id=pid,
+            name=str(body.name if hasattr(body, "name") else "Board"),
+        )
         ctx.store.put("boards", board)
         ctx.audit(req, "board.create", "boards", board.id, product_id=pid)
         return envelope(board.model_dump(mode="json", by_alias=True))
@@ -822,13 +925,13 @@ def create_app(home: Path | None = None) -> FastAPI:
         doc["column_id"] = column_id
         doc["position"] = int(getattr(body, "position", doc.get("position", 0)) or 0)
         doc["version"] = int(doc.get("version", 1)) + 1
-        doc["activities"] = [*(doc.get("activities") or []),
-                               {"action": "moved", "column_id": column_id,
-                                "at": utcnow(), "actor": "local"}]
+        doc["activities"] = [
+            *(doc.get("activities") or []),
+            {"action": "moved", "column_id": column_id, "at": utcnow(), "actor": "local"},
+        ]
         ent = Task.model_validate(doc)
         ctx.store.put("tasks", ent)
-        ctx.audit(req, "task.move", "tasks", tid, product_id=pid,
-                  details={"column_id": column_id})
+        ctx.audit(req, "task.move", "tasks", tid, product_id=pid, details={"column_id": column_id})
         return envelope(ent.model_dump(mode="json", by_alias=True))
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/tasks/{{tid}}/comments", status_code=201)
@@ -839,8 +942,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         text = str(getattr(body, "text", "") or "").strip()
         if not text:
             raise ForgeError("PF-VALIDATION", "comment text is required", 422)
-        comment = {"id": new_id("cmt"), "author": "local", "text": text,
-                   "created_at": utcnow()}
+        comment = {"id": new_id("cmt"), "author": "local", "text": text, "created_at": utcnow()}
         doc["comments"] = [*(doc.get("comments") or []), comment]
         doc["version"] = int(doc.get("version", 1)) + 1
         ctx.store.put("tasks", Task.model_validate(doc))
@@ -850,12 +952,12 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.post(f"{API_PREFIX}/products/{{pid}}/notebooks/{{nid}}/blocks", status_code=201)
     def notebook_add_block(pid: str, nid: str, body: dict[str, Any], req: Request) -> dict:
         from ..intel.notebooks import add_block
+
         nb = ctx.store.get("notebooks", nid)
         if nb.get("product_id") != pid:
             raise ForgeError("PF-404", "notebook not in product", 404)
         try:
-            blk = add_block(nb, body.get("kind", "markdown"),
-                            body.get("content", ""), body.get("source_id"))
+            blk = add_block(nb, body.get("kind", "markdown"), body.get("content", ""), body.get("source_id"))
         except ValueError as exc:
             raise ForgeError("PF-VALIDATION", str(exc), 422) from exc
         ctx.store.put_doc("notebooks", nb)
@@ -866,6 +968,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     def notebook_run_block(pid: str, nid: str, bid: str, req: Request) -> dict:
         from ..analytics.engine import execute_query, validate_query
         from ..intel.notebooks import run_sql_block
+
         nb = ctx.store.get("notebooks", nid)
         if nb.get("product_id") != pid:
             raise ForgeError("PF-404", "notebook not in product", 404)
@@ -875,25 +978,33 @@ def create_app(home: Path | None = None) -> FastAPI:
         if block["kind"] != "sql":
             block["version"] += 1
             ctx.store.put_doc("notebooks", nb)
-            return envelope({"ran": False, "status": "markdown-rendered",
-                             "block_version": block["version"]})
+            return envelope({"ran": False, "status": "markdown-rendered", "block_version": block["version"]})
         dialect = "sqlite"
         if block.get("source_id"):
             import contextlib
+
             with contextlib.suppress(Exception):
-                dialect = (ctx.store.get("data_sources", block["source_id"])
-                           .get("dialect") or "sqlite")
+                dialect = ctx.store.get("data_sources", block["source_id"]).get("dialect") or "sqlite"
         res = run_sql_block(
-            block, lambda st: validate_query(st, dialect),
-            lambda sid, st: execute_query(ctx.store, pid, sid, st))
+            block,
+            lambda st: validate_query(st, dialect),
+            lambda sid, st: execute_query(ctx.store, pid, sid, st),
+        )
         ctx.store.put_doc("notebooks", nb)
-        ctx.audit(req, "notebooks.block-run", "notebooks", nid, product_id=pid,
-                  details={"block": bid, "status": res.get("status")})
+        ctx.audit(
+            req,
+            "notebooks.block-run",
+            "notebooks",
+            nid,
+            product_id=pid,
+            details={"block": bid, "status": res.get("status")},
+        )
         return envelope(res)
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/notebooks/{{nid}}/render")
     def notebook_render(pid: str, nid: str) -> dict:
         from ..intel.notebooks import render
+
         nb = ctx.store.get("notebooks", nid)
         if nb.get("product_id") != pid:
             raise ForgeError("PF-404", "notebook not in product", 404)
@@ -902,6 +1013,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.post(f"{API_PREFIX}/products/{{pid}}/experiments/{{eid}}/conclude")
     def experiment_conclude(pid: str, eid: str, body: dict[str, Any], req: Request) -> dict:
         from ..intel.experiments import conclude_experiment
+
         exp = ctx.store.get("experiments", eid)
         if exp.get("product_id") != pid:
             raise ForgeError("PF-404", "experiment not in product", 404)
@@ -911,11 +1023,14 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.audit(req, "experiments.conclude", "experiments", eid, product_id=pid)
         refs = []
         if body.get("record_decision"):
-            dec = Decision(id=new_id("dec"), product_id=pid,
-                           title=f"Experiment outcome: {exp['title']}",
-                           context=exp.get("hypothesis", ""),
-                           decision=upd["outcome"],
-                           evidence=[f"experiment:{eid}"])
+            dec = Decision(
+                id=new_id("dec"),
+                product_id=pid,
+                title=f"Experiment outcome: {exp['title']}",
+                context=exp.get("hypothesis", ""),
+                decision=upd["outcome"],
+                evidence=[f"experiment:{eid}"],
+            )
             ctx.store.put("decisions", dec)
             refs.append(dec.id)
         return envelope({**upd, "decision_refs": refs})
@@ -923,6 +1038,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.get(f"{API_PREFIX}/products/{{pid}}/decisions/{{did}}/completeness")
     def decision_completeness(pid: str, did: str) -> dict:
         from ..intel.experiments import decision_completeness
+
         dec = ctx.store.get("decisions", did)
         if dec.get("product_id") != pid:
             raise ForgeError("PF-404", "decision not in product", 404)
@@ -931,6 +1047,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.post(f"{API_PREFIX}/products/{{pid}}/meetings/{{mid}}/extract")
     def meeting_extract(pid: str, mid: str, req: Request) -> dict:
         from ..intel.experiments import extract_drafts
+
         mtg = ctx.store.get("meetings", mid)
         if mtg.get("product_id") != pid:
             raise ForgeError("PF-404", "meeting not in product", 404)
@@ -938,9 +1055,14 @@ def create_app(home: Path | None = None) -> FastAPI:
         mtg["status"] = "draft"
         ctx.store.put_doc("meetings", mtg)
         ctx.audit(req, "meetings.extract", "meetings", mid, product_id=pid)
-        return envelope({"meeting_id": mid, "status": "draft",
-                         "draft_items": mtg["draft_items"],
-                         "note": "drafts only — publish requires human review"})
+        return envelope(
+            {
+                "meeting_id": mid,
+                "status": "draft",
+                "draft_items": mtg["draft_items"],
+                "note": "drafts only — publish requires human review",
+            }
+        )
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/meetings/{{mid}}/publish")
     def meeting_publish(pid: str, mid: str, body: dict[str, Any], req: Request) -> dict:
@@ -948,29 +1070,33 @@ def create_app(home: Path | None = None) -> FastAPI:
         if mtg.get("product_id") != pid:
             raise ForgeError("PF-404", "meeting not in product", 404)
         if not body.get("reviewed"):
-            raise ForgeError("PF-REVIEW-REQUIRED",
-                             "human review required: resubmit with reviewed=true", 409)
+            raise ForgeError("PF-REVIEW-REQUIRED", "human review required: resubmit with reviewed=true", 409)
         refs: list[str] = []
         for item in body.get("items") or mtg.get("draft_items") or []:
             if item.get("kind") == "decision":
-                dec = Decision(id=new_id("dec"), product_id=pid,
-                               title=item["text"][:80], decision=item["text"],
-                               evidence=[f"meeting:{mid}:line{item.get('line')}"])
+                dec = Decision(
+                    id=new_id("dec"),
+                    product_id=pid,
+                    title=item["text"][:80],
+                    decision=item["text"],
+                    evidence=[f"meeting:{mid}:line{item.get('line')}"],
+                )
                 ctx.store.put("decisions", dec)
                 refs.append(dec.id)
             elif item.get("kind") == "action":
-                ini = Initiative(id=new_id("ini"), product_id=pid,
-                                 title=item["text"][:80],
-                                 evidence=[f"meeting:{mid}:line{item.get('line')}"])
+                ini = Initiative(
+                    id=new_id("ini"),
+                    product_id=pid,
+                    title=item["text"][:80],
+                    evidence=[f"meeting:{mid}:line{item.get('line')}"],
+                )
                 ctx.store.put("initiatives", ini)
                 refs.append(ini.id)
         mtg["status"] = "published"
         mtg["published_refs"] = refs
         ctx.store.put_doc("meetings", mtg)
-        ctx.audit(req, "meetings.publish", "meetings", mid, product_id=pid,
-                  details={"refs": refs})
-        return envelope({"meeting_id": mid, "status": "published",
-                         "published_refs": refs})
+        ctx.audit(req, "meetings.publish", "meetings", mid, product_id=pid, details={"refs": refs})
+        return envelope({"meeting_id": mid, "status": "published", "published_refs": refs})
 
     # -- knowledge (Cycle 3) ---------------------------------------------------
 
@@ -978,20 +1104,33 @@ def create_app(home: Path | None = None) -> FastAPI:
     def kn_query(pid: str, body: QueryIn) -> dict:
         ctx.store.get("products", pid)
         hits = ctx.store.search_fts(pid, body.question, limit=body.limit)
-        citations = [{"chunk_id": h["id"], "document_id": h["document_id"],
-                      "snippet": h["snip"], "title": ctx.store.doc_title(h["document_id"])}
-                     for h in hits]
+        citations = [
+            {
+                "chunk_id": h["id"],
+                "document_id": h["document_id"],
+                "snippet": h["snip"],
+                "title": ctx.store.doc_title(h["document_id"]),
+            }
+            for h in hits
+        ]
         from ..gateway.synthesis import synthesize
+
         synth = synthesize(ctx.store, pid, body.question, citations, ctx.cfg)
-        return envelope({"question": body.question,
-                         "citations": citations,
-                         "answer": synth.get("text"),
-                         "synthesis": ("ok" if synth["status"] == "ok"
-                                       else f"unavailable:{synth.get('reason', 'provider')}"
-                                       if synth["status"] == "unavailable"
-                                       else f"error:{synth.get('error', 'unknown')}"),
-                         "synthesis_meta": {k: v for k, v in synth.items()
-                                            if k not in ("text", "status")}})
+        return envelope(
+            {
+                "question": body.question,
+                "citations": citations,
+                "answer": synth.get("text"),
+                "synthesis": (
+                    "ok"
+                    if synth["status"] == "ok"
+                    else f"unavailable:{synth.get('reason', 'provider')}"
+                    if synth["status"] == "unavailable"
+                    else f"error:{synth.get('error', 'unknown')}"
+                ),
+                "synthesis_meta": {k: v for k, v in synth.items() if k not in ("text", "status")},
+            }
+        )
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/knowledge/extract")
     def kn_extract(pid: str, req: Request) -> dict:
@@ -1006,9 +1145,13 @@ def create_app(home: Path | None = None) -> FastAPI:
         for r in rels:
             ctx.store.put("relations", r)
         ctx.audit(req, "knowledge.extract", "product", pid, product_id=pid)
-        return envelope({"entities": len(ents), "relations": len(rels),
-                         "kinds": {k: sum(1 for e in ents if e.kind.value == k)
-                                   for k in {e.kind.value for e in ents}}})
+        return envelope(
+            {
+                "entities": len(ents),
+                "relations": len(rels),
+                "kinds": {k: sum(1 for e in ents if e.kind.value == k) for k in {e.kind.value for e in ents}},
+            }
+        )
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/graph")
     def kn_graph(pid: str, limit: int = 2000) -> dict:
@@ -1033,10 +1176,15 @@ def create_app(home: Path | None = None) -> FastAPI:
         text = str(body.model_dump().get("content", ""))
         if not text:
             from ..errors import ValidationError
+
             raise ValidationError("document content is required")
-        doc = Document(id=new_id("doc"), product_id=pid,
-                       title=str(body.model_dump().get("title", "untitled")),
-                       content_hash=sha256_text(text), status=DocumentStatus.IMPORTED)
+        doc = Document(
+            id=new_id("doc"),
+            product_id=pid,
+            title=str(body.model_dump().get("title", "untitled")),
+            content_hash=sha256_text(text),
+            status=DocumentStatus.IMPORTED,
+        )
         ctx.store.put("documents", doc)
         doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(text))
         doc.status = DocumentStatus.INDEXED
@@ -1059,15 +1207,17 @@ def create_app(home: Path | None = None) -> FastAPI:
         for hit in hits:
             doc = ctx.store.get("documents", hit["document_id"])
             metadata = doc.get("metadata") or {}
-            items.append({
-                "document_id": hit["document_id"],
-                "chunk_id": hit["id"],
-                "seq": hit["seq"],
-                "title": doc.get("title", hit["document_id"]),
-                "snippet": hit["snip"],
-                "source": metadata.get("source"),
-                "version": metadata.get("version", 1),
-            })
+            items.append(
+                {
+                    "document_id": hit["document_id"],
+                    "chunk_id": hit["id"],
+                    "seq": hit["seq"],
+                    "title": doc.get("title", hit["document_id"]),
+                    "snippet": hit["snip"],
+                    "source": metadata.get("source"),
+                    "version": metadata.get("version", 1),
+                }
+            )
         return envelope({"schema": "productforge/DocumentSearch/v1", "items": items})
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/knowledge/search")
@@ -1085,31 +1235,35 @@ def create_app(home: Path | None = None) -> FastAPI:
             doc = ctx.store.get("documents", did)
         except KeyError as exc:
             from ..errors import NotFoundError
+
             raise NotFoundError("document not found") from exc
         if doc.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError("document not in product")
-        chunks = [chunk for chunk in ctx.store.list_chunks(pid)
-                  if chunk.get("document_id") == did]
-        return envelope({
-            "schema": "productforge/DocumentExplorer/v1",
-            "document": doc,
-            "content": {"chunks": chunks, "chunk_count": len(chunks)},
-            "source": (doc.get("metadata") or {}).get("source"),
-            "versions": explorer_versions(ctx.store, pid, doc),
-            "relations": [],
-        })
+        chunks = [chunk for chunk in ctx.store.list_chunks(pid) if chunk.get("document_id") == did]
+        return envelope(
+            {
+                "schema": "productforge/DocumentExplorer/v1",
+                "document": doc,
+                "content": {"chunks": chunks, "chunk_count": len(chunks)},
+                "source": (doc.get("metadata") or {}).get("source"),
+                "versions": explorer_versions(ctx.store, pid, doc),
+                "relations": [],
+            }
+        )
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/url/preview")
-    def preview_url_doc(pid: str, url: str) -> dict:
+    def preview_url_doc(pid: str, url: str, extractor: str = "stdlib") -> dict:
         """Fetch a bounded, non-mutating URL preview after SSRF validation."""
         ctx.store.get("products", pid)
         try:
-            captured = fetch_url_document(url)
+            captured = fetch_url_document(url, extractor=extractor)
         except UrlCaptureError as exc:
             raise UrlCaptureForgeError(str(exc), details={"reason_code": exc.code, **exc.details}) from exc
-        return envelope({k: v for k, v in captured.items() if k != "content"} |
-                        {"preview": captured["content"]})
+        return envelope(
+            {k: v for k, v in captured.items() if k != "content"} | {"preview": captured["content"]}
+        )
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-workspace", status_code=201)
     def import_workspace_doc(pid: str, body: ScopedIn, req: Request) -> dict:
@@ -1127,31 +1281,59 @@ def create_app(home: Path | None = None) -> FastAPI:
             imported = import_workspace_document(root, raw_path)
         except WorkspaceDiscoveryError as exc:
             raise ForgeError("PF-WORKSPACE-DOCUMENT", str(exc), 422) from exc
-        existing = [doc for doc in ctx.store.list("documents", product_id=pid)
-                    if (doc.get("metadata") or {}).get("workspace_path") == imported["path"]
-                    and doc.get("content_hash") == imported["content_hash"]]
+        existing = [
+            doc
+            for doc in ctx.store.list("documents", product_id=pid)
+            if (doc.get("metadata") or {}).get("workspace_path") == imported["path"]
+            and doc.get("content_hash") == imported["content_hash"]
+        ]
         if existing:
-            return envelope({**existing[0], "state": "already_imported",
-                             "source_path": imported["path"], "source_kind": imported["kind"]})
-        metadata, _ = prepare_version(ctx.store, pid, {
-            "source": "workspace", "workspace_path": imported["path"],
-            "classification": imported["kind"], "size": imported["size"],
-        })
+            return envelope(
+                {
+                    **existing[0],
+                    "state": "already_imported",
+                    "source_path": imported["path"],
+                    "source_kind": imported["kind"],
+                }
+            )
+        metadata, _ = prepare_version(
+            ctx.store,
+            pid,
+            {
+                "source": "workspace",
+                "workspace_path": imported["path"],
+                "classification": imported["kind"],
+                "size": imported["size"],
+            },
+        )
         doc = Document(
-            id=new_id("doc"), product_id=pid,
+            id=new_id("doc"),
+            product_id=pid,
             title=str(body.model_dump().get("title") or imported["title"]),
-            content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
+            content_hash=imported["content_hash"],
+            status=DocumentStatus.IMPORTED,
             metadata=metadata,
         )
         ctx.store.put("documents", doc)
         doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(imported["content"]))
         doc.status = DocumentStatus.INDEXED
         ctx.store.put("documents", doc)
-        ctx.audit(req, "workspace.document.import", "documents", doc.id, product_id=pid,
-                  workspace_id=product.get("workspace_id", ""))
-        return envelope({**doc.model_dump(mode="json", by_alias=True),
-                         "state": "imported", "source_path": imported["path"],
-                         "source_kind": imported["kind"]})
+        ctx.audit(
+            req,
+            "workspace.document.import",
+            "documents",
+            doc.id,
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
+        return envelope(
+            {
+                **doc.model_dump(mode="json", by_alias=True),
+                "state": "imported",
+                "source_path": imported["path"],
+                "source_kind": imported["kind"],
+            }
+        )
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-url", status_code=201)
     def import_url_doc(pid: str, body: ScopedIn, req: Request) -> dict:
@@ -1168,38 +1350,67 @@ def create_app(home: Path | None = None) -> FastAPI:
         if not raw_url:
             raise ValidationError("url is required")
         try:
-            captured = fetch_url_document(raw_url)
+            captured = fetch_url_document(raw_url, extractor=str(payload.get("extractor") or "stdlib"))
         except UrlCaptureError as exc:
             raise UrlCaptureForgeError(str(exc), details={"reason_code": exc.code, **exc.details}) from exc
-        existing = [doc for doc in ctx.store.list("documents", product_id=pid)
-                    if (doc.get("metadata") or {}).get("source_url") == captured["url"]
-                    and doc.get("content_hash") == captured["content_hash"]]
+        existing = [
+            doc
+            for doc in ctx.store.list("documents", product_id=pid)
+            if (doc.get("metadata") or {}).get("source_url") == captured["url"]
+            and doc.get("content_hash") == captured["content_hash"]
+        ]
         if existing:
-            return envelope({**existing[0], "state": "already_imported",
-                             "source_url": captured["url"], "source_kind": "url"})
-        metadata, _ = prepare_version(ctx.store, pid, {
-            "source": "url", "source_url": captured["url"],
-            "content_type": captured["content_type"],
-            "extractor": captured["extractor"], "size": captured["size"],
-            "metrics": captured["metrics"], "warnings": captured["warnings"],
-            "provenance": captured["provenance"],
-        })
+            return envelope(
+                {
+                    **existing[0],
+                    "state": "already_imported",
+                    "source_url": captured["url"],
+                    "source_kind": "url",
+                }
+            )
+        metadata, _ = prepare_version(
+            ctx.store,
+            pid,
+            {
+                "source": "url",
+                "source_url": captured["url"],
+                "content_type": captured["content_type"],
+                "extractor": captured["extractor"],
+                "size": captured["size"],
+                "metrics": captured["metrics"],
+                "warnings": captured["warnings"],
+                "provenance": captured["provenance"],
+            },
+        )
         doc = Document(
-            id=new_id("doc"), product_id=pid,
+            id=new_id("doc"),
+            product_id=pid,
             title=str(payload.get("title") or captured["title"]),
-            content_hash=captured["content_hash"], status=DocumentStatus.IMPORTED,
+            content_hash=captured["content_hash"],
+            status=DocumentStatus.IMPORTED,
             metadata=metadata,
         )
         ctx.store.put("documents", doc)
         doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(captured["content"]))
         doc.status = DocumentStatus.INDEXED
         ctx.store.put("documents", doc)
-        ctx.audit(req, "url.document.import", "documents", doc.id, product_id=pid,
-                  workspace_id=product.get("workspace_id", ""))
-        return envelope({**doc.model_dump(mode="json", by_alias=True),
-                         "state": "imported", "source_url": captured["url"],
-                         "source_kind": "url", "capture": {k: v for k, v in captured.items()
-                                                               if k != "content"}})
+        ctx.audit(
+            req,
+            "url.document.import",
+            "documents",
+            doc.id,
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
+        return envelope(
+            {
+                **doc.model_dump(mode="json", by_alias=True),
+                "state": "imported",
+                "source_url": captured["url"],
+                "source_kind": "url",
+                "capture": {k: v for k, v in captured.items() if k != "content"},
+            }
+        )
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/preview")
     def preview_obsidian_doc(pid: str, path: str) -> dict:
@@ -1208,8 +1419,9 @@ def create_app(home: Path | None = None) -> FastAPI:
             imported = import_vault_document(_obsidian_vault(), path)
         except ObsidianVaultError as exc:
             raise ForgeError(str(exc), details={"code": exc.code}) from exc
-        return envelope({k: v for k, v in imported.items() if k != "content"} |
-                        {"preview": imported["content"]})
+        return envelope(
+            {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
+        )
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-obsidian", status_code=201)
     def import_obsidian_doc(pid: str, body: ScopedIn, req: Request) -> dict:
@@ -1228,31 +1440,59 @@ def create_app(home: Path | None = None) -> FastAPI:
             imported = import_vault_document(_obsidian_vault(), raw_path)
         except ObsidianVaultError as exc:
             raise ForgeError(str(exc), details={"code": exc.code}) from exc
-        existing = [doc for doc in ctx.store.list("documents", product_id=pid)
-                    if (doc.get("metadata") or {}).get("obsidian_path") == imported["path"]
-                    and doc.get("content_hash") == imported["content_hash"]]
+        existing = [
+            doc
+            for doc in ctx.store.list("documents", product_id=pid)
+            if (doc.get("metadata") or {}).get("obsidian_path") == imported["path"]
+            and doc.get("content_hash") == imported["content_hash"]
+        ]
         if existing:
-            return envelope({**existing[0], "state": "already_imported",
-                             "source_path": imported["path"], "source_kind": "obsidian"})
-        metadata, _ = prepare_version(ctx.store, pid, {
-            "source": "obsidian", "obsidian_path": imported["path"],
-            "size": imported["size"], "provenance": imported["provenance"],
-        })
+            return envelope(
+                {
+                    **existing[0],
+                    "state": "already_imported",
+                    "source_path": imported["path"],
+                    "source_kind": "obsidian",
+                }
+            )
+        metadata, _ = prepare_version(
+            ctx.store,
+            pid,
+            {
+                "source": "obsidian",
+                "obsidian_path": imported["path"],
+                "size": imported["size"],
+                "provenance": imported["provenance"],
+            },
+        )
         doc = Document(
-            id=new_id("doc"), product_id=pid,
+            id=new_id("doc"),
+            product_id=pid,
             title=str(payload.get("title") or imported["title"]),
-            content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
+            content_hash=imported["content_hash"],
+            status=DocumentStatus.IMPORTED,
             metadata=metadata,
         )
         ctx.store.put("documents", doc)
         doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(imported["content"]))
         doc.status = DocumentStatus.INDEXED
         ctx.store.put("documents", doc)
-        ctx.audit(req, "obsidian.document.import", "documents", doc.id, product_id=pid,
-                  workspace_id=product.get("workspace_id", ""))
-        return envelope({**doc.model_dump(mode="json", by_alias=True),
-                         "state": "imported", "source_path": imported["path"],
-                         "source_kind": "obsidian"})
+        ctx.audit(
+            req,
+            "obsidian.document.import",
+            "documents",
+            doc.id,
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
+        return envelope(
+            {
+                **doc.model_dump(mode="json", by_alias=True),
+                "state": "imported",
+                "source_path": imported["path"],
+                "source_kind": "obsidian",
+            }
+        )
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/documents/to-obsidian")
     def export_obsidian_doc(pid: str, body: ScopedIn, req: Request) -> dict:
@@ -1270,8 +1510,14 @@ def create_app(home: Path | None = None) -> FastAPI:
             exported = export_vault_document(_obsidian_vault(), raw_path, content)
         except ObsidianVaultError as exc:
             raise ForgeError(str(exc), details={"code": exc.code}) from exc
-        ctx.audit(req, "obsidian.document.export", "obsidian", exported["path"],
-                  product_id=pid, workspace_id=product.get("workspace_id", ""))
+        ctx.audit(
+            req,
+            "obsidian.document.export",
+            "obsidian",
+            exported["path"],
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
         return envelope(exported)
 
     # -- agents runtime (Cycle 4) ---------------------------------------------
@@ -1280,6 +1526,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         doc = ctx.store.get("agents", aid)
         if doc.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"agent {aid} not in product {pid}")
         return AgentDefinition.model_validate(doc)
 
@@ -1295,8 +1542,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.get(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}/runs")
     def agent_runs(pid: str, aid: str) -> dict:
         _agent(pid, aid)
-        runs = [r for r in ctx.store.list("agent_runs", product_id=pid)
-                if r.get("agent_id") == aid]
+        runs = [r for r in ctx.store.list("agent_runs", product_id=pid) if r.get("agent_id") == aid]
         return envelope({"items": runs})
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/agents/{{aid}}/runs/{{rid}}/cancel")
@@ -1313,10 +1559,14 @@ def create_app(home: Path | None = None) -> FastAPI:
         from ..agents.evals import run_evals
 
         agent = _agent(pid, aid)
-        cases = (body.model_dump().get("cases") if body else None)
+        cases = body.model_dump().get("cases") if body else None
         report = run_evals(ctx.store, agent, cases)
-        agent.eval_summary = {"score": report["score"], "passed": report["passed"],
-                              "total": report["total"], "at": utcnow()}
+        agent.eval_summary = {
+            "score": report["score"],
+            "passed": report["passed"],
+            "total": report["total"],
+            "at": utcnow(),
+        }
         ctx.store.put("agents", agent)
         ctx.audit(req, "agent.eval", "agents", aid, product_id=pid)
         return envelope(report)
@@ -1333,12 +1583,13 @@ def create_app(home: Path | None = None) -> FastAPI:
             raise UnsafeOperationError("agent has no tools_allowed — configure permissions first")
         if score < float(gate["eval_gate"]):
             raise UnsafeOperationError(
-                f"eval score {score} below publish gate {gate['eval_gate']} "
-                f"(risk tier {gate['tier']})")
+                f"eval score {score} below publish gate {gate['eval_gate']} (risk tier {gate['tier']})"
+            )
         if gate["approval_required"] and not agent.policies.get("allow_destructive"):
             raise UnsafeOperationError(
                 "high-risk agent (destructive/unknown tools) requires "
-                "policies.allow_destructive=true before publish")
+                "policies.allow_destructive=true before publish"
+            )
         agent.status = agent.status.PUBLISHED
         agent.version += 1
         ctx.store.put("agents", agent)
@@ -1384,12 +1635,14 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.get(f"{API_PREFIX}/products/{{pid}}/health")
     def product_health(pid: str) -> dict:
         from ..intel.health import compute_health
+
         ctx.store.get("products", pid)
         return envelope(compute_health(ctx.store, pid))
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/evidence-graph")
     def evidence_graph(pid: str) -> dict:
         from ..intel.health import evidence_graph
+
         ctx.store.get("products", pid)
         return envelope(evidence_graph(ctx.store, pid))
 
@@ -1401,6 +1654,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.post(f"{API_PREFIX}/products/{{pid}}/metrics")
     def metrics_put(pid: str, body: dict[str, Any], req: Request) -> dict:
         from ..analytics.metrics import put_metric
+
         ctx.store.get("products", pid)
         doc = put_metric(ctx.store, pid, body)
         ctx.audit(req, "metric.put", "metrics", doc["id"], product_id=pid)
@@ -1409,6 +1663,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.post(f"{API_PREFIX}/products/{{pid}}/metrics/resolve")
     def metrics_resolve(pid: str, body: QueryIn) -> dict:
         from ..analytics.metrics import resolve
+
         ctx.store.get("products", pid)
         return envelope(resolve(ctx.store, pid, body.question))
 
@@ -1427,9 +1682,14 @@ def create_app(home: Path | None = None) -> FastAPI:
                 tables = ds.get("catalog_allowlist") or ds.get("tables") or []
                 if tables:
                     sql = metric_sql(m, tables[0])
-                    return envelope({"ok": True, "sql": sql,
-                                     "metric": {"id": m["id"], "name": m["name"]},
-                                     "via": "semantic-catalog"})
+                    return envelope(
+                        {
+                            "ok": True,
+                            "sql": sql,
+                            "metric": {"id": m["id"], "name": m["name"]},
+                            "via": "semantic-catalog",
+                        }
+                    )
         tables: list[str] = []
         if body.source_id:
             ds = ctx.store.get("data_sources", body.source_id)
@@ -1450,9 +1710,11 @@ def create_app(home: Path | None = None) -> FastAPI:
         statement = body.statement or (compile_spec(body.spec) if body.spec else None)
         if not statement:
             from ..errors import ValidationError
+
             raise ValidationError("statement or spec required")
-        run = execute_query(ctx.store, pid, body.source_id, statement,
-                            row_limit=body.row_limit, timeout_s=body.timeout_s)
+        run = execute_query(
+            ctx.store, pid, body.source_id, statement, row_limit=body.row_limit, timeout_s=body.timeout_s
+        )
         ctx.audit(req, "query.execute", "query_runs", run["id"], product_id=pid)
         return envelope(run)
 
@@ -1474,6 +1736,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         run = ctx.store.get("query_runs", qid)
         if run.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"query {qid} not in product {pid}")
         return envelope(run)
 
@@ -1484,8 +1747,11 @@ def create_app(home: Path | None = None) -> FastAPI:
         run = ctx.store.get("query_runs", qid)
         if run.get("product_id") != pid:
             raise NotFoundError(f"query {qid} not in product {pid}")
-        data = {k: v for k, v in body.model_dump(exclude_unset=True).items()
-                if k in {"statement", "status", "error", "truncated"}}
+        data = {
+            k: v
+            for k, v in body.model_dump(exclude_unset=True).items()
+            if k in {"statement", "status", "error", "truncated"}
+        }
         if not data:
             raise ValidationError("at least one query field is required")
         run.update(data)
@@ -1511,6 +1777,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         ds = ctx.store.get("data_sources", sid)
         if ds.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"data source {sid} not in product {pid}")
         from pathlib import Path
 
@@ -1524,6 +1791,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         doc = ctx.store.get("data_sources", sid)
         if doc.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"data source {sid} not in product {pid}")
         ds = DataSource.model_validate(doc)
         try:
@@ -1548,6 +1816,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         dash = ctx.store.get("dashboards", did)
         if dash.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"dashboard {did} not in product {pid}")
         result = render_dashboard(ctx.store, pid, dash)
         ctx.audit(req, "dashboard.render", "dashboards", did, product_id=pid)
@@ -1562,8 +1831,9 @@ def create_app(home: Path | None = None) -> FastAPI:
         doc = ctx.store.get("initiatives", iid)
         if doc.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"initiative {iid} not in product {pid}")
-        factors = (body.model_dump() if body else {})
+        factors = body.model_dump() if body else {}
         res = score_initiative(doc, factors.get("factors", {}))
         doc["priority_score"] = res["score"]
         doc.setdefault("metadata", {})["prioritization"] = res
@@ -1581,6 +1851,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         doc = ctx.store.get("initiatives", iid)
         if doc.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"initiative {iid} not in product {pid}")
         prd = generate_prd(ctx.store, pid, doc)
         ctx.audit(req, "initiative.prd", "initiatives", iid, product_id=pid)
@@ -1604,20 +1875,26 @@ def create_app(home: Path | None = None) -> FastAPI:
             if provider == "aws":
                 from ..integrations import aws
 
-                fn = {"glue": lambda: aws.glue_catalog(p.get("database"), p.get("region")),
-                      "quicksight": lambda: aws.quicksight_inventory(p["account_id"], p.get("region")),
-                      "cost": lambda: aws.cost_summary(int(p.get("days", 30)), p.get("region"))}
+                fn = {
+                    "glue": lambda: aws.glue_catalog(p.get("database"), p.get("region")),
+                    "quicksight": lambda: aws.quicksight_inventory(p["account_id"], p.get("region")),
+                    "cost": lambda: aws.cost_summary(int(p.get("days", 30)), p.get("region")),
+                }
             elif provider == "azure":
                 from ..integrations import azure
 
-                fn = {"kql-verify": lambda: azure.KQLConnector(p["workspace_id"]).verify(),
-                      "powerbi": lambda: azure.powerbi_inventory(p.get("token")),
-                      "fabric": lambda: azure.fabric_inventory(p["workspace_id"], p.get("token"))}
+                fn = {
+                    "kql-verify": lambda: azure.KQLConnector(p["workspace_id"]).verify(),
+                    "powerbi": lambda: azure.powerbi_inventory(p.get("token")),
+                    "fabric": lambda: azure.fabric_inventory(p["workspace_id"], p.get("token")),
+                }
             else:
                 from ..errors import ValidationError
+
                 raise ValidationError(f"provider must be aws|azure, got {provider}")
             if service not in fn:
                 from ..errors import ValidationError
+
                 raise ValidationError(f"service must be one of {sorted(fn)}")
             result = fn[service]()
         except ForgeError:
@@ -1639,24 +1916,34 @@ def create_app(home: Path | None = None) -> FastAPI:
             parsed = parse_openapi(spec)
         except Exception:
             parsed = parse_asyncapi(spec)
-        rec = {"id": new_id("api"), "schema": "productforge/ApiSpec/v1",
-               "product_id": pid, "name": p.get("name") or parsed.get("title", "api"),
-               "kind": parsed["kind"], "version": parsed.get("version"),
-               "surface": parsed, "created_at": utcnow(), "updated_at": utcnow()}
+        rec = {
+            "id": new_id("api"),
+            "schema": "productforge/ApiSpec/v1",
+            "product_id": pid,
+            "name": p.get("name") or parsed.get("title", "api"),
+            "kind": parsed["kind"],
+            "version": parsed.get("version"),
+            "surface": parsed,
+            "created_at": utcnow(),
+            "updated_at": utcnow(),
+        }
         ctx.store.put_doc("api_specs", rec, name=rec["name"])
         n = 0
         for op in parsed.get("operations", []):
-            ent = KnowledgeEntity(id=new_id("ent"), product_id=pid, kind=EntityKind.API,
-                                  name=f"{op['method']} {op['path']}",
-                                  description=op.get("summary", ""), confidence=0.95,
-                                  provisional=False,
-                                  attributes={"operation_id": op.get("operation_id"),
-                                              "api_spec_id": rec["id"]})
+            ent = KnowledgeEntity(
+                id=new_id("ent"),
+                product_id=pid,
+                kind=EntityKind.API,
+                name=f"{op['method']} {op['path']}",
+                description=op.get("summary", ""),
+                confidence=0.95,
+                provisional=False,
+                attributes={"operation_id": op.get("operation_id"), "api_spec_id": rec["id"]},
+            )
             ctx.store.put("entities", ent)
             n += 1
         ctx.audit(req, "api.import", "api_specs", rec["id"], product_id=pid)
-        return envelope({"api_spec_id": rec["id"], "kind": parsed["kind"],
-                         "entities_created": n})
+        return envelope({"api_spec_id": rec["id"], "kind": parsed["kind"], "entities_created": n})
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/apis")
     def api_list(pid: str) -> dict:
@@ -1670,13 +1957,23 @@ def create_app(home: Path | None = None) -> FastAPI:
         rec = ctx.store.get("api_specs", aid)
         if rec.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"api {aid} not in product {pid}")
-        old_doc = {"openapi": rec["surface"].get("version"),
-                   "info": {"title": rec["name"]},
-                   "paths": _surface_to_paths(rec["surface"]),
-                   "components": {"schemas": {k: {"type": v["type"], "required": v["required"],
-                                                  "properties": {p_: {} for p_ in v["properties"]}}
-                                              for k, v in rec["surface"]["schemas"].items()}}}
+        old_doc = {
+            "openapi": rec["surface"].get("version"),
+            "info": {"title": rec["name"]},
+            "paths": _surface_to_paths(rec["surface"]),
+            "components": {
+                "schemas": {
+                    k: {
+                        "type": v["type"],
+                        "required": v["required"],
+                        "properties": {p_: {} for p_ in v["properties"]},
+                    }
+                    for k, v in rec["surface"]["schemas"].items()
+                }
+            },
+        }
         new_spec = load_spec(body.model_dump().get("spec") or {})
         report = diff_openapi(old_doc, new_spec)
         ctx.audit(req, "api.diff", "api_specs", aid, product_id=pid)
@@ -1686,10 +1983,16 @@ def create_app(home: Path | None = None) -> FastAPI:
     def contract_create(pid: str, body: ScopedIn, req: Request) -> dict:
         ctx.store.get("products", pid)
         p = body.model_dump()
-        rec = {"id": new_id("ctr"), "schema": "productforge/DataContract/v1",
-               "product_id": pid, "name": p.get("name", "contract"),
-               "fields": p.get("fields", []), "quality": p.get("quality", []),
-               "created_at": utcnow(), "updated_at": utcnow()}
+        rec = {
+            "id": new_id("ctr"),
+            "schema": "productforge/DataContract/v1",
+            "product_id": pid,
+            "name": p.get("name", "contract"),
+            "fields": p.get("fields", []),
+            "quality": p.get("quality", []),
+            "created_at": utcnow(),
+            "updated_at": utcnow(),
+        }
         ctx.store.put_doc("contracts", rec, name=rec["name"])
         ctx.audit(req, "contract.create", "contracts", rec["id"], product_id=pid)
         return envelope(rec)
@@ -1701,6 +2004,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         rec = ctx.store.get("contracts", cid)
         if rec.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"contract {cid} not in product {pid}")
         return envelope(validate_payload(rec, body.model_dump().get("payload", {})))
 
@@ -1734,6 +2038,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         w = ctx.store.get("watches", wid)
         if w.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"watch {wid} not in product {pid}")
         res = evaluate_watch(ctx.store, w)
         ctx.audit(req, "watch.run", "watches", wid, product_id=pid)
@@ -1758,9 +2063,11 @@ def create_app(home: Path | None = None) -> FastAPI:
         a = ctx.store.get("alerts", alid)
         if a.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"alert {alid} not in product {pid}")
         if action not in {"ack", "resolve", "reopen"}:
             from ..errors import ValidationError
+
             raise ValidationError("action must be ack|resolve|reopen")
         a["state"] = {"ack": "acknowledged", "resolve": "resolved", "reopen": "open"}[action]
         a["updated_at"] = utcnow()
@@ -1788,8 +2095,7 @@ def create_app(home: Path | None = None) -> FastAPI:
 
         ctx.store.get("products", pid)
         p = body.model_dump()
-        rec = request_approval(ctx.store, pid, p.get("action", ""),
-                               p.get("payload", {}), requester="api")
+        rec = request_approval(ctx.store, pid, p.get("action", ""), p.get("payload", {}), requester="api")
         ctx.audit(req, "approval.request", "approvals", rec["id"], product_id=pid)
         return envelope(rec)
 
@@ -1800,6 +2106,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         rec = ctx.store.get("approvals", apid)
         if rec.get("product_id") != pid:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"approval {apid} not in product {pid}")
         rec = decide(ctx.store, apid, decision == "approve")
         ctx.audit(req, f"approval.{decision}", "approvals", apid, product_id=pid)
@@ -1813,12 +2120,17 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.post(f"{API_PREFIX}/products/{{pid}}/task-proposals", status_code=201)
     def task_proposal_create(pid: str, body: ScopedIn, req: Request) -> dict:
         from ..operations.proposals import create_proposal
+
         ctx.store.get("products", pid)
         values = body.model_dump()
-        rec = create_proposal(ctx.store, pid, list(values.get("tasks") or []),
-                              source=str(values.get("source") or "chat"),
-                              session_id=str(values.get("session_id") or ""),
-                              idempotency_key=values.get("idempotency_key"))
+        rec = create_proposal(
+            ctx.store,
+            pid,
+            list(values.get("tasks") or []),
+            source=str(values.get("source") or "chat"),
+            session_id=str(values.get("session_id") or ""),
+            idempotency_key=values.get("idempotency_key"),
+        )
         ctx.audit(req, "task-proposal.create", "task_proposals", rec["id"], product_id=pid)
         return envelope(rec)
 
@@ -1830,6 +2142,7 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.post(f"{API_PREFIX}/products/{{pid}}/task-proposals/{{proposal_id}}/approve")
     def task_proposal_approve(pid: str, proposal_id: str, body: ScopedIn, req: Request) -> dict:
         from ..operations.proposals import approve_proposal, revise_proposal
+
         ctx.store.get("products", pid)
         proposal = ctx.store.get("task_proposals", proposal_id)
         if proposal.get("product_id") != pid:
@@ -1842,8 +2155,9 @@ def create_app(home: Path | None = None) -> FastAPI:
             proposal["updated_at"] = utcnow()
             rec = ctx.store.put_doc("task_proposals", proposal, status="rejected")
         else:
-            rec = approve_proposal(ctx.store, proposal_id, reviewer="api",
-                                   idempotency_key=values.get("idempotency_key"))
+            rec = approve_proposal(
+                ctx.store, proposal_id, reviewer="api", idempotency_key=values.get("idempotency_key")
+            )
         ctx.audit(req, "task-proposal.approve", "task_proposals", proposal_id, product_id=pid)
         return envelope(rec)
 

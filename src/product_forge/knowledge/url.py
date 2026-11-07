@@ -21,6 +21,8 @@ from datetime import UTC, datetime
 from html.parser import HTMLParser
 from typing import Any
 
+from .defuddle import DefuddleError, parse_defuddle
+
 MAX_URL_BYTES = 1 * 1024 * 1024
 DEFAULT_TIMEOUT_S = 10.0
 ALLOWED_CONTENT_TYPES = {
@@ -223,12 +225,15 @@ def _extract(content: str, content_type: str) -> tuple[str, str, str]:
 def fetch_url_document(
     raw_url: str,
     *,
+    extractor: str = "stdlib",
     timeout_s: float = DEFAULT_TIMEOUT_S,
     max_bytes: int = MAX_URL_BYTES,
     resolver: Callable[..., Any] = socket.getaddrinfo,
     opener: Any | None = None,
 ) -> dict[str, Any]:
     """Fetch one public URL, without redirecting or executing remote code."""
+    if extractor not in {"stdlib", "defuddle"}:
+        raise UrlCaptureError("URL-EXTRACTOR-INVALID", "extractor must be stdlib or defuddle")
     url = validate_url(raw_url, resolver=resolver)
     request = urllib.request.Request(  # noqa: S310 - scheme and host validated above
         url,
@@ -260,7 +265,16 @@ def fetch_url_document(
         )
     charset = response.headers.get_content_charset() or "utf-8"
     text = payload.decode(charset, errors="replace")
-    title, normalized, extractor = _extract(text, content_type)
+    if extractor == "defuddle":
+        try:
+            parsed = parse_defuddle(text, url)
+        except DefuddleError as exc:
+            raise UrlCaptureError(exc.code, str(exc), details=exc.details) from exc
+        title = str(parsed["title"])
+        normalized = str(parsed["content"])
+        extractor_name = str(parsed["extractor"])
+    else:
+        title, normalized, extractor_name = _extract(text, content_type)
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
     return {
         "schema": "productforge/UrlDocument/v1",
@@ -270,9 +284,12 @@ def fetch_url_document(
         "content_hash": digest,
         "size": len(payload),
         "content_type": content_type,
-        "extractor": extractor,
+        "extractor": extractor_name,
         "state": "ready_for_import",
-        "warnings": ["remote content is untrusted and was not executed"],
+        "warnings": [
+            "remote content is untrusted and was not executed",
+            *(["optional Defuddle extraction was selected"] if extractor == "defuddle" else []),
+        ],
         "metrics": {"bytes_read": len(payload), "characters": len(normalized), "max_bytes": max_bytes},
         "provenance": {"requested_url": url, "final_url": url, "fetched_at": _now(), "redirects_followed": 0},
     }
