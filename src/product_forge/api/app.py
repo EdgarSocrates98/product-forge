@@ -1051,7 +1051,11 @@ def create_app(home: Path | None = None) -> FastAPI:
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/{{did}}")
     def get_doc(pid: str, did: str) -> dict:
         """Return one document explorer payload without exposing other products."""
-        doc = ctx.store.get("documents", did)
+        try:
+            doc = ctx.store.get("documents", did)
+        except KeyError as exc:
+            from ..errors import NotFoundError
+            raise NotFoundError("document not found") from exc
         if doc.get("product_id") != pid:
             from ..errors import NotFoundError
             raise NotFoundError("document not in product")
