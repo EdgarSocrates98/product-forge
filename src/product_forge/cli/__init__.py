@@ -693,6 +693,14 @@ def mcp_serve(transport: str = typer.Option("stdio", "--transport",
 
 
 def main() -> None:
+    if sys.argv[1:] in ([], ["tui"]):
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            from product_forge.ui.home import run_home
+
+            raise SystemExit(run_home())
+        if sys.argv[1:] == ["tui"]:
+            print("productforge tui requires an interactive TTY", file=sys.stderr)
+            raise SystemExit(2)
     # Bare `productforge install` on a TTY → guided wizard (same contract as
     # `sparkforge-aws install`); flags/pipes keep the JSON flag path.
     if sys.argv[1:] == ["install"]:

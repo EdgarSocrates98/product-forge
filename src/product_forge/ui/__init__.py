@@ -16,6 +16,8 @@ from product_forge.ui.kit import (
     select,
     status_table,
 )
+from product_forge.ui.home import run_home
+from product_forge.ui.tui import run_tui
 
 __all__ = [
     "UIContext",
@@ -25,5 +27,7 @@ __all__ = [
     "prompt",
     "select",
     "status_table",
+    "run_home",
+    "run_tui",
     "t",
 ]
