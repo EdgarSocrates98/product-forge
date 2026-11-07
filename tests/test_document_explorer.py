@@ -21,13 +21,11 @@ def test_document_explorer_returns_product_scoped_chunks_and_metadata(tmp_path, 
     ).json()["data"]
     document = client.post(
         f"/api/v1/products/{product['id']}/documents",
-        json={"title": "Runbook", "content": "# Spark\n\nUse the safe path."},
+        json={"title": "Runbook", "content": "# Spark\n\nGET /api/v1/x reads table orders."},
         headers=headers,
     ).json()["data"]
 
-    response = client.get(
-        f"/api/v1/products/{product['id']}/documents/{document['id']}", headers=headers
-    )
+    response = client.get(f"/api/v1/products/{product['id']}/documents/{document['id']}", headers=headers)
 
     assert response.status_code == 200
     payload = response.json()["data"]
@@ -36,9 +34,26 @@ def test_document_explorer_returns_product_scoped_chunks_and_metadata(tmp_path, 
     assert payload["content"]["chunks"]
     assert payload["versions"]["state"] == "current_only"
 
-    search = client.get(
-        f"/api/v1/products/{product['id']}/documents/search?q=Spark", headers=headers
-    )
+    search = client.get(f"/api/v1/products/{product['id']}/documents/search?q=Spark", headers=headers)
     assert search.status_code == 200
     assert search.json()["data"]["schema"] == "productforge/DocumentSearch/v1"
     assert search.json()["data"]["items"][0]["document_id"] == document["id"]
+
+    source = client.post(
+        f"/api/v1/products/{product['id']}/sources",
+        json={"name": "Spark runbooks", "type": "markdown", "locator": "runbooks/"},
+        headers=headers,
+    )
+    assert source.status_code == 201
+    federated = client.get(f"/api/v1/products/{product['id']}/knowledge/search?q=Spark", headers=headers)
+    assert federated.status_code == 200
+    payload = federated.json()["data"]
+    assert payload["schema"] == "productforge/KnowledgeSearch/v1"
+    assert {item["kind"] for item in payload["items"]} == {"document", "source"}
+    assert all("content" not in item for item in payload["items"])
+
+    extracted = client.post(f"/api/v1/products/{product['id']}/knowledge/extract", headers=headers)
+    assert extracted.status_code == 200
+    graph_hits = client.get(f"/api/v1/products/{product['id']}/knowledge/search?q=related", headers=headers)
+    assert graph_hits.status_code == 200
+    assert any(item["kind"] == "relation" for item in graph_hits.json()["data"]["items"])
