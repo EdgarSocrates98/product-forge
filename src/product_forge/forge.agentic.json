@@ -28,7 +28,13 @@
     }
   ],
   "skills": [],
-  "agents": [],
+  "agents": [
+    "agent-ops-coordinator",
+    "data-analyst-coordinator",
+    "integration-coordinator",
+    "planning-coordinator",
+    "product-intel-coordinator"
+  ],
   "coordinators": [],
   "mcp_command": ["{cli}", "mcp", "serve"],
   "host_adapters": ["claude", "devin", "codex", "copilot"],
