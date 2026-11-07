@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -352,16 +353,57 @@ def kn_import(product_id: str, file: Path) -> None:
 
     st = _store()
     st.get("products", product_id)
+    started = time.perf_counter()
     raw = file.read_text(encoding="utf-8", errors="replace")
+    content_hash = sha256_text(raw)
+    existing = next(
+        (item for item in st.list("documents", product_id=product_id)
+         if item.get("content_hash") == content_hash),
+        None,
+    )
+    if existing:
+        st.close()
+        _out({
+            "document_id": existing["id"],
+            "chunks": existing.get("chunk_count", 0),
+            "status": existing.get("status", "indexed"),
+            "receipt": {
+                "schema": "theforge/KnowledgeImportReceipt/v1",
+                "receipt_id": new_id("receipt"),
+                "operation": "import",
+                "source_id": "file:" + sha256_text(str(file.resolve()))[:16],
+                "duplicates": [existing["id"]],
+                "content_hashes": {existing["id"]: content_hash},
+                "duration_ms": round((time.perf_counter() - started) * 1000),
+                "audit_id": new_id("audit"),
+                "rollback_available": False,
+            },
+        })
+        return
     doc = Document(id=new_id("doc"), product_id=product_id, title=file.name,
-                   content_hash=sha256_text(raw), status=DocumentStatus.IMPORTED)
+                   content_hash=content_hash, status=DocumentStatus.IMPORTED)
     st.put("documents", doc)
     chunks = chunk_text(raw)
     doc.chunk_count = st.put_chunks(doc.id, product_id, chunks)
     doc.status = DocumentStatus.INDEXED
     st.put("documents", doc)
     st.close()
-    _out({"document_id": doc.id, "chunks": doc.chunk_count, "status": doc.status})
+    _out({
+        "document_id": doc.id,
+        "chunks": doc.chunk_count,
+        "status": doc.status,
+        "receipt": {
+            "schema": "theforge/KnowledgeImportReceipt/v1",
+            "receipt_id": new_id("receipt"),
+            "operation": "import",
+            "source_id": "file:" + sha256_text(str(file.resolve()))[:16],
+            "created_ids": [doc.id],
+            "content_hashes": {doc.id: content_hash},
+            "duration_ms": round((time.perf_counter() - started) * 1000),
+            "audit_id": new_id("audit"),
+            "rollback_available": False,
+        },
+    })
 
 
 @kn_app.command("query")
