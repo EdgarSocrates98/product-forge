@@ -1048,6 +1048,24 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.store.get("products", pid)
         return envelope({"items": ctx.store.list("documents", product_id=pid)})
 
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/{{did}}")
+    def get_doc(pid: str, did: str) -> dict:
+        """Return one document explorer payload without exposing other products."""
+        doc = ctx.store.get("documents", did)
+        if doc.get("product_id") != pid:
+            from ..errors import NotFoundError
+            raise NotFoundError("document not in product")
+        chunks = [chunk for chunk in ctx.store.list_chunks(pid)
+                  if chunk.get("document_id") == did]
+        return envelope({
+            "schema": "productforge/DocumentExplorer/v1",
+            "document": doc,
+            "content": {"chunks": chunks, "chunk_count": len(chunks)},
+            "source": (doc.get("metadata") or {}).get("source"),
+            "versions": {"state": "current_only", "items": [doc]},
+            "relations": [],
+        })
+
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/url/preview")
     def preview_url_doc(pid: str, url: str) -> dict:
         """Fetch a bounded, non-mutating URL preview after SSRF validation."""

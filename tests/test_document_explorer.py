@@ -1,0 +1,37 @@
+import pytest
+
+
+def test_document_explorer_returns_product_scoped_chunks_and_metadata(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "pf"))
+    from fastapi.testclient import TestClient
+
+    from product_forge.api.app import create_app
+    from product_forge.config import home_dir, load_config
+    from product_forge.security import TokenStore
+
+    home = home_dir("user")
+    cfg = load_config(home)
+    token = TokenStore(home / str(cfg["api"]["token_file"])).token
+    headers = {"Authorization": f"Bearer {token}"}
+    client = TestClient(create_app(home))
+    workspace = client.post("/api/v1/workspaces", json={"name": "W"}, headers=headers).json()["data"]
+    product = client.post(
+        "/api/v1/products", json={"workspace_id": workspace["id"], "name": "P"}, headers=headers
+    ).json()["data"]
+    document = client.post(
+        f"/api/v1/products/{product['id']}/documents",
+        json={"title": "Runbook", "content": "# Spark\n\nUse the safe path."},
+        headers=headers,
+    ).json()["data"]
+
+    response = client.get(
+        f"/api/v1/products/{product['id']}/documents/{document['id']}", headers=headers
+    )
+
+    assert response.status_code == 200
+    payload = response.json()["data"]
+    assert payload["schema"] == "productforge/DocumentExplorer/v1"
+    assert payload["document"]["title"] == "Runbook"
+    assert payload["content"]["chunks"]
+    assert payload["versions"]["state"] == "current_only"
