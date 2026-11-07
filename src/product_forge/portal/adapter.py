@@ -29,6 +29,7 @@ from .._forge_portal import (
 from ..config import db_path, home_dir, load_config
 from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id, utcnow
 from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
+from ..knowledge.search import search_knowledge
 from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..knowledge.versions import explorer_versions, prepare_version
 from ..store.sqlite import Store
@@ -173,6 +174,7 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}", self._product_get))
         self.register(Operation("GET", "/products/{pid}/context", self._product_context))
         self.register(Operation("GET", "/products/{pid}/documents/search", self._document_search))
+        self.register(Operation("GET", "/products/{pid}/knowledge/search", self._knowledge_search))
         self.register(Operation("GET", "/products/{pid}/documents/{did}", self._document_detail))
         self.register(Operation("GET", "/workspace/discovery", self._workspace_discovery))
         self.register(Operation("GET", "/workspace/discovery/preview", self._workspace_preview))
@@ -414,6 +416,20 @@ class ProductForgePortal(PortalAdapter):
                     "version": metadata.get("version", 1),
                 })
             return {"schema": "productforge/DocumentSearch/v1", "items": items}
+        finally:
+            st.close()
+
+    def _knowledge_search(self, ctx: RequestContext) -> dict[str, Any]:
+        query = (_q1(ctx, "q") or "").strip()
+        try:
+            limit = max(1, min(int(_q1(ctx, "limit") or "20"), 100))
+        except ValueError as exc:
+            raise PortalError("PORTAL-VALIDATION", "limit must be an integer", http=422) from exc
+        st = _store()
+        try:
+            pid = ctx.params["pid"]
+            _require(st, "products", pid)
+            return search_knowledge(st, pid, query, limit)
         finally:
             st.close()
 

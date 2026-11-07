@@ -1070,6 +1070,14 @@ def create_app(home: Path | None = None) -> FastAPI:
             })
         return envelope({"schema": "productforge/DocumentSearch/v1", "items": items})
 
+    @app.get(f"{API_PREFIX}/products/{{pid}}/knowledge/search")
+    def search_knowledge(pid: str, q: str = "", limit: int = 20) -> dict:
+        """Search body-free document and knowledge-graph projections."""
+        from ..knowledge.search import search_knowledge as search
+
+        ctx.store.get("products", pid)
+        return envelope(search(ctx.store, pid, q, limit))
+
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/{{did}}")
     def get_doc(pid: str, did: str) -> dict:
         """Return one document explorer payload without exposing other products."""
