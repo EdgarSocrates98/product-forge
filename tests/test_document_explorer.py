@@ -35,3 +35,10 @@ def test_document_explorer_returns_product_scoped_chunks_and_metadata(tmp_path, 
     assert payload["document"]["title"] == "Runbook"
     assert payload["content"]["chunks"]
     assert payload["versions"]["state"] == "current_only"
+
+    search = client.get(
+        f"/api/v1/products/{product['id']}/documents/search?q=Spark", headers=headers
+    )
+    assert search.status_code == 200
+    assert search.json()["data"]["schema"] == "productforge/DocumentSearch/v1"
+    assert search.json()["data"]["items"][0]["document_id"] == document["id"]
