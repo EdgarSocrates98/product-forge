@@ -6,6 +6,7 @@ Mutations require the local bearer token (productforge api token --show).
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 import uuid
@@ -39,6 +40,7 @@ from ..domain.models import (
     utcnow,
 )
 from ..errors import ForgeError, UrlCaptureForgeError
+from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
 from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..security import TokenStore, redact, verify_oidc_token
 from ..store.sqlite import Store
@@ -228,6 +230,13 @@ def _principal_allows(cfg: dict[str, Any], token: str, workspace_id: str) -> boo
         if p.get("token") == token:
             return workspace_id in (p.get("workspaces") or [])
     return False
+
+
+def _obsidian_vault() -> Path:
+    raw = os.environ.get("FORGE_OBSIDIAN_VAULT", "").strip()
+    if not raw:
+        raise ForgeError("Obsidian vault is not configured", details={"code": "OBSIDIAN-NOT-CONFIGURED"})
+    return Path(raw)
 
 
 def _oidc_workspaces(claims: dict[str, Any] | None) -> set[str]:
@@ -1133,6 +1142,76 @@ def create_app(home: Path | None = None) -> FastAPI:
                          "state": "imported", "source_url": captured["url"],
                          "source_kind": "url", "capture": {k: v for k, v in captured.items()
                                                                if k != "content"}})
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/preview")
+    def preview_obsidian_doc(pid: str, path: str) -> dict:
+        ctx.store.get("products", pid)
+        try:
+            imported = import_vault_document(_obsidian_vault(), path)
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+        return envelope({k: v for k, v in imported.items() if k != "content"} |
+                        {"preview": imported["content"]})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-obsidian", status_code=201)
+    def import_obsidian_doc(pid: str, body: ScopedIn, req: Request) -> dict:
+        from ..domain.models import Document, DocumentStatus
+        from ..errors import ValidationError
+        from ..knowledge.ingest import chunk_text
+
+        product = ctx.store.get("products", pid)
+        payload = body.model_dump()
+        if str(payload.get("confirm", "")) != "import":
+            raise ValidationError("confirm=import is required")
+        raw_path = str(payload.get("path", "")).strip()
+        if not raw_path:
+            raise ValidationError("path is required")
+        try:
+            imported = import_vault_document(_obsidian_vault(), raw_path)
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+        existing = [doc for doc in ctx.store.list("documents", product_id=pid)
+                    if (doc.get("metadata") or {}).get("obsidian_path") == imported["path"]
+                    and doc.get("content_hash") == imported["content_hash"]]
+        if existing:
+            return envelope({**existing[0], "state": "already_imported",
+                             "source_path": imported["path"], "source_kind": "obsidian"})
+        doc = Document(
+            id=new_id("doc"), product_id=pid,
+            title=str(payload.get("title") or imported["title"]),
+            content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
+            metadata={"source": "obsidian", "obsidian_path": imported["path"],
+                      "size": imported["size"], "provenance": imported["provenance"]},
+        )
+        ctx.store.put("documents", doc)
+        doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(imported["content"]))
+        doc.status = DocumentStatus.INDEXED
+        ctx.store.put("documents", doc)
+        ctx.audit(req, "obsidian.document.import", "documents", doc.id, product_id=pid,
+                  workspace_id=product.get("workspace_id", ""))
+        return envelope({**doc.model_dump(mode="json", by_alias=True),
+                         "state": "imported", "source_path": imported["path"],
+                         "source_kind": "obsidian"})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/to-obsidian")
+    def export_obsidian_doc(pid: str, body: ScopedIn, req: Request) -> dict:
+        from ..errors import ValidationError
+
+        product = ctx.store.get("products", pid)
+        payload = body.model_dump()
+        if str(payload.get("confirm", "")) != "export":
+            raise ValidationError("confirm=export is required")
+        raw_path = str(payload.get("path", "")).strip()
+        content = str(payload.get("content", ""))
+        if not raw_path or not content:
+            raise ValidationError("path and content are required")
+        try:
+            exported = export_vault_document(_obsidian_vault(), raw_path, content)
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+        ctx.audit(req, "obsidian.document.export", "obsidian", exported["path"],
+                  product_id=pid, workspace_id=product.get("workspace_id", ""))
+        return envelope(exported)
 
     # -- agents runtime (Cycle 4) ---------------------------------------------
 
