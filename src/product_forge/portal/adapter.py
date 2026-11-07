@@ -171,6 +171,7 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("POST", "/products", self._product_create, mutating=True, confirm="create"))
         self.register(Operation("GET", "/products/{pid}", self._product_get))
         self.register(Operation("GET", "/products/{pid}/context", self._product_context))
+        self.register(Operation("GET", "/products/{pid}/documents/{did}", self._document_detail))
         self.register(Operation("GET", "/workspace/discovery", self._workspace_discovery))
         self.register(Operation("GET", "/workspace/discovery/preview", self._workspace_preview))
         self.register(Operation("POST", "/products/{pid}/documents/from-workspace",
@@ -364,6 +365,25 @@ class ProductForgePortal(PortalAdapter):
                     "entities": st.list("entities", product_id=pid, limit=200),
                     "agents": st.list("agents", product_id=pid, limit=100),
                     "data_sources": st.list("data_sources", product_id=pid, limit=100)}
+        finally:
+            st.close()
+
+    def _document_detail(self, ctx: RequestContext) -> dict[str, Any]:
+        st = _store()
+        try:
+            doc = _require(st, "documents", ctx.params["did"])
+            if doc.get("product_id") != ctx.params["pid"]:
+                raise PortalError("PORTAL-NOT-FOUND", "document not in product", http=404)
+            chunks = [chunk for chunk in st.list_chunks(ctx.params["pid"])
+                      if chunk.get("document_id") == ctx.params["did"]]
+            return {
+                "schema": "productforge/DocumentExplorer/v1",
+                "document": doc,
+                "content": {"chunks": chunks, "chunk_count": len(chunks)},
+                "source": (doc.get("metadata") or {}).get("source"),
+                "versions": {"state": "current_only", "items": [doc]},
+                "relations": [],
+            }
         finally:
             st.close()
 
