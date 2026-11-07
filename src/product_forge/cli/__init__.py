@@ -55,7 +55,16 @@ def cli_callback(
 
 
 def _out(obj: Any) -> None:
-    typer.echo(json.dumps(obj, indent=2, ensure_ascii=False, default=str))
+    # Windows can expose a legacy cp1252 stdout even when the JSON payload
+    # contains diagnostic glyphs from the install plan. Machine-readable output
+    # must not crash because of the terminal code page.
+    rendered = json.dumps(obj, indent=2, ensure_ascii=False, default=str)
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    try:
+        rendered.encode(encoding)
+    except (LookupError, UnicodeEncodeError):
+        rendered = json.dumps(obj, indent=2, ensure_ascii=True, default=str)
+    typer.echo(rendered)
 
 
 def _store() -> Store:
