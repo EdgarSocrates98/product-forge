@@ -172,6 +172,7 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("POST", "/products", self._product_create, mutating=True, confirm="create"))
         self.register(Operation("GET", "/products/{pid}", self._product_get))
         self.register(Operation("GET", "/products/{pid}/context", self._product_context))
+        self.register(Operation("GET", "/products/{pid}/documents/search", self._document_search))
         self.register(Operation("GET", "/products/{pid}/documents/{did}", self._document_detail))
         self.register(Operation("GET", "/workspace/discovery", self._workspace_discovery))
         self.register(Operation("GET", "/workspace/discovery/preview", self._workspace_preview))
@@ -385,6 +386,34 @@ class ProductForgePortal(PortalAdapter):
                 "versions": explorer_versions(st, ctx.params["pid"], doc),
                 "relations": [],
             }
+        finally:
+            st.close()
+
+    def _document_search(self, ctx: RequestContext) -> dict[str, Any]:
+        query = (_q1(ctx, "q") or "").strip()
+        try:
+            limit = max(1, min(int(_q1(ctx, "limit") or "20"), 100))
+        except ValueError as exc:
+            raise PortalError("PORTAL-VALIDATION", "limit must be an integer", http=422) from exc
+        st = _store()
+        try:
+            pid = ctx.params["pid"]
+            _require(st, "products", pid)
+            hits = st.search_fts(pid, query, limit) if query else []
+            items = []
+            for hit in hits:
+                doc = st.get("documents", hit["document_id"])
+                metadata = doc.get("metadata") or {}
+                items.append({
+                    "document_id": hit["document_id"],
+                    "chunk_id": hit["id"],
+                    "seq": hit["seq"],
+                    "title": doc.get("title", hit["document_id"]),
+                    "snippet": hit["snip"],
+                    "source": metadata.get("source"),
+                    "version": metadata.get("version", 1),
+                })
+            return {"schema": "productforge/DocumentSearch/v1", "items": items}
         finally:
             st.close()
 

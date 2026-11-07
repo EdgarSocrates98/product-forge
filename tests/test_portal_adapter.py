@@ -88,6 +88,7 @@ def test_document_explorer_route_is_product_scoped() -> None:
     portal = ProductForgePortal()
     routes = {(op.method, op.path, op.confirm) for op in portal.ops}
     assert ("GET", "/products/{pid}/documents/{did}", None) in routes
+    assert ("GET", "/products/{pid}/documents/search", None) in routes
 
 
 def test_bridge_unavailable_is_honest(monkeypatch) -> None:

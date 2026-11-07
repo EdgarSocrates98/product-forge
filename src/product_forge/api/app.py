@@ -1049,6 +1049,27 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.store.get("products", pid)
         return envelope({"items": ctx.store.list("documents", product_id=pid)})
 
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/search")
+    def search_docs(pid: str, q: str = "", limit: int = 20) -> dict:
+        """Search indexed product documents without returning document bodies."""
+        ctx.store.get("products", pid)
+        safe_limit = max(1, min(limit, 100))
+        hits = ctx.store.search_fts(pid, q, safe_limit) if q.strip() else []
+        items = []
+        for hit in hits:
+            doc = ctx.store.get("documents", hit["document_id"])
+            metadata = doc.get("metadata") or {}
+            items.append({
+                "document_id": hit["document_id"],
+                "chunk_id": hit["id"],
+                "seq": hit["seq"],
+                "title": doc.get("title", hit["document_id"]),
+                "snippet": hit["snip"],
+                "source": metadata.get("source"),
+                "version": metadata.get("version", 1),
+            })
+        return envelope({"schema": "productforge/DocumentSearch/v1", "items": items})
+
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/{{did}}")
     def get_doc(pid: str, did: str) -> dict:
         """Return one document explorer payload without exposing other products."""
