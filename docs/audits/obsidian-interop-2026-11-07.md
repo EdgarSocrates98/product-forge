@@ -23,3 +23,8 @@ same versioned validation contracts.
 uv run pytest -q tests/test_obsidian.py  # 15 passed
 uv run ruff check src/product_forge/knowledge/obsidian.py tests/test_obsidian.py
 ```
+
+The adjacent local-storage benchmark is available as
+`python scripts/knowledge_store_bench.py --sizes 100,1000,10000`. It measures
+the public SQLite Store path, FTS search and integrity check; its output is a
+machine-specific baseline, not a production SLO.
