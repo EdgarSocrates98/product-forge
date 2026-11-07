@@ -10,17 +10,142 @@ from __future__ import annotations
 
 import hashlib
 import stat
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 MAX_VAULT_BYTES = 1 * 1024 * 1024
+MAX_INTEROP_BYTES = 1 * 1024 * 1024
+_CANVAS_NODE_TYPES = {"text", "file", "link", "group"}
 
 
 class ObsidianVaultError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+
+
+def _bounded_document(document: str | bytes | Mapping[str, Any], *, kind: str) -> Any:
+    """Decode one bounded Obsidian interchange document without executing content."""
+    if isinstance(document, bytes):
+        if len(document) > MAX_INTEROP_BYTES:
+            raise ObsidianVaultError("OBSIDIAN-SIZE-LIMIT", f"{kind} document exceeds the safe size limit")
+        try:
+            text = document.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ObsidianVaultError("OBSIDIAN-UTF8-INVALID", f"{kind} document is not valid UTF-8") from exc
+    elif isinstance(document, str):
+        if len(document.encode("utf-8")) > MAX_INTEROP_BYTES:
+            raise ObsidianVaultError("OBSIDIAN-SIZE-LIMIT", f"{kind} document exceeds the safe size limit")
+        text = document
+    elif isinstance(document, Mapping):
+        return dict(document)
+    else:
+        raise ObsidianVaultError(
+            f"OBSIDIAN-{kind.upper()}-INVALID", f"{kind} document must be text or an object"
+        )
+
+    try:
+        value = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise ObsidianVaultError(f"OBSIDIAN-{kind.upper()}-INVALID", f"{kind} document is malformed") from exc
+    if not isinstance(value, Mapping):
+        raise ObsidianVaultError(
+            f"OBSIDIAN-{kind.upper()}-INVALID", f"{kind} document must contain an object"
+        )
+    return dict(value)
+
+
+def validate_canvas_document(document: str | bytes | Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the safe, structural subset of JSON Canvas used for interoperability.
+
+    This deliberately validates rather than renders or executes a canvas.  Unknown
+    optional fields are preserved by the caller and do not make a document invalid.
+    """
+    value = _bounded_document(document, kind="canvas")
+    nodes = value.get("nodes")
+    edges = value.get("edges")
+    if not isinstance(nodes, list) or not isinstance(edges, list):
+        raise ObsidianVaultError(
+            "OBSIDIAN-CANVAS-INVALID", "canvas document requires nodes and edges arrays"
+        )
+
+    node_ids: set[str] = set()
+    for node in nodes:
+        if not isinstance(node, Mapping):
+            raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", "every canvas node must be an object")
+        node_id = node.get("id")
+        node_type = node.get("type")
+        if not isinstance(node_id, str) or not node_id.strip() or node_id in node_ids:
+            raise ObsidianVaultError(
+                "OBSIDIAN-CANVAS-INVALID", "canvas node ids must be unique and non-empty"
+            )
+        if node_type not in _CANVAS_NODE_TYPES:
+            raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", "canvas node type is unsupported")
+        node_ids.add(node_id)
+
+    edge_ids: set[str] = set()
+    for edge in edges:
+        if not isinstance(edge, Mapping):
+            raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", "every canvas edge must be an object")
+        edge_id = edge.get("id")
+        from_node = edge.get("fromNode")
+        to_node = edge.get("toNode")
+        if not isinstance(edge_id, str) or not edge_id.strip() or edge_id in edge_ids:
+            raise ObsidianVaultError(
+                "OBSIDIAN-CANVAS-INVALID", "canvas edge ids must be unique and non-empty"
+            )
+        if from_node not in node_ids or to_node not in node_ids:
+            raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", "canvas edge endpoint does not exist")
+        edge_ids.add(edge_id)
+
+    return {
+        "schema": "productforge/ObsidianCanvasValidation/v1",
+        "kind": "canvas",
+        "state": "validated",
+        "nodes": len(nodes),
+        "edges": len(edges),
+        "warnings": [],
+    }
+
+
+def validate_base_document(document: str | bytes | Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the bounded Obsidian Bases interchange shape.
+
+    Bases evolves independently of Product Forge.  We therefore validate the
+    container and known section types, preserve unknown fields, and avoid
+    claiming full Bases query/view semantics.
+    """
+    value = _bounded_document(document, kind="base")
+    expected_types = {
+        "properties": Mapping,
+        "formulas": Mapping,
+        "views": list,
+        "filters": (str, list, Mapping),
+    }
+    for key, expected in expected_types.items():
+        if key in value and not isinstance(value[key], expected):
+            raise ObsidianVaultError("OBSIDIAN-BASE-INVALID", f"base field '{key}' has an invalid shape")
+    if "views" in value:
+        for view in value["views"]:
+            if not isinstance(view, Mapping):
+                raise ObsidianVaultError("OBSIDIAN-BASE-INVALID", "every base view must be an object")
+
+    warnings = [
+        "validation covers the interchange container and known section shapes; "
+        "full Bases semantics are not implemented"
+    ]
+    return {
+        "schema": "productforge/ObsidianBaseValidation/v1",
+        "kind": "base",
+        "state": "validated",
+        "sections": sorted(value),
+        "views": len(value.get("views", [])) if isinstance(value.get("views"), list) else 0,
+        "warnings": warnings,
+    }
 
 
 def _resolved(path: Path) -> Path:
