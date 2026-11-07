@@ -102,3 +102,34 @@ def test_plain_text_capture_is_deterministic_and_has_metrics():
     assert result["content"] == "first\nsecond"
     assert result["metrics"]["bytes_read"] == len(b"  first\nsecond  ")
     assert len(result["content_hash"]) == 64
+
+
+def test_defuddle_is_explicit_optional_extractor(monkeypatch):
+    monkeypatch.setattr(
+        "product_forge.knowledge.url.parse_defuddle",
+        lambda _html, url: {
+            "title": "Defuddled",
+            "content": "# cleaned",
+            "extractor": "defuddle-cli",
+            "url": url,
+        },
+    )
+    result = fetch_url_document(
+        "https://example.com/article",
+        extractor="defuddle",
+        resolver=_public_resolver,
+        opener=_Opener(_Response(b"<article>raw</article>")),
+    )
+    assert result["title"] == "Defuddled"
+    assert result["extractor"] == "defuddle-cli"
+    assert "optional Defuddle" in result["warnings"][1]
+
+
+def test_url_capture_rejects_unknown_extractor():
+    with pytest.raises(UrlCaptureError, match="extractor must be stdlib or defuddle"):
+        fetch_url_document(
+            "https://example.com/article",
+            extractor="other",
+            resolver=_public_resolver,
+            opener=_Opener(_Response(b"<p>safe</p>")),
+        )

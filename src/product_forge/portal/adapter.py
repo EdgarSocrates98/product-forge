@@ -113,21 +113,30 @@ def _translate_handler_errors(handler: Any) -> Any:
     return wrapper
 
 
-def _record_audit(st: Store, ctx: RequestContext, action: str, resource_type: str,
-                  resource_id: str, *, product_id: str | None = None,
-                  workspace_id: str | None = None) -> None:
+def _record_audit(
+    st: Store,
+    ctx: RequestContext,
+    action: str,
+    resource_type: str,
+    resource_id: str,
+    *,
+    product_id: str | None = None,
+    workspace_id: str | None = None,
+) -> None:
     """Persist the same mutation trail exposed by the Portal audit route."""
-    st.audit({
-        "id": new_id("aud"),
-        "action": action,
-        "resource_type": resource_type,
-        "resource_id": resource_id,
-        "product_id": product_id,
-        "workspace_id": workspace_id,
-        "actor": "local",
-        "correlation_id": ctx.correlation_id,
-        "created_at": utcnow(),
-    })
+    st.audit(
+        {
+            "id": new_id("aud"),
+            "action": action,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "product_id": product_id,
+            "workspace_id": workspace_id,
+            "actor": "local",
+            "correlation_id": ctx.correlation_id,
+            "created_at": utcnow(),
+        }
+    )
 
 
 class _BridgeProxyOperation(Operation):
@@ -145,7 +154,7 @@ class _BridgeProxyOperation(Operation):
         prefix = "/bridge/"
         if not path.startswith(prefix) or path in {prefix, "/bridge/bootstrap"}:
             return None
-        return {"bridge_path": "/" + path[len(prefix):], "__method": self.proxy_method}
+        return {"bridge_path": "/" + path[len(prefix) :], "__method": self.proxy_method}
 
 
 class ProductForgePortal(PortalAdapter):
@@ -178,17 +187,44 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}/documents/{did}", self._document_detail))
         self.register(Operation("GET", "/workspace/discovery", self._workspace_discovery))
         self.register(Operation("GET", "/workspace/discovery/preview", self._workspace_preview))
-        self.register(Operation("POST", "/products/{pid}/documents/from-workspace",
-                                self._workspace_document_import,
-                                mutating=True, confirm="import"))
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/from-workspace",
+                self._workspace_document_import,
+                mutating=True,
+                confirm="import",
+            )
+        )
         self.register(Operation("GET", "/products/{pid}/documents/url/preview", self._url_preview))
-        self.register(Operation("POST", "/products/{pid}/documents/from-url",
-                                self._url_document_import, mutating=True, confirm="import"))
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/from-url",
+                self._url_document_import,
+                mutating=True,
+                confirm="import",
+            )
+        )
         self.register(Operation("GET", "/products/{pid}/documents/obsidian/preview", self._obsidian_preview))
-        self.register(Operation("POST", "/products/{pid}/documents/from-obsidian",
-                                self._obsidian_import, mutating=True, confirm="import"))
-        self.register(Operation("POST", "/products/{pid}/documents/to-obsidian",
-                                self._obsidian_export, mutating=True, confirm="export"))
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/from-obsidian",
+                self._obsidian_import,
+                mutating=True,
+                confirm="import",
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/to-obsidian",
+                self._obsidian_export,
+                mutating=True,
+                confirm="export",
+            )
+        )
         self.register(Operation("GET", "/products/{pid}/agents", self._agents))
         self.register(Operation("POST", "/products/{pid}/knowledge/query", self._kn_query))
         self.register(Operation("GET", "/products/{pid}/graph", self._graph))
@@ -197,53 +233,117 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/agent/providers", self._agent_providers))
         for method in ("GET", "POST"):
             self.register(_BridgeProxyOperation(method, self._bridge_proxy))
-        self.register(Operation("POST", "/bridge/bootstrap", self._bridge_bootstrap,
-                                mutating=True, confirm="bootstrap"))
-        self.register(Operation("POST", "/agent/providers/claude/auth", self._claude_auth,
-                                mutating=True, confirm="start"))
+        self.register(
+            Operation("POST", "/bridge/bootstrap", self._bridge_bootstrap, mutating=True, confirm="bootstrap")
+        )
+        self.register(
+            Operation(
+                "POST", "/agent/providers/claude/auth", self._claude_auth, mutating=True, confirm="start"
+            )
+        )
         self.register(Operation("GET", "/chat/sessions", self._chat_sessions))
-        self.register(Operation("POST", "/chat/sessions", self._chat_create,
-                                mutating=True, confirm="create"))
-        self.register(Operation("POST", "/chat/sessions/cleanup", self._chat_cleanup,
-                                mutating=True, confirm="cleanup"))
+        self.register(Operation("POST", "/chat/sessions", self._chat_create, mutating=True, confirm="create"))
+        self.register(
+            Operation("POST", "/chat/sessions/cleanup", self._chat_cleanup, mutating=True, confirm="cleanup")
+        )
         self.register(Operation("GET", "/chat/sessions/{sid}/stream", self._chat_stream))
-        self.register(Operation("POST", "/chat/sessions/{sid}/prompt", self._chat_prompt,
-                                mutating=True, confirm="send", timeout=300.0))
+        self.register(
+            Operation(
+                "POST",
+                "/chat/sessions/{sid}/prompt",
+                self._chat_prompt,
+                mutating=True,
+                confirm="send",
+                timeout=300.0,
+            )
+        )
         self.register(Operation("POST", "/chat/sessions/{sid}/events", self._chat_events))
-        self.register(Operation("POST", "/chat/sessions/{sid}/cancel", self._chat_cancel,
-                                mutating=True, confirm="cancel"))
-        self.register(Operation("POST", "/chat/sessions/{sid}/approve", self._chat_approve,
-                                mutating=True, confirm="approve"))
-        self.register(Operation("POST", "/chat/sessions/{sid}/resume", self._chat_resume,
-                                mutating=True, confirm="resume", timeout=120.0))
+        self.register(
+            Operation(
+                "POST", "/chat/sessions/{sid}/cancel", self._chat_cancel, mutating=True, confirm="cancel"
+            )
+        )
+        self.register(
+            Operation(
+                "POST", "/chat/sessions/{sid}/approve", self._chat_approve, mutating=True, confirm="approve"
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/chat/sessions/{sid}/resume",
+                self._chat_resume,
+                mutating=True,
+                confirm="resume",
+                timeout=120.0,
+            )
+        )
         # POST, not DELETE: the portal server only parses bodies (and thus
         # enforces `confirm`) on POST — a DELETE route would bypass the
         # mutation gate entirely.
-        self.register(Operation("POST", "/chat/sessions/{sid}/close", self._chat_close,
-                                mutating=True, confirm="close"))
-        self.register(Operation("POST", "/products/{pid}/queries/execute", self._q_exec,
-                                mutating=True, confirm="execute"))
-        self.register(Operation("POST", "/products/{pid}/agents/{aid}/run", self._agent_run,
-                                mutating=True, confirm="run"))
+        self.register(
+            Operation("POST", "/chat/sessions/{sid}/close", self._chat_close, mutating=True, confirm="close")
+        )
+        self.register(
+            Operation(
+                "POST", "/products/{pid}/queries/execute", self._q_exec, mutating=True, confirm="execute"
+            )
+        )
+        self.register(
+            Operation(
+                "POST", "/products/{pid}/agents/{aid}/run", self._agent_run, mutating=True, confirm="run"
+            )
+        )
         self.register(Operation("GET", "/products/{pid}/roadmap", self._roadmap))
         self.register(Operation("GET", "/products/{pid}/initiatives", self._initiatives))
-        self.register(Operation("POST", "/products/{pid}/initiatives", self._initiative_create,
-                                mutating=True, confirm="create"))
-        self.register(Operation("POST", "/products/{pid}/initiatives/{iid}/prioritize",
-                                self._initiative_prioritize, mutating=True, confirm="prioritize"))
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/initiatives",
+                self._initiative_create,
+                mutating=True,
+                confirm="create",
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/initiatives/{iid}/prioritize",
+                self._initiative_prioritize,
+                mutating=True,
+                confirm="prioritize",
+            )
+        )
         self.register(Operation("GET", "/products/{pid}/boards", self._board))
         self.register(Operation("GET", "/products/{pid}/board", self._board))
-        self.register(Operation("POST", "/products/{pid}/tasks", self._task_create,
-                               mutating=True, confirm="create"))
+        self.register(
+            Operation("POST", "/products/{pid}/tasks", self._task_create, mutating=True, confirm="create")
+        )
         self.register(Operation("GET", "/products/{pid}/tasks", self._tasks))
-        self.register(Operation("POST", "/products/{pid}/tasks/{tid}/move",
-                               self._task_move, mutating=True, confirm="move"))
-        self.register(Operation("POST", "/products/{pid}/task-proposals",
-                               self._task_proposal_create, mutating=True, confirm="create"))
-        self.register(Operation("GET", "/products/{pid}/task-proposals",
-                               self._task_proposal_list))
-        self.register(Operation("POST", "/products/{pid}/task-proposals/{proposal_id}/approve",
-                               self._task_proposal_decide, mutating=True, confirm="decide"))
+        self.register(
+            Operation(
+                "POST", "/products/{pid}/tasks/{tid}/move", self._task_move, mutating=True, confirm="move"
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/task-proposals",
+                self._task_proposal_create,
+                mutating=True,
+                confirm="create",
+            )
+        )
+        self.register(Operation("GET", "/products/{pid}/task-proposals", self._task_proposal_list))
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/task-proposals/{proposal_id}/approve",
+                self._task_proposal_decide,
+                mutating=True,
+                confirm="decide",
+            )
+        )
         self.register(Operation("GET", "/notifications", self._notifications))
         self.register(Operation("GET", "/products/{pid}/alerts", self._alerts))
         self.register(Operation("GET", "/audit", self._audit))
@@ -257,8 +357,7 @@ class ProductForgePortal(PortalAdapter):
     # -- capability surface -------------------------------------------------
 
     def capabilities(self) -> list[dict[str, Any]]:
-        bridge_state = ((self.bridge_status() or {}).get("state")
-                        if self.bridge_status is not None else None)
+        bridge_state = (self.bridge_status() or {}).get("state") if self.bridge_status is not None else None
         chat_state = "unverified"
         agent_bridge = "unverified"
         if bridge_state == "running":
@@ -299,10 +398,8 @@ class ProductForgePortal(PortalAdapter):
         ]
 
     def health(self) -> dict[str, Any]:
-        bridge = (self.bridge_status() if self.bridge_status is not None
-                  else {"state": "unverified"})
-        return {"forge_id": FORGE_ID, "version": __version__, "status": "healthy",
-                "bridge": bridge}
+        bridge = self.bridge_status() if self.bridge_status is not None else {"state": "unverified"}
+        return {"forge_id": FORGE_ID, "version": __version__, "status": "healthy", "bridge": bridge}
 
     # -- ops ------------------------------------------------------------------
 
@@ -317,11 +414,13 @@ class ProductForgePortal(PortalAdapter):
         body = ctx.body or {}
         st = _store()
         try:
-            ws = Workspace(id=new_id("ws"), name=ctx.require("name").strip(),
-                           description=str(body.get("description", "")))
+            ws = Workspace(
+                id=new_id("ws"),
+                name=ctx.require("name").strip(),
+                description=str(body.get("description", "")),
+            )
             st.put("workspaces", ws)
-            _record_audit(st, ctx, "workspace.create", "workspaces", ws.id,
-                          workspace_id=ws.id)
+            _record_audit(st, ctx, "workspace.create", "workspaces", ws.id, workspace_id=ws.id)
             ctx.emit("workspace.created", resource_id=ws.id)
             return ws.model_dump(mode="json", by_alias=True)
         finally:
@@ -348,12 +447,16 @@ class ProductForgePortal(PortalAdapter):
         st = _store()
         try:
             _require(st, "workspaces", body["workspace_id"])
-            fields = {k: v for k, v in body.items()
-                      if k in {"workspace_id", "name", "description", "domain", "tags"}}
+            fields = {
+                k: v
+                for k, v in body.items()
+                if k in {"workspace_id", "name", "description", "domain", "tags"}
+            }
             p = Product(id=new_id("prd"), status="active", **fields)
             st.put("products", p)
-            _record_audit(st, ctx, "product.create", "products", p.id,
-                          product_id=p.id, workspace_id=p.workspace_id)
+            _record_audit(
+                st, ctx, "product.create", "products", p.id, product_id=p.id, workspace_id=p.workspace_id
+            )
             ctx.emit("product.created", resource_id=p.id)
             return p.model_dump(mode="json", by_alias=True)
         finally:
@@ -363,12 +466,14 @@ class ProductForgePortal(PortalAdapter):
         pid = ctx.params["pid"]
         st = _store()
         try:
-            return {"schema": "productforge/ProductContextPackage/v1",
-                    "product": _require(st, "products", pid),
-                    "sources": st.list("knowledge_sources", product_id=pid, limit=200),
-                    "entities": st.list("entities", product_id=pid, limit=200),
-                    "agents": st.list("agents", product_id=pid, limit=100),
-                    "data_sources": st.list("data_sources", product_id=pid, limit=100)}
+            return {
+                "schema": "productforge/ProductContextPackage/v1",
+                "product": _require(st, "products", pid),
+                "sources": st.list("knowledge_sources", product_id=pid, limit=200),
+                "entities": st.list("entities", product_id=pid, limit=200),
+                "agents": st.list("agents", product_id=pid, limit=100),
+                "data_sources": st.list("data_sources", product_id=pid, limit=100),
+            }
         finally:
             st.close()
 
@@ -378,8 +483,11 @@ class ProductForgePortal(PortalAdapter):
             doc = _require(st, "documents", ctx.params["did"])
             if doc.get("product_id") != ctx.params["pid"]:
                 raise PortalError("PORTAL-NOT-FOUND", "document not in product", http=404)
-            chunks = [chunk for chunk in st.list_chunks(ctx.params["pid"])
-                      if chunk.get("document_id") == ctx.params["did"]]
+            chunks = [
+                chunk
+                for chunk in st.list_chunks(ctx.params["pid"])
+                if chunk.get("document_id") == ctx.params["did"]
+            ]
             return {
                 "schema": "productforge/DocumentExplorer/v1",
                 "document": doc,
@@ -406,15 +514,17 @@ class ProductForgePortal(PortalAdapter):
             for hit in hits:
                 doc = st.get("documents", hit["document_id"])
                 metadata = doc.get("metadata") or {}
-                items.append({
-                    "document_id": hit["document_id"],
-                    "chunk_id": hit["id"],
-                    "seq": hit["seq"],
-                    "title": doc.get("title", hit["document_id"]),
-                    "snippet": hit["snip"],
-                    "source": metadata.get("source"),
-                    "version": metadata.get("version", 1),
-                })
+                items.append(
+                    {
+                        "document_id": hit["document_id"],
+                        "chunk_id": hit["id"],
+                        "seq": hit["seq"],
+                        "title": doc.get("title", hit["document_id"]),
+                        "snippet": hit["snip"],
+                        "source": metadata.get("source"),
+                        "version": metadata.get("version", 1),
+                    }
+                )
             return {"schema": "productforge/DocumentSearch/v1", "items": items}
         finally:
             st.close()
@@ -466,47 +576,79 @@ class ProductForgePortal(PortalAdapter):
                 imported = import_workspace_document(root, raw_path)
             except WorkspaceDiscoveryError as exc:
                 raise PortalError("WORKSPACE-DOCUMENT-REFUSED", str(exc), http=422) from exc
-            existing = [doc for doc in st.list("documents", product_id=pid)
-                        if (doc.get("metadata") or {}).get("workspace_path") == imported["path"]
-                        and doc.get("content_hash") == imported["content_hash"]]
+            existing = [
+                doc
+                for doc in st.list("documents", product_id=pid)
+                if (doc.get("metadata") or {}).get("workspace_path") == imported["path"]
+                and doc.get("content_hash") == imported["content_hash"]
+            ]
             if existing:
-                return {**existing[0], "state": "already_imported",
-                        "source_path": imported["path"], "source_kind": imported["kind"]}
+                return {
+                    **existing[0],
+                    "state": "already_imported",
+                    "source_path": imported["path"],
+                    "source_kind": imported["kind"],
+                }
             from ..domain.models import Document, DocumentStatus
             from ..knowledge.ingest import chunk_text
 
             title = str(body.get("title") or imported["title"])
-            metadata, _ = prepare_version(st, pid, {
-                "source": "workspace", "workspace_path": imported["path"],
-                "classification": imported["kind"], "size": imported["size"],
-            })
+            metadata, _ = prepare_version(
+                st,
+                pid,
+                {
+                    "source": "workspace",
+                    "workspace_path": imported["path"],
+                    "classification": imported["kind"],
+                    "size": imported["size"],
+                },
+            )
             doc = Document(
-                id=new_id("doc"), product_id=pid, title=title,
-                content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
+                id=new_id("doc"),
+                product_id=pid,
+                title=title,
+                content_hash=imported["content_hash"],
+                status=DocumentStatus.IMPORTED,
                 metadata=metadata,
             )
             st.put("documents", doc)
             doc.chunk_count = st.put_chunks(doc.id, pid, chunk_text(imported["content"]))
             doc.status = DocumentStatus.INDEXED
             st.put("documents", doc)
-            _record_audit(st, ctx, "workspace.document.import", "documents", doc.id,
-                          product_id=pid, workspace_id=product.get("workspace_id"))
-            ctx.emit("workspace.document.imported", resource_id=doc.id,
-                     product_id=pid, path=imported["path"], kind=imported["kind"])
-            return {**doc.model_dump(mode="json", by_alias=True),
-                    "state": "imported", "source_path": imported["path"],
-                    "source_kind": imported["kind"]}
+            _record_audit(
+                st,
+                ctx,
+                "workspace.document.import",
+                "documents",
+                doc.id,
+                product_id=pid,
+                workspace_id=product.get("workspace_id"),
+            )
+            ctx.emit(
+                "workspace.document.imported",
+                resource_id=doc.id,
+                product_id=pid,
+                path=imported["path"],
+                kind=imported["kind"],
+            )
+            return {
+                **doc.model_dump(mode="json", by_alias=True),
+                "state": "imported",
+                "source_path": imported["path"],
+                "source_kind": imported["kind"],
+            }
         finally:
             st.close()
 
     def _url_preview(self, ctx: RequestContext) -> dict[str, Any]:
         raw_url = _q1(ctx, "url")
+        extractor = _q1(ctx, "extractor") or "stdlib"
         if not raw_url:
             raise PortalError("URL-REQUIRED", "url query parameter is required", http=422)
         st = _store()
         try:
             _require(st, "products", ctx.params["pid"])
-            captured = fetch_url_document(raw_url)
+            captured = fetch_url_document(raw_url, extractor=extractor)
         except UrlCaptureError as exc:
             raise PortalError(exc.code, str(exc), http=422, details=exc.details) from exc
         finally:
@@ -523,43 +665,68 @@ class ProductForgePortal(PortalAdapter):
         try:
             product = _require(st, "products", pid)
             try:
-                captured = fetch_url_document(raw_url)
+                captured = fetch_url_document(raw_url, extractor=str(body.get("extractor") or "stdlib"))
             except UrlCaptureError as exc:
                 raise PortalError(exc.code, str(exc), http=422, details=exc.details) from exc
-            existing = [doc for doc in st.list("documents", product_id=pid)
-                        if (doc.get("metadata") or {}).get("source_url") == captured["url"]
-                        and doc.get("content_hash") == captured["content_hash"]]
+            existing = [
+                doc
+                for doc in st.list("documents", product_id=pid)
+                if (doc.get("metadata") or {}).get("source_url") == captured["url"]
+                and doc.get("content_hash") == captured["content_hash"]
+            ]
             if existing:
-                return {**existing[0], "state": "already_imported",
-                        "source_url": captured["url"], "source_kind": "url"}
+                return {
+                    **existing[0],
+                    "state": "already_imported",
+                    "source_url": captured["url"],
+                    "source_kind": "url",
+                }
             from ..domain.models import Document, DocumentStatus
             from ..knowledge.ingest import chunk_text
 
-            metadata, _ = prepare_version(st, pid, {
-                "source": "url", "source_url": captured["url"],
-                "content_type": captured["content_type"],
-                "extractor": captured["extractor"], "size": captured["size"],
-                "metrics": captured["metrics"], "warnings": captured["warnings"],
-                "provenance": captured["provenance"],
-            })
+            metadata, _ = prepare_version(
+                st,
+                pid,
+                {
+                    "source": "url",
+                    "source_url": captured["url"],
+                    "content_type": captured["content_type"],
+                    "extractor": captured["extractor"],
+                    "size": captured["size"],
+                    "metrics": captured["metrics"],
+                    "warnings": captured["warnings"],
+                    "provenance": captured["provenance"],
+                },
+            )
             doc = Document(
-                id=new_id("doc"), product_id=pid,
+                id=new_id("doc"),
+                product_id=pid,
                 title=str(body.get("title") or captured["title"]),
-                content_hash=captured["content_hash"], status=DocumentStatus.IMPORTED,
+                content_hash=captured["content_hash"],
+                status=DocumentStatus.IMPORTED,
                 metadata=metadata,
             )
             st.put("documents", doc)
             doc.chunk_count = st.put_chunks(doc.id, pid, chunk_text(captured["content"]))
             doc.status = DocumentStatus.INDEXED
             st.put("documents", doc)
-            _record_audit(st, ctx, "url.document.import", "documents", doc.id,
-                          product_id=pid, workspace_id=product.get("workspace_id"))
-            ctx.emit("url.document.imported", resource_id=doc.id,
-                     product_id=pid, url=captured["url"])
-            return {**doc.model_dump(mode="json", by_alias=True),
-                    "state": "imported", "source_url": captured["url"],
-                    "source_kind": "url", "capture": {k: v for k, v in captured.items()
-                                                          if k != "content"}}
+            _record_audit(
+                st,
+                ctx,
+                "url.document.import",
+                "documents",
+                doc.id,
+                product_id=pid,
+                workspace_id=product.get("workspace_id"),
+            )
+            ctx.emit("url.document.imported", resource_id=doc.id, product_id=pid, url=captured["url"])
+            return {
+                **doc.model_dump(mode="json", by_alias=True),
+                "state": "imported",
+                "source_url": captured["url"],
+                "source_kind": "url",
+                "capture": {k: v for k, v in captured.items() if k != "content"},
+            }
         finally:
             st.close()
 
@@ -586,35 +753,60 @@ class ProductForgePortal(PortalAdapter):
                 imported = import_vault_document(_obsidian_vault(), raw_path)
             except ObsidianVaultError as exc:
                 raise PortalError(exc.code, str(exc), http=422) from exc
-            existing = [doc for doc in st.list("documents", product_id=pid)
-                        if (doc.get("metadata") or {}).get("obsidian_path") == imported["path"]
-                        and doc.get("content_hash") == imported["content_hash"]]
+            existing = [
+                doc
+                for doc in st.list("documents", product_id=pid)
+                if (doc.get("metadata") or {}).get("obsidian_path") == imported["path"]
+                and doc.get("content_hash") == imported["content_hash"]
+            ]
             if existing:
-                return {**existing[0], "state": "already_imported",
-                        "source_path": imported["path"], "source_kind": "obsidian"}
+                return {
+                    **existing[0],
+                    "state": "already_imported",
+                    "source_path": imported["path"],
+                    "source_kind": "obsidian",
+                }
             from ..domain.models import Document, DocumentStatus
             from ..knowledge.ingest import chunk_text
 
-            metadata, _ = prepare_version(st, pid, {
-                "source": "obsidian", "obsidian_path": imported["path"],
-                "size": imported["size"], "provenance": imported["provenance"],
-            })
+            metadata, _ = prepare_version(
+                st,
+                pid,
+                {
+                    "source": "obsidian",
+                    "obsidian_path": imported["path"],
+                    "size": imported["size"],
+                    "provenance": imported["provenance"],
+                },
+            )
             doc = Document(
-                id=new_id("doc"), product_id=pid,
+                id=new_id("doc"),
+                product_id=pid,
                 title=str(body.get("title") or imported["title"]),
-                content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
+                content_hash=imported["content_hash"],
+                status=DocumentStatus.IMPORTED,
                 metadata=metadata,
             )
             st.put("documents", doc)
             doc.chunk_count = st.put_chunks(doc.id, pid, chunk_text(imported["content"]))
             doc.status = DocumentStatus.INDEXED
             st.put("documents", doc)
-            _record_audit(st, ctx, "obsidian.document.import", "documents", doc.id,
-                          product_id=pid, workspace_id=product.get("workspace_id"))
-            ctx.emit("obsidian.document.imported", resource_id=doc.id,
-                     product_id=pid, path=imported["path"])
-            return {**doc.model_dump(mode="json", by_alias=True),
-                    "state": "imported", "source_path": imported["path"], "source_kind": "obsidian"}
+            _record_audit(
+                st,
+                ctx,
+                "obsidian.document.import",
+                "documents",
+                doc.id,
+                product_id=pid,
+                workspace_id=product.get("workspace_id"),
+            )
+            ctx.emit("obsidian.document.imported", resource_id=doc.id, product_id=pid, path=imported["path"])
+            return {
+                **doc.model_dump(mode="json", by_alias=True),
+                "state": "imported",
+                "source_path": imported["path"],
+                "source_kind": "obsidian",
+            }
         finally:
             st.close()
 
@@ -632,8 +824,15 @@ class ProductForgePortal(PortalAdapter):
                 exported = export_vault_document(_obsidian_vault(), raw_path, content)
             except ObsidianVaultError as exc:
                 raise PortalError(exc.code, str(exc), http=422) from exc
-            _record_audit(st, ctx, "obsidian.document.export", "obsidian", exported["path"],
-                          product_id=pid, workspace_id=product.get("workspace_id"))
+            _record_audit(
+                st,
+                ctx,
+                "obsidian.document.export",
+                "obsidian",
+                exported["path"],
+                product_id=pid,
+                workspace_id=product.get("workspace_id"),
+            )
             ctx.emit("obsidian.document.exported", resource_id=exported["path"], product_id=pid)
             return exported
         finally:
@@ -659,10 +858,18 @@ class ProductForgePortal(PortalAdapter):
         st = _store()
         try:
             hits = st.search_fts(pid, question, limit=10)
-            return {"question": question,
-                    "citations": [{"chunk_id": h["id"], "document_id": h["document_id"],
-                                   "snippet": h["snip"], "title": st.doc_title(h["document_id"])}
-                                  for h in hits]}
+            return {
+                "question": question,
+                "citations": [
+                    {
+                        "chunk_id": h["id"],
+                        "document_id": h["document_id"],
+                        "snippet": h["snip"],
+                        "title": st.doc_title(h["document_id"]),
+                    }
+                    for h in hits
+                ],
+            }
         finally:
             st.close()
 
@@ -689,8 +896,7 @@ class ProductForgePortal(PortalAdapter):
 
         body = ctx.body or {}
         source_id = ctx.require("source_id")
-        statement = body.get("statement") or (
-            compile_spec(body["spec"]) if body.get("spec") else None)
+        statement = body.get("statement") or (compile_spec(body["spec"]) if body.get("spec") else None)
         if not statement:
             raise PortalError(
                 "PORTAL-VALIDATION",
@@ -711,8 +917,7 @@ class ProductForgePortal(PortalAdapter):
 
         st = _store()
         try:
-            agent = AgentDefinition.model_validate(
-                _require(st, "agents", ctx.params["aid"]))
+            agent = AgentDefinition.model_validate(_require(st, "agents", ctx.params["aid"]))
             run = run_agent(st, agent, (ctx.body or {}).get("input", ""), actor="portal")
             ctx.emit("agent.run", resource_id=run["id"], status=run["status"])
             return run
@@ -741,10 +946,13 @@ class ProductForgePortal(PortalAdapter):
         st = _store()
         try:
             _require(st, "products", ctx.params["pid"])
-            item = Initiative(id=new_id("ini"), product_id=ctx.params["pid"],
-                              title=title,
-                              hypothesis=str(body.get("hypothesis", "")),
-                              status=str(body.get("status", "proposed")))
+            item = Initiative(
+                id=new_id("ini"),
+                product_id=ctx.params["pid"],
+                title=title,
+                hypothesis=str(body.get("hypothesis", "")),
+                status=str(body.get("status", "proposed")),
+            )
             st.put("initiatives", item)
             ctx.emit("initiative.created", resource_id=item.id)
             return item.model_dump(mode="json", by_alias=True)
@@ -753,6 +961,7 @@ class ProductForgePortal(PortalAdapter):
 
     def _initiative_prioritize(self, ctx: RequestContext) -> dict[str, Any]:
         from ..planning.prioritize import score_initiative
+
         st = _store()
         try:
             doc = _require(st, "initiatives", ctx.params["iid"])
@@ -774,17 +983,25 @@ class ProductForgePortal(PortalAdapter):
             boards = st.list("boards", product_id=ctx.params["pid"], limit=20)
             board = boards[0] if boards else None
             if board is None:
-                board = Board(id=new_id("brd"), workspace_id=product["workspace_id"],
-                              product_id=ctx.params["pid"],
-                              name=f"{product['name']} board")
+                board = Board(
+                    id=new_id("brd"),
+                    workspace_id=product["workspace_id"],
+                    product_id=ctx.params["pid"],
+                    name=f"{product['name']} board",
+                )
                 st.put("boards", board)
             tasks = st.list("tasks", product_id=ctx.params["pid"], limit=1000)
             columns = {str(c.get("id")): [] for c in board.get("columns", [])}
             for task in tasks:
                 columns.setdefault(str(task.get("column_id", "backlog")), []).append(task)
-            return {"schema": "productforge/Board/v1", "product_id": ctx.params["pid"],
-                    "board": board, "columns": columns, "tasks": tasks,
-                    "items": self._initiatives(ctx)["items"]}
+            return {
+                "schema": "productforge/Board/v1",
+                "product_id": ctx.params["pid"],
+                "board": board,
+                "columns": columns,
+                "tasks": tasks,
+                "items": self._initiatives(ctx)["items"],
+            }
         finally:
             st.close()
 
@@ -802,21 +1019,39 @@ class ProductForgePortal(PortalAdapter):
         try:
             product = _require(st, "products", ctx.params["pid"])
             boards = st.list("boards", product_id=ctx.params["pid"], limit=1)
-            board = boards[0] if boards else Board(
-                id=new_id("brd"), workspace_id=product["workspace_id"],
-                product_id=ctx.params["pid"], name=f"{product['name']} board")
+            board = (
+                boards[0]
+                if boards
+                else Board(
+                    id=new_id("brd"),
+                    workspace_id=product["workspace_id"],
+                    product_id=ctx.params["pid"],
+                    name=f"{product['name']} board",
+                )
+            )
             if not boards:
                 st.put("boards", board)
             board_id = board.id if isinstance(board, Board) else board["id"]
-            task = Task(id=new_id("tsk"), workspace_id=product["workspace_id"],
-                        product_id=ctx.params["pid"], board_id=board_id,
-                        title=title,
-                        description=str(body.get("description", "")),
-                        column_id=str(body.get("column_id", "backlog")),
-                        priority=str(body.get("priority", "medium")))
+            task = Task(
+                id=new_id("tsk"),
+                workspace_id=product["workspace_id"],
+                product_id=ctx.params["pid"],
+                board_id=board_id,
+                title=title,
+                description=str(body.get("description", "")),
+                column_id=str(body.get("column_id", "backlog")),
+                priority=str(body.get("priority", "medium")),
+            )
             st.put("tasks", task)
-            _record_audit(st, ctx, "task.create", "tasks", task.id,
-                          product_id=task.product_id, workspace_id=task.workspace_id)
+            _record_audit(
+                st,
+                ctx,
+                "task.create",
+                "tasks",
+                task.id,
+                product_id=task.product_id,
+                workspace_id=task.workspace_id,
+            )
             ctx.emit("task.created", resource_id=task.id)
             return task.model_dump(mode="json", by_alias=True)
         finally:
@@ -835,8 +1070,7 @@ class ProductForgePortal(PortalAdapter):
             doc["position"] = int((ctx.body or {}).get("position", doc.get("position", 0)))
             doc["version"] = int(doc.get("version", 1)) + 1
             st.put("tasks", Task.model_validate(doc))
-            ctx.emit("task.moved", resource_id=ctx.params["tid"],
-                     column_id=doc["column_id"])
+            ctx.emit("task.moved", resource_id=ctx.params["tid"], column_id=doc["column_id"])
             return doc
         finally:
             st.close()
@@ -891,8 +1125,11 @@ class ProductForgePortal(PortalAdapter):
                     reviewer="portal",
                     idempotency_key=body.get("idempotency_key"),
                 )
-            ctx.emit("task-proposal.decided", resource_id=ctx.params["proposal_id"],
-                     approved=bool(body.get("approved", True)))
+            ctx.emit(
+                "task-proposal.decided",
+                resource_id=ctx.params["proposal_id"],
+                approved=bool(body.get("approved", True)),
+            )
             return rec
         finally:
             st.close()
@@ -900,8 +1137,10 @@ class ProductForgePortal(PortalAdapter):
     def _notifications(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()
         try:
-            return {"items": st.list("alerts", limit=100) + st.list("notifications", limit=100),
-                    "delivery": "approval-gated-webhook-or-smtp"}
+            return {
+                "items": st.list("alerts", limit=100) + st.list("notifications", limit=100),
+                "delivery": "approval-gated-webhook-or-smtp",
+            }
         finally:
             st.close()
 
@@ -921,9 +1160,9 @@ class ProductForgePortal(PortalAdapter):
         """
         return str(getattr(self, "_gateway_bridge_token", "") or "")
 
-    def _bridge_call(self, path: str, *, method: str = "GET",
-                     body: dict[str, Any] | None = None,
-                     timeout: float = 2.0) -> dict[str, Any]:
+    def _bridge_call(
+        self, path: str, *, method: str = "GET", body: dict[str, Any] | None = None, timeout: float = 2.0
+    ) -> dict[str, Any]:
         """_bridge_request that fails honestly instead of returning an error dict.
 
         Read ops keep the ``{"state": "unavailable"|"error"}`` shape for the UI
@@ -931,8 +1170,8 @@ class ProductForgePortal(PortalAdapter):
         envelope errors (HTTP status + typed code), never 200-wrapped.
         """
         result = ProductForgePortal._bridge_request(
-            path, method=method, body=body,
-            token_override=self._gateway_token(), timeout=timeout)
+            path, method=method, body=body, token_override=self._gateway_token(), timeout=timeout
+        )
         status = result.get("status")
         if result.get("state") == "error" or (isinstance(status, int) and status >= 400):
             detail = result.get("error") or result
@@ -955,19 +1194,21 @@ class ProductForgePortal(PortalAdapter):
         return result
 
     @staticmethod
-    def _bridge_request(path: str, *, method: str = "GET",
-                        body: dict[str, Any] | None = None,
-                        token_override: str = "",
-                        timeout: float = 2.0) -> dict[str, Any]:
+    def _bridge_request(
+        path: str,
+        *,
+        method: str = "GET",
+        body: dict[str, Any] | None = None,
+        token_override: str = "",
+        timeout: float = 2.0,
+    ) -> dict[str, Any]:
         base = os.environ.get("FORGE_BRIDGE_URL", "http://127.0.0.1:8471").rstrip("/")
         parsed = urllib.parse.urlsplit(base)
-        if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
-            "127.0.0.1", "localhost", "::1"
-        }:
+        if parsed.scheme not in {"http", "https"} or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
             return {"state": "unavailable", "reason": "non_loopback_bridge_url"}
-        token_file = Path(os.environ.get(
-            "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token"
-        )).expanduser()
+        token_file = Path(
+            os.environ.get("FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token")
+        ).expanduser()
         headers = {"Accept": "application/json"}
         token = token_override
         if not token:
@@ -981,7 +1222,8 @@ class ProductForgePortal(PortalAdapter):
         if data is not None:
             headers["Content-Type"] = "application/json"
         request = urllib.request.Request(  # noqa: S310 - URL validated above
-            f"{base}{path}", data=data, headers=headers, method=method)
+            f"{base}{path}", data=data, headers=headers, method=method
+        )
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 - loopback validated above
                 payload = json.loads(response.read().decode("utf-8"))
@@ -996,8 +1238,7 @@ class ProductForgePortal(PortalAdapter):
             return {"state": "unavailable", "reason": type(exc).__name__}
 
     def _bridge_get(self, path: str) -> dict[str, Any]:
-        return ProductForgePortal._bridge_request(
-            path, token_override=self._gateway_token())
+        return ProductForgePortal._bridge_request(path, token_override=self._gateway_token())
 
     def _bridge_proxy(self, ctx: RequestContext) -> dict[str, Any]:
         """Forward a Bridge contract through this process' same-origin API.
@@ -1011,8 +1252,16 @@ class ProductForgePortal(PortalAdapter):
         body = dict(ctx.body or {})
         method = str(body.pop("_method", ctx.params.get("__method", "GET"))).upper()
         path = ctx.params["bridge_path"]
-        allowed = ("/status", "/providers", "/diagnostics", "/mcp/doctor",
-                   "/agent-sessions", "/approvals", "/files", "/intel")
+        allowed = (
+            "/status",
+            "/providers",
+            "/diagnostics",
+            "/mcp/doctor",
+            "/agent-sessions",
+            "/approvals",
+            "/files",
+            "/intel",
+        )
         if not path.startswith(allowed) or path in {"/pair/exchange", "/pair/rotate"}:
             raise PortalError(
                 "BRIDGE-GATEWAY-FORBIDDEN",
@@ -1061,9 +1310,9 @@ class ProductForgePortal(PortalAdapter):
             # latency on Windows and turns a healthy Bridge into a false
             # "unavailable" state.  Keep mutating/prompt calls bounded while
             # giving read-only discovery a realistic local budget.
-            timeout=280.0 if path.endswith("/prompt") else (15.0 if path in {
-                "/status", "/providers", "/diagnostics", "/mcp/doctor"
-            } else 5.0),
+            timeout=280.0
+            if path.endswith("/prompt")
+            else (15.0 if path in {"/status", "/providers", "/diagnostics", "/mcp/doctor"} else 5.0),
         )
         status = result.get("status")
         if isinstance(status, int) and status >= 400:
@@ -1088,9 +1337,7 @@ class ProductForgePortal(PortalAdapter):
         """
         base = os.environ.get("FORGE_BRIDGE_URL", "http://127.0.0.1:8471").rstrip("/")
         parsed = urllib.parse.urlsplit(base)
-        if parsed.scheme not in {"http", "https"} or parsed.hostname not in {
-            "127.0.0.1", "localhost", "::1"
-        }:
+        if parsed.scheme not in {"http", "https"} or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
             raise PortalError("BRIDGE-GATEWAY-FORBIDDEN", "bridge URL must be loopback", http=403)
         request = urllib.request.Request(  # noqa: S310 - loopback URL validated
             f"{base}{path}",
@@ -1182,20 +1429,24 @@ class ProductForgePortal(PortalAdapter):
         result only; neither the master pair token, an internal URL nor a
         Bridge bearer token crosses the Portal boundary.
         """
-        token_file = Path(os.environ.get(
-            "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token"
-        )).expanduser()
+        token_file = Path(
+            os.environ.get("FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token")
+        ).expanduser()
         try:
             master = token_file.read_text(encoding="utf-8").strip()
         except OSError:
             return {"connected": False, "bridge": {"state": "unavailable", "reason": "pair_token_missing"}}
         if not master:
             return {"connected": False, "bridge": {"state": "unavailable", "reason": "pair_token_empty"}}
-        result = self._bridge_request("/pair/exchange", method="POST", body={
-            "pair_token": master,
-            "device_name": "product-forge-portal",
-            "scopes": ["agent"],
-        })
+        result = self._bridge_request(
+            "/pair/exchange",
+            method="POST",
+            body={
+                "pair_token": master,
+                "device_name": "product-forge-portal",
+                "scopes": ["agent"],
+            },
+        )
         if "session_token" not in result:
             return {"connected": False, "bridge": result}
         # Keep this credential server-side for subsequent proxy calls.  The
@@ -1204,13 +1455,20 @@ class ProductForgePortal(PortalAdapter):
         return {
             "connected": True,
             "bridge": {"state": "ready", "capabilities": ["sessions", "streaming"]},
-            "device": {"device_id": "gateway", "device_name": "Product Forge gateway",
-                        "scopes": ["agent"], "created_at": 0, "expires_at": 0, "last_seen": 0},
+            "device": {
+                "device_id": "gateway",
+                "device_name": "Product Forge gateway",
+                "scopes": ["agent"],
+                "created_at": 0,
+                "expires_at": 0,
+                "last_seen": 0,
+            },
         }
 
     def _claude_auth(self, ctx: RequestContext) -> dict[str, Any]:
-        return self._bridge_call("/providers/claude-code/auth", method="POST",
-                                 body=dict(ctx.body or {}), timeout=30.0)
+        return self._bridge_call(
+            "/providers/claude-code/auth", method="POST", body=dict(ctx.body or {}), timeout=30.0
+        )
 
     def _chat_sessions(self, ctx: RequestContext) -> dict[str, Any]:
         listing = self._bridge_get("/agent-sessions")
@@ -1232,8 +1490,7 @@ class ProductForgePortal(PortalAdapter):
             for item in items:
                 if not isinstance(item, dict):
                     continue
-                pid = ((item.get("meta") or {}).get("product_id")
-                       or item.get("product_id"))
+                pid = (item.get("meta") or {}).get("product_id") or item.get("product_id")
                 if not pid:
                     continue
                 pid = str(pid)
@@ -1256,8 +1513,7 @@ class ProductForgePortal(PortalAdapter):
                 http=422,
                 action="connect-provider",
             )
-        return self._bridge_call("/agent-sessions", method="POST", body=body,
-                                 timeout=30.0)
+        return self._bridge_call("/agent-sessions", method="POST", body=body, timeout=30.0)
 
     def _chat_stream(self, ctx: RequestContext) -> SseResult:
         """Typed SSE route for chat — delegates to the gateway proxy so cursor
@@ -1276,13 +1532,13 @@ class ProductForgePortal(PortalAdapter):
                 http=422,
             )
         return self._bridge_call(
-            f"/agent-sessions/{ctx.params['sid']}/prompt",
-            method="POST", body=body, timeout=280.0)
+            f"/agent-sessions/{ctx.params['sid']}/prompt", method="POST", body=body, timeout=280.0
+        )
 
     def _chat_cancel(self, ctx: RequestContext) -> dict[str, Any]:
         return self._bridge_call(
-            f"/agent-sessions/{ctx.params['sid']}/cancel",
-            method="POST", body={}, timeout=15.0)
+            f"/agent-sessions/{ctx.params['sid']}/cancel", method="POST", body={}, timeout=15.0
+        )
 
     def _chat_approve(self, ctx: RequestContext) -> dict[str, Any]:
         body = dict(ctx.body or {})
@@ -1301,8 +1557,10 @@ class ProductForgePortal(PortalAdapter):
             )
         return self._bridge_call(
             f"/agent-sessions/{ctx.params['sid']}/approve",
-            method="POST", timeout=15.0,
-            body={"approval_id": approval_id, "approved": body["approved"]})
+            method="POST",
+            timeout=15.0,
+            body={"approval_id": approval_id, "approved": body["approved"]},
+        )
 
     def _chat_resume(self, ctx: RequestContext) -> dict[str, Any]:
         body = dict(ctx.body or {})
@@ -1313,13 +1571,16 @@ class ProductForgePortal(PortalAdapter):
                 http=422,
             )
         return self._bridge_call(
-            f"/agent-sessions/{ctx.params['sid']}/resume",
-            method="POST", body=body, timeout=90.0)
+            f"/agent-sessions/{ctx.params['sid']}/resume", method="POST", body=body, timeout=90.0
+        )
 
     def _chat_events(self, ctx: RequestContext) -> dict[str, Any]:
         return self._bridge_call(
             f"/agent-sessions/{ctx.params['sid']}/events",
-            method="POST", body=dict(ctx.body or {}), timeout=15.0)
+            method="POST",
+            body=dict(ctx.body or {}),
+            timeout=15.0,
+        )
 
     def _chat_cleanup(self, ctx: RequestContext) -> dict[str, Any]:
         """Archive bridge chat sessions that are no longer active.
@@ -1334,8 +1595,7 @@ class ProductForgePortal(PortalAdapter):
         listing = self._bridge_get("/agent-sessions")
         items = listing.get("items")
         if not isinstance(items, list):
-            return {"state": "unavailable", "bridge": listing,
-                    "closed": [], "kept": [], "errors": []}
+            return {"state": "unavailable", "bridge": listing, "closed": [], "kept": [], "errors": []}
         closed: list[str] = []
         kept: list[str] = []
         errors: list[dict[str, Any]] = []
@@ -1347,8 +1607,8 @@ class ProductForgePortal(PortalAdapter):
                 kept.append(sid)
                 continue
             result = self._bridge_request(
-                f"/agent-sessions/{sid}", method="DELETE",
-                token_override=self._gateway_token())
+                f"/agent-sessions/{sid}", method="DELETE", token_override=self._gateway_token()
+            )
             if result.get("archived"):
                 closed.append(sid)
             else:
@@ -1357,5 +1617,4 @@ class ProductForgePortal(PortalAdapter):
         return {"closed": closed, "kept": kept, "errors": errors}
 
     def _chat_close(self, ctx: RequestContext) -> dict[str, Any]:
-        return self._bridge_call(
-            f"/agent-sessions/{ctx.params['sid']}", method="DELETE", timeout=15.0)
+        return self._bridge_call(f"/agent-sessions/{ctx.params['sid']}", method="DELETE", timeout=15.0)

@@ -66,12 +66,22 @@ All product-scoped collections below live under `/api/v1/products/{pid}/…`.
 | Method | Path | Purpose |
 |---|---|---|
 | GET·POST | `/documents` | document list / import (content is redacted before persist) |
+| GET | `/documents/search` | backward-compatible indexed document search |
+| GET | `/knowledge/search` | bounded body-free search across documents, sources, entities and relations |
+| GET | `/products/{pid}/documents/url/preview?url=…&extractor=stdlib|defuddle` | safe URL preview; `defuddle` is optional |
+| POST | `/products/{pid}/documents/from-url` | confirmed URL import; optional `extractor` is `stdlib` or `defuddle` |
 | POST | `/knowledge/query` | FTS retrieval with chunk citations |
 | POST | `/knowledge/extract` | entity/relation extraction |
 | GET | `/knowledge-health` | coverage/citation health |
 | GET | `/graph` | entity/relation graph |
 | GET | `/evidence-graph` | evidence-first graph projection |
 | GET | `/impact/{eid}` | impact/lineage for an entity |
+
+URL capture always validates the public URL and downloads bounded HTML before
+extraction. `stdlib` is the default, dependency-free extractor. `defuddle`
+passes that already-validated HTML to the optional Defuddle CLI over stdin;
+set `FORGE_DEFUDDLE_BIN` when the executable is not on `PATH`. It never passes
+the remote URL to the optional process and never executes page scripts.
 
 ### Agents (Agent Factory)
 

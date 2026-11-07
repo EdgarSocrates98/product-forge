@@ -55,7 +55,11 @@ def test_url_routes_are_registered_and_preview_keeps_provenance(monkeypatch) -> 
         "metrics": {"bytes_read": 9},
         "provenance": {"redirects_followed": 0},
     }
-    monkeypatch.setattr("product_forge.portal.adapter.fetch_url_document", lambda _url: captured)
+    monkeypatch.setattr(
+        "product_forge.portal.adapter.fetch_url_document",
+        lambda _url, **_kwargs: captured,
+    )
+
     class StoreStub:
         def get(self, collection, key):
             assert collection == "products" and key == "p1"
@@ -113,12 +117,14 @@ def test_chat_requires_an_explicit_provider() -> None:
 def test_bridge_stream_relay_preserves_sse_metadata(monkeypatch) -> None:
     class Response:
         def __iter__(self):
-            return iter([
-                b"id: 7\n",
-                b"event: turn.completed\n",
-                b"data: {\"payload\": {\"ok\": true}}\n",
-                b"\n",
-            ])
+            return iter(
+                [
+                    b"id: 7\n",
+                    b"event: turn.completed\n",
+                    b'data: {"payload": {"ok": true}}\n',
+                    b"\n",
+                ]
+            )
 
         def close(self):
             pass
@@ -128,13 +134,15 @@ def test_bridge_stream_relay_preserves_sse_metadata(monkeypatch) -> None:
     result = ProductForgePortal._bridge_stream(
         "/agent-sessions/ses_1/stream?after_seq=6", token_override=token
     )
-    assert list(result.events) == [{
-        "payload": {"ok": True},
-        "seq": 7,
-        "type": "turn.completed",
-        "sse_id": "7",
-        "sse_event": "turn.completed",
-    }]
+    assert list(result.events) == [
+        {
+            "payload": {"ok": True},
+            "seq": 7,
+            "type": "turn.completed",
+            "sse_id": "7",
+            "sse_event": "turn.completed",
+        }
+    ]
 
 
 def test_health_reports_unverified_bridge_without_supervisor() -> None:
@@ -161,32 +169,31 @@ class _Ctx:
 
 def _patch_bridge(monkeypatch, listing, delete_result=None):
     deleted = []
-    monkeypatch.setattr(
-        ProductForgePortal, "_bridge_get", staticmethod(lambda path: listing))
+    monkeypatch.setattr(ProductForgePortal, "_bridge_get", staticmethod(lambda path: listing))
 
     def fake_request(path, *, method="GET", body=None, token_override=""):
         deleted.append((path, method))
         return delete_result or {"closed": True, "archived": True}
 
-    monkeypatch.setattr(
-        ProductForgePortal, "_bridge_request", staticmethod(fake_request))
+    monkeypatch.setattr(ProductForgePortal, "_bridge_request", staticmethod(fake_request))
     return deleted
 
 
 def test_chat_cleanup_archives_inactive_and_keeps_active(monkeypatch) -> None:
-    listing = {"items": [
-        {"id": "s1", "state": "active"},
-        {"id": "s2", "state": "closed"},
-        {"id": "s3", "state": "ended"},
-        {"no_id": True},
-    ]}
+    listing = {
+        "items": [
+            {"id": "s1", "state": "active"},
+            {"id": "s2", "state": "closed"},
+            {"id": "s3", "state": "ended"},
+            {"no_id": True},
+        ]
+    }
     deleted = _patch_bridge(monkeypatch, listing)
     ctx = _Ctx()
     result = ProductForgePortal()._chat_cleanup(ctx)
     assert result["closed"] == ["s2", "s3"]
     assert result["kept"] == ["s1"]
-    assert deleted == [("/agent-sessions/s2", "DELETE"),
-                       ("/agent-sessions/s3", "DELETE")]
+    assert deleted == [("/agent-sessions/s2", "DELETE"), ("/agent-sessions/s3", "DELETE")]
     assert ctx.events and ctx.events[0][0] == "chat.sessions_cleaned"
 
 
@@ -217,23 +224,20 @@ def test_chat_cleanup_reports_failed_deletes(monkeypatch) -> None:
 def _capture_bridge(monkeypatch):
     calls = []
 
-    def fake_request(path, *, method="GET", body=None, token_override="",
-                     timeout=2.0):
-        calls.append({"path": path, "method": method, "body": body,
-                      "timeout": timeout})
+    def fake_request(path, *, method="GET", body=None, token_override="", timeout=2.0):
+        calls.append({"path": path, "method": method, "body": body, "timeout": timeout})
         return {"accepted": True}
 
-    monkeypatch.setattr(
-        ProductForgePortal, "_bridge_request", staticmethod(fake_request))
+    monkeypatch.setattr(ProductForgePortal, "_bridge_request", staticmethod(fake_request))
     return calls
 
 
 def test_chat_prompt_requires_text() -> None:
     from product_forge._forge_portal import RequestContext
+
     portal = ProductForgePortal()
     try:
-        portal._chat_prompt(RequestContext(
-            None, {"sid": "s1"}, {}, {"text": "  "}, "cid"))  # type: ignore[arg-type]
+        portal._chat_prompt(RequestContext(None, {"sid": "s1"}, {}, {"text": "  "}, "cid"))  # type: ignore[arg-type]
     except Exception as exc:
         assert getattr(exc, "code", "") == "PROMPT-REQUIRED"
     else:
@@ -242,18 +246,18 @@ def test_chat_prompt_requires_text() -> None:
 
 def test_chat_prompt_forwards_text(monkeypatch) -> None:
     from product_forge._forge_portal import RequestContext
+
     calls = _capture_bridge(monkeypatch)
-    ProductForgePortal()._chat_prompt(RequestContext(
-        None, {"sid": "s1"}, {}, {"text": "hello"}, "cid"))  # type: ignore[arg-type]
+    ProductForgePortal()._chat_prompt(RequestContext(None, {"sid": "s1"}, {}, {"text": "hello"}, "cid"))  # type: ignore[arg-type]
     assert calls[0]["path"] == "/agent-sessions/s1/prompt"
     assert calls[0]["body"]["text"] == "hello"
 
 
 def test_chat_cancel_posts_to_bridge(monkeypatch) -> None:
     from product_forge._forge_portal import RequestContext
+
     calls = _capture_bridge(monkeypatch)
-    ProductForgePortal()._chat_cancel(RequestContext(
-        None, {"sid": "s1"}, {}, {"confirm": "cancel"}, "cid"))  # type: ignore[arg-type]
+    ProductForgePortal()._chat_cancel(RequestContext(None, {"sid": "s1"}, {}, {"confirm": "cancel"}, "cid"))  # type: ignore[arg-type]
     assert calls[0]["path"] == "/agent-sessions/s1/cancel"
     assert calls[0]["method"] == "POST"
     assert calls[0]["body"] == {}
@@ -261,14 +265,14 @@ def test_chat_cancel_posts_to_bridge(monkeypatch) -> None:
 
 def test_chat_approve_validates_fields() -> None:
     from product_forge._forge_portal import RequestContext
+
     portal = ProductForgePortal()
     for body, code in [
         ({"approved": True}, "APPROVAL-REQUIRED"),
         ({"approval_id": "a1", "approved": "yes"}, "APPROVAL-REQUIRED"),
     ]:
         try:
-            portal._chat_approve(RequestContext(
-                None, {"sid": "s1"}, {}, body, "cid"))  # type: ignore[arg-type]
+            portal._chat_approve(RequestContext(None, {"sid": "s1"}, {}, body, "cid"))  # type: ignore[arg-type]
         except Exception as exc:
             assert getattr(exc, "code", "") == code
         else:
@@ -277,20 +281,21 @@ def test_chat_approve_validates_fields() -> None:
 
 def test_chat_approve_forwards_decision(monkeypatch) -> None:
     from product_forge._forge_portal import RequestContext
+
     calls = _capture_bridge(monkeypatch)
-    ProductForgePortal()._chat_approve(RequestContext(
-        None, {"sid": "s1"}, {},
-        {"approval_id": "a1", "approved": False}, "cid"))  # type: ignore[arg-type]
+    ProductForgePortal()._chat_approve(
+        RequestContext(None, {"sid": "s1"}, {}, {"approval_id": "a1", "approved": False}, "cid")
+    )  # type: ignore[arg-type]
     assert calls[0]["path"] == "/agent-sessions/s1/approve"
     assert calls[0]["body"] == {"approval_id": "a1", "approved": False}
 
 
 def test_chat_resume_requires_session_ref() -> None:
     from product_forge._forge_portal import RequestContext
+
     portal = ProductForgePortal()
     try:
-        portal._chat_resume(RequestContext(
-            None, {"sid": "s1"}, {}, {"session_ref": " "}, "cid"))  # type: ignore[arg-type]
+        portal._chat_resume(RequestContext(None, {"sid": "s1"}, {}, {"session_ref": " "}, "cid"))  # type: ignore[arg-type]
     except Exception as exc:
         assert getattr(exc, "code", "") == "SESSION-REF-REQUIRED"
     else:
@@ -299,6 +304,7 @@ def test_chat_resume_requires_session_ref() -> None:
 
 def test_chat_stream_delegates_to_gateway_proxy(monkeypatch) -> None:
     import types
+
     portal = ProductForgePortal()
     portal._gateway_bridge_token = "fake-session"  # noqa: S105 - test fixture
     captured = {}
@@ -307,11 +313,10 @@ def test_chat_stream_delegates_to_gateway_proxy(monkeypatch) -> None:
         captured["path"] = path
         return "SSE"
 
-    monkeypatch.setattr(
-        ProductForgePortal, "_bridge_stream", staticmethod(fake_stream))
+    monkeypatch.setattr(ProductForgePortal, "_bridge_stream", staticmethod(fake_stream))
     ctx = types.SimpleNamespace(
-        params={"sid": "s9"}, query={}, body=None,
-        handler=types.SimpleNamespace(headers={}))
+        params={"sid": "s9"}, query={}, body=None, handler=types.SimpleNamespace(headers={})
+    )
     assert portal._chat_stream(ctx) == "SSE"
     assert captured["path"] == "/agent-sessions/s9/stream"
 
@@ -333,8 +338,8 @@ def test_capabilities_follow_supervised_bridge_state() -> None:
 
 def test_agent_health_merges_managed_bridge(monkeypatch) -> None:
     from product_forge._forge_portal import RequestContext
-    monkeypatch.setattr(ProductForgePortal, "_bridge_get",
-                        staticmethod(lambda path: {"overall": "ok"}))
+
+    monkeypatch.setattr(ProductForgePortal, "_bridge_get", staticmethod(lambda path: {"overall": "ok"}))
     portal = ProductForgePortal()
     portal.bridge_status = lambda: {"state": "running", "restarts": 2}
     out = portal._agent_health(RequestContext(None, {}, {}, None, "cid"))  # type: ignore[arg-type]
@@ -345,14 +350,16 @@ def test_agent_health_merges_managed_bridge(monkeypatch) -> None:
 def test_chat_sessions_enriches_product_names(monkeypatch) -> None:
     import product_forge.portal.adapter as adapter_mod
     from product_forge._forge_portal import RequestContext
-    listing = {"items": [
-        {"id": "s1", "state": "active", "meta": {"product_id": "p1"}},
-        {"id": "s2", "state": "active", "meta": {"product_id": "p1"}},
-        {"id": "s3", "state": "active", "meta": {"product_id": "missing"}},
-        {"id": "s4", "state": "active"},
-    ]}
-    monkeypatch.setattr(ProductForgePortal, "_bridge_get",
-                        staticmethod(lambda path: listing))
+
+    listing = {
+        "items": [
+            {"id": "s1", "state": "active", "meta": {"product_id": "p1"}},
+            {"id": "s2", "state": "active", "meta": {"product_id": "p1"}},
+            {"id": "s3", "state": "active", "meta": {"product_id": "missing"}},
+            {"id": "s4", "state": "active"},
+        ]
+    }
+    monkeypatch.setattr(ProductForgePortal, "_bridge_get", staticmethod(lambda path: listing))
 
     class _FakeStore:
         def get(self, coll, pid):
@@ -364,8 +371,7 @@ def test_chat_sessions_enriches_product_names(monkeypatch) -> None:
             pass
 
     monkeypatch.setattr(adapter_mod, "_store", lambda: _FakeStore())
-    out = ProductForgePortal()._chat_sessions(
-        RequestContext(None, {}, {}, None, "cid"))  # type: ignore[arg-type]
+    out = ProductForgePortal()._chat_sessions(RequestContext(None, {}, {}, None, "cid"))  # type: ignore[arg-type]
     items = {i["id"]: i for i in out["items"]}
     assert items["s1"]["product_name"] == "Atlas"
     assert items["s2"]["product_name"] == "Atlas"
@@ -382,6 +388,7 @@ def _op(portal, method, path):
 
 def _req(params=None, body=None):
     from product_forge._forge_portal import RequestContext
+
     return RequestContext(None, params or {}, {}, body, "cid")  # type: ignore[arg-type]
 
 
@@ -403,6 +410,7 @@ class _FakeStore:
 
 def _fake_store(monkeypatch, docs=None):
     import product_forge.portal.adapter as adapter_mod
+
     monkeypatch.setattr(adapter_mod, "_store", lambda: _FakeStore(docs))
 
 
@@ -470,9 +478,19 @@ def test_kn_query_requires_question(monkeypatch) -> None:
 
 
 def test_value_error_maps_to_422(monkeypatch) -> None:
-    _fake_store(monkeypatch, {"t1": {"id": "t1", "product_id": "p1",
-                                     "workspace_id": "w1", "board_id": "b1",
-                                     "title": "t", "version": 1}})
+    _fake_store(
+        monkeypatch,
+        {
+            "t1": {
+                "id": "t1",
+                "product_id": "p1",
+                "workspace_id": "w1",
+                "board_id": "b1",
+                "title": "t",
+                "version": 1,
+            }
+        },
+    )
     op = _op(ProductForgePortal(), "POST", "/products/{pid}/tasks/{tid}/move")
     try:
         op.handler(_req({"pid": "p1", "tid": "t1"}, {"expected_version": "abc"}))
@@ -524,11 +542,9 @@ def test_bridge_call_surfaces_upstream_error_as_envelope(monkeypatch) -> None:
 
     def fake_request(path, *, method="GET", body=None, token_override="", timeout=2.0):
         seen["timeout"] = timeout
-        return {"state": "error", "status": 422,
-                "error": {"code": "FAB-VALIDATION", "message": "bad"}}
+        return {"state": "error", "status": 422, "error": {"code": "FAB-VALIDATION", "message": "bad"}}
 
-    monkeypatch.setattr(
-        ProductForgePortal, "_bridge_request", staticmethod(fake_request))
+    monkeypatch.setattr(ProductForgePortal, "_bridge_request", staticmethod(fake_request))
     try:
         ProductForgePortal()._bridge_call("/x", method="POST", timeout=280.0)
     except Exception as exc:
@@ -541,9 +557,10 @@ def test_bridge_call_surfaces_upstream_error_as_envelope(monkeypatch) -> None:
 
 def test_bridge_call_maps_unavailable_to_503(monkeypatch) -> None:
     monkeypatch.setattr(
-        ProductForgePortal, "_bridge_request",
-        staticmethod(lambda *a, **k: {"state": "unavailable",
-                                      "reason": "connection refused"}))
+        ProductForgePortal,
+        "_bridge_request",
+        staticmethod(lambda *a, **k: {"state": "unavailable", "reason": "connection refused"}),
+    )
     try:
         ProductForgePortal()._bridge_call("/status")
     except Exception as exc:
@@ -556,6 +573,6 @@ def test_bridge_call_maps_unavailable_to_503(monkeypatch) -> None:
 
 def test_bridge_call_passes_success_through(monkeypatch) -> None:
     monkeypatch.setattr(
-        ProductForgePortal, "_bridge_request",
-        staticmethod(lambda *a, **k: {"accepted": True}))
+        ProductForgePortal, "_bridge_request", staticmethod(lambda *a, **k: {"accepted": True})
+    )
     assert ProductForgePortal()._bridge_call("/ok") == {"accepted": True}
