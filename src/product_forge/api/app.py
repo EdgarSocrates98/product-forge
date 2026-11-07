@@ -42,6 +42,7 @@ from ..domain.models import (
 from ..errors import ForgeError, UrlCaptureForgeError
 from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
 from ..knowledge.url import UrlCaptureError, fetch_url_document
+from ..knowledge.versions import explorer_versions, prepare_version
 from ..security import TokenStore, redact, verify_oidc_token
 from ..store.sqlite import Store
 from ..workspace.discovery import (
@@ -1066,7 +1067,7 @@ def create_app(home: Path | None = None) -> FastAPI:
             "document": doc,
             "content": {"chunks": chunks, "chunk_count": len(chunks)},
             "source": (doc.get("metadata") or {}).get("source"),
-            "versions": {"state": "current_only", "items": [doc]},
+            "versions": explorer_versions(ctx.store, pid, doc),
             "relations": [],
         })
 
@@ -1103,12 +1104,15 @@ def create_app(home: Path | None = None) -> FastAPI:
         if existing:
             return envelope({**existing[0], "state": "already_imported",
                              "source_path": imported["path"], "source_kind": imported["kind"]})
+        metadata, _ = prepare_version(ctx.store, pid, {
+            "source": "workspace", "workspace_path": imported["path"],
+            "classification": imported["kind"], "size": imported["size"],
+        })
         doc = Document(
             id=new_id("doc"), product_id=pid,
             title=str(body.model_dump().get("title") or imported["title"]),
             content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
-            metadata={"source": "workspace", "workspace_path": imported["path"],
-                      "classification": imported["kind"], "size": imported["size"]},
+            metadata=metadata,
         )
         ctx.store.put("documents", doc)
         doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(imported["content"]))
@@ -1144,15 +1148,18 @@ def create_app(home: Path | None = None) -> FastAPI:
         if existing:
             return envelope({**existing[0], "state": "already_imported",
                              "source_url": captured["url"], "source_kind": "url"})
+        metadata, _ = prepare_version(ctx.store, pid, {
+            "source": "url", "source_url": captured["url"],
+            "content_type": captured["content_type"],
+            "extractor": captured["extractor"], "size": captured["size"],
+            "metrics": captured["metrics"], "warnings": captured["warnings"],
+            "provenance": captured["provenance"],
+        })
         doc = Document(
             id=new_id("doc"), product_id=pid,
             title=str(payload.get("title") or captured["title"]),
             content_hash=captured["content_hash"], status=DocumentStatus.IMPORTED,
-            metadata={"source": "url", "source_url": captured["url"],
-                      "content_type": captured["content_type"],
-                      "extractor": captured["extractor"], "size": captured["size"],
-                      "metrics": captured["metrics"], "warnings": captured["warnings"],
-                      "provenance": captured["provenance"]},
+            metadata=metadata,
         )
         ctx.store.put("documents", doc)
         doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(captured["content"]))
@@ -1198,12 +1205,15 @@ def create_app(home: Path | None = None) -> FastAPI:
         if existing:
             return envelope({**existing[0], "state": "already_imported",
                              "source_path": imported["path"], "source_kind": "obsidian"})
+        metadata, _ = prepare_version(ctx.store, pid, {
+            "source": "obsidian", "obsidian_path": imported["path"],
+            "size": imported["size"], "provenance": imported["provenance"],
+        })
         doc = Document(
             id=new_id("doc"), product_id=pid,
             title=str(payload.get("title") or imported["title"]),
             content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
-            metadata={"source": "obsidian", "obsidian_path": imported["path"],
-                      "size": imported["size"], "provenance": imported["provenance"]},
+            metadata=metadata,
         )
         ctx.store.put("documents", doc)
         doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(imported["content"]))
