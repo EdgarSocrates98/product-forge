@@ -6,6 +6,8 @@ from product_forge.knowledge.obsidian import (
     ObsidianVaultError,
     export_vault_document,
     import_vault_document,
+    validate_base_document,
+    validate_canvas_document,
 )
 
 
@@ -47,3 +49,61 @@ def test_vault_refuses_symlinked_document(tmp_path: Path):
 
     with pytest.raises(ObsidianVaultError):
         import_vault_document(vault, "link.md")
+
+
+def test_canvas_validation_checks_graph_integrity_without_rendering():
+    result = validate_canvas_document(
+        {
+            "nodes": [
+                {"id": "n1", "type": "text", "x": 0, "y": 0, "width": 200, "height": 100},
+                {"id": "n2", "type": "file", "x": 300, "y": 0, "width": 200, "height": 100},
+            ],
+            "edges": [{"id": "e1", "fromNode": "n1", "toNode": "n2"}],
+        }
+    )
+
+    assert result == {
+        "schema": "productforge/ObsidianCanvasValidation/v1",
+        "kind": "canvas",
+        "state": "validated",
+        "nodes": 2,
+        "edges": 1,
+        "warnings": [],
+    }
+
+
+@pytest.mark.parametrize(
+    "document",
+    [
+        {},
+        {
+            "nodes": [{"id": "n1", "type": "text"}],
+            "edges": [{"id": "e1", "fromNode": "n1", "toNode": "missing"}],
+        },
+        {"nodes": [{"id": "n1", "type": "unknown"}], "edges": []},
+        b"\xff\xfe",
+    ],
+)
+def test_canvas_validation_rejects_invalid_documents(document):
+    with pytest.raises(ObsidianVaultError, match="canvas|UTF-8"):
+        validate_canvas_document(document)
+
+
+def test_base_validation_is_explicit_about_partial_semantics():
+    result = validate_base_document(
+        "views:\n  - name: Payments\n    type: table\nfilters: status = 'open'\n"
+    )
+
+    assert result["schema"] == "productforge/ObsidianBaseValidation/v1"
+    assert result["state"] == "validated"
+    assert result["views"] == 1
+    assert result["warnings"]
+
+
+@pytest.mark.parametrize(
+    "document",
+    ["views: [broken", {"views": ["not-an-object"]}, {"filters": 42}, b"\xff"],
+)
+def test_base_validation_rejects_invalid_documents(document):
+    with pytest.raises(ObsidianVaultError):
+        validate_base_document(document)

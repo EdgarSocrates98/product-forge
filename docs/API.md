@@ -83,6 +83,17 @@ passes that already-validated HTML to the optional Defuddle CLI over stdin;
 set `FORGE_DEFUDDLE_BIN` when the executable is not on `PATH`. It never passes
 the remote URL to the optional process and never executes page scripts.
 
+### Obsidian interoperability
+
+The stdlib vault adapter imports and exports bounded Markdown without requiring
+the Obsidian application or CLI. `validate_canvas_document()` validates the
+safe structural subset of JSON Canvas (unique node/edge IDs and existing edge
+endpoints). `validate_base_document()` validates a bounded Bases container and
+the shapes of its known sections (`properties`, `formulas`, `filters`, and
+`views`). Both validators parse content without rendering or executing it and
+return versioned validation envelopes. Full Bases query/view semantics and a
+Canvas editor are intentionally not claimed yet.
+
 ### Agents (Agent Factory)
 
 | Method | Path |
