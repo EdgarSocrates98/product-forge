@@ -38,6 +38,44 @@ def test_workspace_routes_are_registered_with_explicit_import_gate() -> None:
     assert ("POST", "/products/{pid}/documents/from-workspace", "import") in routes
 
 
+def test_url_routes_are_registered_and_preview_keeps_provenance(monkeypatch) -> None:
+    from product_forge._forge_portal import RequestContext
+
+    captured = {
+        "schema": "productforge/UrlDocument/v1",
+        "url": "https://example.com/docs",
+        "title": "Docs",
+        "content": "safe text",
+        "content_hash": "a" * 64,
+        "size": 9,
+        "content_type": "text/plain",
+        "extractor": "stdlib-text",
+        "state": "ready_for_import",
+        "warnings": [],
+        "metrics": {"bytes_read": 9},
+        "provenance": {"redirects_followed": 0},
+    }
+    monkeypatch.setattr("product_forge.portal.adapter.fetch_url_document", lambda _url: captured)
+    class StoreStub:
+        def get(self, collection, key):
+            assert collection == "products" and key == "p1"
+            return {"id": key}
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr("product_forge.portal.adapter._store", lambda: StoreStub())
+    portal = ProductForgePortal()
+    routes = {(op.method, op.path, op.confirm) for op in portal.ops}
+    assert ("GET", "/products/{pid}/documents/url/preview", None) in routes
+    assert ("POST", "/products/{pid}/documents/from-url", "import") in routes
+    result = portal._url_preview(
+        RequestContext(None, {"pid": "p1"}, {"url": [captured["url"]]}, None, "cid")  # type: ignore[arg-type]
+    )
+    assert result["url"] == captured["url"]
+    assert result["preview"] == "safe text"
+
+
 def test_bridge_unavailable_is_honest(monkeypatch) -> None:
     monkeypatch.setenv("FORGE_BRIDGE_URL", "http://127.0.0.1:1")
     result = ProductForgePortal()._bridge_get("/status")

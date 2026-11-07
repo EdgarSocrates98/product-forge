@@ -28,6 +28,7 @@ from .._forge_portal import (
 )
 from ..config import db_path, home_dir, load_config
 from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id, utcnow
+from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..store.sqlite import Store
 from ..workspace.discovery import (
     WorkspaceDiscoveryError,
@@ -167,6 +168,9 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("POST", "/products/{pid}/documents/from-workspace",
                                 self._workspace_document_import,
                                 mutating=True, confirm="import"))
+        self.register(Operation("GET", "/products/{pid}/documents/url/preview", self._url_preview))
+        self.register(Operation("POST", "/products/{pid}/documents/from-url",
+                                self._url_document_import, mutating=True, confirm="import"))
         self.register(Operation("GET", "/products/{pid}/agents", self._agents))
         self.register(Operation("POST", "/products/{pid}/knowledge/query", self._kn_query))
         self.register(Operation("GET", "/products/{pid}/graph", self._graph))
@@ -414,6 +418,67 @@ class ProductForgePortal(PortalAdapter):
             return {**doc.model_dump(mode="json", by_alias=True),
                     "state": "imported", "source_path": imported["path"],
                     "source_kind": imported["kind"]}
+        finally:
+            st.close()
+
+    def _url_preview(self, ctx: RequestContext) -> dict[str, Any]:
+        raw_url = _q1(ctx, "url")
+        if not raw_url:
+            raise PortalError("URL-REQUIRED", "url query parameter is required", http=422)
+        st = _store()
+        try:
+            _require(st, "products", ctx.params["pid"])
+            captured = fetch_url_document(raw_url)
+        except UrlCaptureError as exc:
+            raise PortalError(exc.code, str(exc), http=422, details=exc.details) from exc
+        finally:
+            st.close()
+        return {k: v for k, v in captured.items() if k != "content"} | {"preview": captured["content"]}
+
+    def _url_document_import(self, ctx: RequestContext) -> dict[str, Any]:
+        pid = ctx.params["pid"]
+        body = ctx.body or {}
+        raw_url = str(body.get("url") or "").strip()
+        if not raw_url:
+            raise PortalError("URL-REQUIRED", "url is required", http=422)
+        st = _store()
+        try:
+            product = _require(st, "products", pid)
+            try:
+                captured = fetch_url_document(raw_url)
+            except UrlCaptureError as exc:
+                raise PortalError(exc.code, str(exc), http=422, details=exc.details) from exc
+            existing = [doc for doc in st.list("documents", product_id=pid)
+                        if (doc.get("metadata") or {}).get("source_url") == captured["url"]
+                        and doc.get("content_hash") == captured["content_hash"]]
+            if existing:
+                return {**existing[0], "state": "already_imported",
+                        "source_url": captured["url"], "source_kind": "url"}
+            from ..domain.models import Document, DocumentStatus
+            from ..knowledge.ingest import chunk_text
+
+            doc = Document(
+                id=new_id("doc"), product_id=pid,
+                title=str(body.get("title") or captured["title"]),
+                content_hash=captured["content_hash"], status=DocumentStatus.IMPORTED,
+                metadata={"source": "url", "source_url": captured["url"],
+                          "content_type": captured["content_type"],
+                          "extractor": captured["extractor"], "size": captured["size"],
+                          "metrics": captured["metrics"], "warnings": captured["warnings"],
+                          "provenance": captured["provenance"]},
+            )
+            st.put("documents", doc)
+            doc.chunk_count = st.put_chunks(doc.id, pid, chunk_text(captured["content"]))
+            doc.status = DocumentStatus.INDEXED
+            st.put("documents", doc)
+            _record_audit(st, ctx, "url.document.import", "documents", doc.id,
+                          product_id=pid, workspace_id=product.get("workspace_id"))
+            ctx.emit("url.document.imported", resource_id=doc.id,
+                     product_id=pid, url=captured["url"])
+            return {**doc.model_dump(mode="json", by_alias=True),
+                    "state": "imported", "source_url": captured["url"],
+                    "source_kind": "url", "capture": {k: v for k, v in captured.items()
+                                                          if k != "content"}}
         finally:
             st.close()
 
