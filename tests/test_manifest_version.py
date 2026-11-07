@@ -71,8 +71,23 @@ def test_embedded_bridge_python_sources_match_standalone_checkout() -> None:
     embedded = REPO / "src" / "forge_agent_bridge"
     if not standalone.is_dir():
         pytest.skip("standalone Bridge checkout is not present")
-    for source in standalone.rglob("*.py"):
-        relative = source.relative_to(standalone)
-        bundled = embedded / relative
-        assert bundled.is_file(), f"embedded Bridge source missing: {relative}"
-        assert bundled.read_bytes() == source.read_bytes(), f"embedded Bridge drift: {relative}"
+    tracked_suffixes = {".py", ".json"}
+    canonical = {
+        path.relative_to(standalone)
+        for path in standalone.rglob("*")
+        if path.is_file() and path.suffix in tracked_suffixes
+    }
+    bundled = {
+        path.relative_to(embedded)
+        for path in embedded.rglob("*")
+        if path.is_file() and path.suffix in tracked_suffixes
+    }
+    assert bundled == canonical, (
+        "embedded Bridge file inventory diverges: "
+        f"missing={sorted(canonical - bundled)!s}, "
+        f"extra={sorted(bundled - canonical)!s}"
+    )
+    for relative in sorted(canonical):
+        source = standalone / relative
+        copy = embedded / relative
+        assert copy.read_bytes() == source.read_bytes(), f"embedded Bridge drift: {relative}"

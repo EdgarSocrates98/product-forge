@@ -6,6 +6,7 @@ POSIX). Every interaction has a headless equivalent so automation never
 blocks on a TTY that isn't there.
 """
 
+from product_forge.ui.home import run_home
 from product_forge.ui.i18n import t
 from product_forge.ui.kit import (
     UIContext,
@@ -16,7 +17,6 @@ from product_forge.ui.kit import (
     select,
     status_table,
 )
-from product_forge.ui.home import run_home
 from product_forge.ui.tui import run_tui
 
 __all__ = [

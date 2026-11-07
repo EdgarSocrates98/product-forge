@@ -51,6 +51,11 @@ class ConflictError(ForgeError):
     retryable = True
 
 
+class ReviewRequiredError(ConflictError):
+    code = "PF-REVIEW-REQUIRED"
+    retryable = False
+
+
 class SourceUnavailableError(ForgeError):
     code = "PF-SOURCE-UNAVAILABLE"
     http_status = 503
