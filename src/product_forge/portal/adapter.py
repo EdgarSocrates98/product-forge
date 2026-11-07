@@ -30,6 +30,7 @@ from ..config import db_path, home_dir, load_config
 from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id, utcnow
 from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
 from ..knowledge.url import UrlCaptureError, fetch_url_document
+from ..knowledge.versions import explorer_versions, prepare_version
 from ..store.sqlite import Store
 from ..workspace.discovery import (
     WorkspaceDiscoveryError,
@@ -381,7 +382,7 @@ class ProductForgePortal(PortalAdapter):
                 "document": doc,
                 "content": {"chunks": chunks, "chunk_count": len(chunks)},
                 "source": (doc.get("metadata") or {}).get("source"),
-                "versions": {"state": "current_only", "items": [doc]},
+                "versions": explorer_versions(st, ctx.params["pid"], doc),
                 "relations": [],
             }
         finally:
@@ -430,15 +431,14 @@ class ProductForgePortal(PortalAdapter):
             from ..knowledge.ingest import chunk_text
 
             title = str(body.get("title") or imported["title"])
+            metadata, _ = prepare_version(st, pid, {
+                "source": "workspace", "workspace_path": imported["path"],
+                "classification": imported["kind"], "size": imported["size"],
+            })
             doc = Document(
                 id=new_id("doc"), product_id=pid, title=title,
                 content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
-                metadata={
-                    "source": "workspace",
-                    "workspace_path": imported["path"],
-                    "classification": imported["kind"],
-                    "size": imported["size"],
-                },
+                metadata=metadata,
             )
             st.put("documents", doc)
             doc.chunk_count = st.put_chunks(doc.id, pid, chunk_text(imported["content"]))
@@ -490,15 +490,18 @@ class ProductForgePortal(PortalAdapter):
             from ..domain.models import Document, DocumentStatus
             from ..knowledge.ingest import chunk_text
 
+            metadata, _ = prepare_version(st, pid, {
+                "source": "url", "source_url": captured["url"],
+                "content_type": captured["content_type"],
+                "extractor": captured["extractor"], "size": captured["size"],
+                "metrics": captured["metrics"], "warnings": captured["warnings"],
+                "provenance": captured["provenance"],
+            })
             doc = Document(
                 id=new_id("doc"), product_id=pid,
                 title=str(body.get("title") or captured["title"]),
                 content_hash=captured["content_hash"], status=DocumentStatus.IMPORTED,
-                metadata={"source": "url", "source_url": captured["url"],
-                          "content_type": captured["content_type"],
-                          "extractor": captured["extractor"], "size": captured["size"],
-                          "metrics": captured["metrics"], "warnings": captured["warnings"],
-                          "provenance": captured["provenance"]},
+                metadata=metadata,
             )
             st.put("documents", doc)
             doc.chunk_count = st.put_chunks(doc.id, pid, chunk_text(captured["content"]))
@@ -547,12 +550,15 @@ class ProductForgePortal(PortalAdapter):
             from ..domain.models import Document, DocumentStatus
             from ..knowledge.ingest import chunk_text
 
+            metadata, _ = prepare_version(st, pid, {
+                "source": "obsidian", "obsidian_path": imported["path"],
+                "size": imported["size"], "provenance": imported["provenance"],
+            })
             doc = Document(
                 id=new_id("doc"), product_id=pid,
                 title=str(body.get("title") or imported["title"]),
                 content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
-                metadata={"source": "obsidian", "obsidian_path": imported["path"],
-                          "size": imported["size"], "provenance": imported["provenance"]},
+                metadata=metadata,
             )
             st.put("documents", doc)
             doc.chunk_count = st.put_chunks(doc.id, pid, chunk_text(imported["content"]))
