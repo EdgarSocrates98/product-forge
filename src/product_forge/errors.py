@@ -57,6 +57,14 @@ class SourceUnavailableError(ForgeError):
     retryable = True
 
 
+class UrlCaptureForgeError(ForgeError):
+    """A bounded remote capture was refused or could not be completed."""
+
+    code = "PF-URL-CAPTURE"
+    http_status = 422
+    severity = "warning"
+
+
 class UnsafeOperationError(ForgeError):
     code = "PF-UNSAFE-OPERATION"
     http_status = 400

@@ -38,7 +38,8 @@ from ..domain.models import (
     new_id,
     utcnow,
 )
-from ..errors import ForgeError
+from ..errors import ForgeError, UrlCaptureForgeError
+from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..security import TokenStore, redact, verify_oidc_token
 from ..store.sqlite import Store
 from ..workspace.discovery import (
@@ -1038,6 +1039,17 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.store.get("products", pid)
         return envelope({"items": ctx.store.list("documents", product_id=pid)})
 
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/url/preview")
+    def preview_url_doc(pid: str, url: str) -> dict:
+        """Fetch a bounded, non-mutating URL preview after SSRF validation."""
+        ctx.store.get("products", pid)
+        try:
+            captured = fetch_url_document(url)
+        except UrlCaptureError as exc:
+            raise UrlCaptureForgeError(str(exc), details={"reason_code": exc.code, **exc.details}) from exc
+        return envelope({k: v for k, v in captured.items() if k != "content"} |
+                        {"preview": captured["content"]})
+
     @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-workspace", status_code=201)
     def import_workspace_doc(pid: str, body: ScopedIn, req: Request) -> dict:
         """Import one explicitly selected local context file idempotently."""
@@ -1076,6 +1088,51 @@ def create_app(home: Path | None = None) -> FastAPI:
         return envelope({**doc.model_dump(mode="json", by_alias=True),
                          "state": "imported", "source_path": imported["path"],
                          "source_kind": imported["kind"]})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-url", status_code=201)
+    def import_url_doc(pid: str, body: ScopedIn, req: Request) -> dict:
+        """Import one explicitly confirmed public URL with provenance."""
+        from ..domain.models import Document, DocumentStatus
+        from ..errors import ValidationError
+        from ..knowledge.ingest import chunk_text
+
+        product = ctx.store.get("products", pid)
+        payload = body.model_dump()
+        if str(payload.get("confirm", "")) != "import":
+            raise ValidationError("confirm=import is required")
+        raw_url = str(payload.get("url", "")).strip()
+        if not raw_url:
+            raise ValidationError("url is required")
+        try:
+            captured = fetch_url_document(raw_url)
+        except UrlCaptureError as exc:
+            raise UrlCaptureForgeError(str(exc), details={"reason_code": exc.code, **exc.details}) from exc
+        existing = [doc for doc in ctx.store.list("documents", product_id=pid)
+                    if (doc.get("metadata") or {}).get("source_url") == captured["url"]
+                    and doc.get("content_hash") == captured["content_hash"]]
+        if existing:
+            return envelope({**existing[0], "state": "already_imported",
+                             "source_url": captured["url"], "source_kind": "url"})
+        doc = Document(
+            id=new_id("doc"), product_id=pid,
+            title=str(payload.get("title") or captured["title"]),
+            content_hash=captured["content_hash"], status=DocumentStatus.IMPORTED,
+            metadata={"source": "url", "source_url": captured["url"],
+                      "content_type": captured["content_type"],
+                      "extractor": captured["extractor"], "size": captured["size"],
+                      "metrics": captured["metrics"], "warnings": captured["warnings"],
+                      "provenance": captured["provenance"]},
+        )
+        ctx.store.put("documents", doc)
+        doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(captured["content"]))
+        doc.status = DocumentStatus.INDEXED
+        ctx.store.put("documents", doc)
+        ctx.audit(req, "url.document.import", "documents", doc.id, product_id=pid,
+                  workspace_id=product.get("workspace_id", ""))
+        return envelope({**doc.model_dump(mode="json", by_alias=True),
+                         "state": "imported", "source_url": captured["url"],
+                         "source_kind": "url", "capture": {k: v for k, v in captured.items()
+                                                               if k != "content"}})
 
     # -- agents runtime (Cycle 4) ---------------------------------------------
 
