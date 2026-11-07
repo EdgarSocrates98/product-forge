@@ -34,6 +34,26 @@ app.add_typer(mcp_app, name="mcp")
 app.add_typer(store_app, name="store")
 
 
+def _print_version(value: bool) -> None:
+    if value:
+        typer.echo(__version__)
+        raise typer.Exit()
+
+
+@app.callback()
+def cli_callback(
+    version_flag: bool = typer.Option(
+        False,
+        "--version",
+        callback=_print_version,
+        is_eager=True,
+        help="Print the Product Forge version and exit.",
+    ),
+) -> None:
+    """Shared global options for the practical Product Forge CLI."""
+    del version_flag
+
+
 def _out(obj: Any) -> None:
     typer.echo(json.dumps(obj, indent=2, ensure_ascii=False, default=str))
 
