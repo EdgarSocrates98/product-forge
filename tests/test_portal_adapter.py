@@ -76,6 +76,14 @@ def test_url_routes_are_registered_and_preview_keeps_provenance(monkeypatch) -> 
     assert result["preview"] == "safe text"
 
 
+def test_obsidian_routes_are_optional_and_explicitly_gated() -> None:
+    portal = ProductForgePortal()
+    routes = {(op.method, op.path, op.confirm) for op in portal.ops}
+    assert ("GET", "/products/{pid}/documents/obsidian/preview", None) in routes
+    assert ("POST", "/products/{pid}/documents/from-obsidian", "import") in routes
+    assert ("POST", "/products/{pid}/documents/to-obsidian", "export") in routes
+
+
 def test_bridge_unavailable_is_honest(monkeypatch) -> None:
     monkeypatch.setenv("FORGE_BRIDGE_URL", "http://127.0.0.1:1")
     result = ProductForgePortal()._bridge_get("/status")

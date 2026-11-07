@@ -28,6 +28,7 @@ from .._forge_portal import (
 )
 from ..config import db_path, home_dir, load_config
 from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id, utcnow
+from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
 from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..store.sqlite import Store
 from ..workspace.discovery import (
@@ -46,6 +47,13 @@ def _store() -> Store:
 def _q1(ctx: RequestContext, key: str) -> str | None:
     vals = ctx.query.get(key)
     return vals[0] if vals else None
+
+
+def _obsidian_vault() -> Path:
+    raw = os.environ.get("FORGE_OBSIDIAN_VAULT", "").strip()
+    if not raw:
+        raise PortalError("OBSIDIAN-NOT-CONFIGURED", "Obsidian vault is not configured", http=422)
+    return Path(raw)
 
 
 def _require(st: Store, collection: str, key: str) -> dict[str, Any]:
@@ -171,6 +179,11 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}/documents/url/preview", self._url_preview))
         self.register(Operation("POST", "/products/{pid}/documents/from-url",
                                 self._url_document_import, mutating=True, confirm="import"))
+        self.register(Operation("GET", "/products/{pid}/documents/obsidian/preview", self._obsidian_preview))
+        self.register(Operation("POST", "/products/{pid}/documents/from-obsidian",
+                                self._obsidian_import, mutating=True, confirm="import"))
+        self.register(Operation("POST", "/products/{pid}/documents/to-obsidian",
+                                self._obsidian_export, mutating=True, confirm="export"))
         self.register(Operation("GET", "/products/{pid}/agents", self._agents))
         self.register(Operation("POST", "/products/{pid}/knowledge/query", self._kn_query))
         self.register(Operation("GET", "/products/{pid}/graph", self._graph))
@@ -479,6 +492,79 @@ class ProductForgePortal(PortalAdapter):
                     "state": "imported", "source_url": captured["url"],
                     "source_kind": "url", "capture": {k: v for k, v in captured.items()
                                                           if k != "content"}}
+        finally:
+            st.close()
+
+    def _obsidian_preview(self, ctx: RequestContext) -> dict[str, Any]:
+        raw_path = _q1(ctx, "path")
+        if not raw_path:
+            raise PortalError("OBSIDIAN-PATH-REQUIRED", "path query parameter is required", http=422)
+        try:
+            imported = import_vault_document(_obsidian_vault(), raw_path)
+        except ObsidianVaultError as exc:
+            raise PortalError(exc.code, str(exc), http=422) from exc
+        return {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
+
+    def _obsidian_import(self, ctx: RequestContext) -> dict[str, Any]:
+        pid = ctx.params["pid"]
+        body = ctx.body or {}
+        raw_path = str(body.get("path") or "").strip()
+        if not raw_path:
+            raise PortalError("OBSIDIAN-PATH-REQUIRED", "path is required", http=422)
+        st = _store()
+        try:
+            product = _require(st, "products", pid)
+            try:
+                imported = import_vault_document(_obsidian_vault(), raw_path)
+            except ObsidianVaultError as exc:
+                raise PortalError(exc.code, str(exc), http=422) from exc
+            existing = [doc for doc in st.list("documents", product_id=pid)
+                        if (doc.get("metadata") or {}).get("obsidian_path") == imported["path"]
+                        and doc.get("content_hash") == imported["content_hash"]]
+            if existing:
+                return {**existing[0], "state": "already_imported",
+                        "source_path": imported["path"], "source_kind": "obsidian"}
+            from ..domain.models import Document, DocumentStatus
+            from ..knowledge.ingest import chunk_text
+
+            doc = Document(
+                id=new_id("doc"), product_id=pid,
+                title=str(body.get("title") or imported["title"]),
+                content_hash=imported["content_hash"], status=DocumentStatus.IMPORTED,
+                metadata={"source": "obsidian", "obsidian_path": imported["path"],
+                          "size": imported["size"], "provenance": imported["provenance"]},
+            )
+            st.put("documents", doc)
+            doc.chunk_count = st.put_chunks(doc.id, pid, chunk_text(imported["content"]))
+            doc.status = DocumentStatus.INDEXED
+            st.put("documents", doc)
+            _record_audit(st, ctx, "obsidian.document.import", "documents", doc.id,
+                          product_id=pid, workspace_id=product.get("workspace_id"))
+            ctx.emit("obsidian.document.imported", resource_id=doc.id,
+                     product_id=pid, path=imported["path"])
+            return {**doc.model_dump(mode="json", by_alias=True),
+                    "state": "imported", "source_path": imported["path"], "source_kind": "obsidian"}
+        finally:
+            st.close()
+
+    def _obsidian_export(self, ctx: RequestContext) -> dict[str, Any]:
+        pid = ctx.params["pid"]
+        body = ctx.body or {}
+        raw_path = str(body.get("path") or "").strip()
+        content = str(body.get("content") or "")
+        if not raw_path or not content:
+            raise PortalError("OBSIDIAN-EXPORT-REQUIRED", "path and content are required", http=422)
+        st = _store()
+        try:
+            product = _require(st, "products", pid)
+            try:
+                exported = export_vault_document(_obsidian_vault(), raw_path, content)
+            except ObsidianVaultError as exc:
+                raise PortalError(exc.code, str(exc), http=422) from exc
+            _record_audit(st, ctx, "obsidian.document.export", "obsidian", exported["path"],
+                          product_id=pid, workspace_id=product.get("workspace_id"))
+            ctx.emit("obsidian.document.exported", resource_id=exported["path"], product_id=pid)
+            return exported
         finally:
             st.close()
 
