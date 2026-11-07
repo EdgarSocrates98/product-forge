@@ -22,9 +22,16 @@
     {
       "id": "knowledge-query",
       "mode": "DIRECT_CAPABILITY",
-      "command": ["{cli}", "knowledge", "query", "{question}"],
+      "command": ["{cli}", "knowledge", "query", "{product_id}", "{question}"],
       "description": "Grounded answer over product knowledge with citations",
       "read_only": true
+    },
+    {
+      "id": "knowledge-import",
+      "mode": "DIRECT_CAPABILITY",
+      "command": ["{cli}", "knowledge", "import", "{product_id}", "{file}"],
+      "description": "Import a local Markdown document with an auditable receipt",
+      "read_only": false
     }
   ],
   "skills": [],
