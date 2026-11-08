@@ -55,10 +55,18 @@ def test_canvas_validation_checks_graph_integrity_without_rendering():
     result = validate_canvas_document(
         {
             "nodes": [
-                {"id": "n1", "type": "text", "x": 0, "y": 0, "width": 200, "height": 100},
-                {"id": "n2", "type": "file", "x": 300, "y": 0, "width": 200, "height": 100},
+                {"id": "n1", "type": "text", "text": "Start", "x": 0, "y": 0, "width": 200, "height": 100},
+                {
+                    "id": "n2",
+                    "type": "file",
+                    "file": "runbook.md",
+                    "x": 300,
+                    "y": 0,
+                    "width": 200,
+                    "height": 100,
+                },
             ],
-            "edges": [{"id": "e1", "fromNode": "n1", "toNode": "n2"}],
+            "edges": [{"id": "e1", "fromNode": "n1", "toNode": "n2", "fromSide": "right", "toEnd": "arrow"}],
         }
     )
 
@@ -79,6 +87,14 @@ def test_canvas_validation_checks_graph_integrity_without_rendering():
         {
             "nodes": [{"id": "n1", "type": "text"}],
             "edges": [{"id": "e1", "fromNode": "n1", "toNode": "missing"}],
+        },
+        {
+            "nodes": [{"id": "n1", "type": "text", "text": "x", "x": 0, "y": 0, "width": 0, "height": 100}],
+            "edges": [],
+        },
+        {
+            "nodes": [{"id": "n1", "type": "text", "text": "x", "x": 0, "y": 0, "width": 100, "height": 100}],
+            "edges": [{"id": "e1", "fromNode": "n1", "toNode": "n1", "fromSide": "diagonal"}],
         },
         {"nodes": [{"id": "n1", "type": "unknown"}], "edges": []},
         b"\xff\xfe",
