@@ -20,6 +20,8 @@ import yaml
 MAX_VAULT_BYTES = 1 * 1024 * 1024
 MAX_INTEROP_BYTES = 1 * 1024 * 1024
 _CANVAS_NODE_TYPES = {"text", "file", "link", "group"}
+_CANVAS_SIDES = {"top", "right", "bottom", "left"}
+_CANVAS_ENDS = {"none", "arrow"}
 
 
 class ObsidianVaultError(ValueError):
@@ -85,6 +87,31 @@ def validate_canvas_document(document: str | bytes | Mapping[str, Any]) -> dict[
             )
         if node_type not in _CANVAS_NODE_TYPES:
             raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", "canvas node type is unsupported")
+        for field in ("x", "y", "width", "height"):
+            number = node.get(field)
+            if isinstance(number, bool) or not isinstance(number, (int, float)):
+                raise ObsidianVaultError(
+                    "OBSIDIAN-CANVAS-INVALID",
+                    f"canvas node field '{field}' must be numeric",
+                )
+        if node["width"] <= 0 or node["height"] <= 0:
+            raise ObsidianVaultError(
+                "OBSIDIAN-CANVAS-INVALID", "canvas node width and height must be positive"
+            )
+        required_content = {
+            "text": "text",
+            "file": "file",
+            "link": "url",
+        }.get(str(node_type))
+        if required_content and not isinstance(node.get(required_content), str):
+            raise ObsidianVaultError(
+                "OBSIDIAN-CANVAS-INVALID",
+                f"canvas {node_type} node requires string field '{required_content}'",
+            )
+        if node_type == "group" and "label" in node and not isinstance(node["label"], str):
+            raise ObsidianVaultError(
+                "OBSIDIAN-CANVAS-INVALID", "canvas group label must be a string"
+            )
         node_ids.add(node_id)
 
     edge_ids: set[str] = set()
@@ -100,6 +127,16 @@ def validate_canvas_document(document: str | bytes | Mapping[str, Any]) -> dict[
             )
         if from_node not in node_ids or to_node not in node_ids:
             raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", "canvas edge endpoint does not exist")
+        for field in ("fromSide", "toSide"):
+            if field in edge and edge[field] not in _CANVAS_SIDES:
+                raise ObsidianVaultError(
+                    "OBSIDIAN-CANVAS-INVALID", f"canvas edge field '{field}' is invalid"
+                )
+        for field in ("fromEnd", "toEnd"):
+            if field in edge and edge[field] not in _CANVAS_ENDS:
+                raise ObsidianVaultError(
+                    "OBSIDIAN-CANVAS-INVALID", f"canvas edge field '{field}' is invalid"
+                )
         edge_ids.add(edge_id)
 
     return {
