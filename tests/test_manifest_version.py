@@ -1,6 +1,7 @@
 """forge.json version must match the package version (single source of truth)."""
 
 import json
+import os
 import re
 from pathlib import Path
 
@@ -70,6 +71,8 @@ def test_embedded_bridge_python_sources_match_standalone_checkout() -> None:
     standalone = REPO.parent / "forge-agent-bridge" / "src" / "forge_agent_bridge"
     embedded = REPO / "src" / "forge_agent_bridge"
     if not standalone.is_dir():
+        if os.environ.get("FORGE_BRIDGE_PARITY_REQUIRED") == "1":
+            pytest.fail("canonical Bridge checkout is required for this parity run")
         pytest.skip("standalone Bridge checkout is not present")
     tracked_suffixes = {".py", ".json"}
     canonical = {

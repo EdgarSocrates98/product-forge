@@ -44,3 +44,15 @@ jobs:
         env:
           PRODUCT_FORGE_SYSTEM_HARNESS: "1"
         run: .venv/bin/python -m pytest tests/system/test_installed_composition.py -q -s
+  bridge-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout canonical Agent Bridge
+        uses: actions/checkout@v4
+        with:
+          repository: EdgarSocrates98/forge-agent-bridge
+          ref: main
+          path: forge-agent-bridge
+      - name: Verify vendored Bridge parity
+        run: python scripts/check_bridge_parity.py --standalone-root forge-agent-bridge
