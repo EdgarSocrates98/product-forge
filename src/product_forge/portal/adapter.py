@@ -28,7 +28,12 @@ from .._forge_portal import (
 )
 from ..config import db_path, home_dir, load_config
 from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id, utcnow
-from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
+from ..knowledge.obsidian import (
+    ObsidianVaultError,
+    export_vault_document,
+    import_vault_document,
+    plan_vault_sync,
+)
 from ..knowledge.search import search_knowledge
 from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..knowledge.versions import explorer_versions, prepare_version
@@ -223,6 +228,13 @@ class ProductForgePortal(PortalAdapter):
                 self._obsidian_export,
                 mutating=True,
                 confirm="export",
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/obsidian/sync-plan",
+                self._obsidian_sync_plan,
             )
         )
         self.register(Operation("GET", "/products/{pid}/agents", self._agents))
@@ -821,7 +833,14 @@ class ProductForgePortal(PortalAdapter):
         try:
             product = _require(st, "products", pid)
             try:
-                exported = export_vault_document(_obsidian_vault(), raw_path, content)
+                exported = export_vault_document(
+                    _obsidian_vault(),
+                    raw_path,
+                    content,
+                    baseline_hash=body.get("baseline_hash"),
+                    classification=str(body.get("classification") or "internal"),
+                    source=str(body.get("source") or "product-forge"),
+                )
             except ObsidianVaultError as exc:
                 raise PortalError(exc.code, str(exc), http=422) from exc
             _record_audit(
@@ -837,6 +856,24 @@ class ProductForgePortal(PortalAdapter):
             return exported
         finally:
             st.close()
+
+    def _obsidian_sync_plan(self, ctx: RequestContext) -> dict[str, Any]:
+        body = ctx.body or {}
+        raw_path = str(body.get("path") or "").strip()
+        content = str(body.get("content") or "")
+        if not raw_path or not content:
+            raise PortalError("OBSIDIAN-PLAN-REQUIRED", "path and content are required", http=422)
+        try:
+            return plan_vault_sync(
+                _obsidian_vault(),
+                raw_path,
+                content,
+                baseline_hash=body.get("baseline_hash"),
+                classification=str(body.get("classification") or "internal"),
+                source=str(body.get("source") or "product-forge"),
+            )
+        except ObsidianVaultError as exc:
+            raise PortalError(exc.code, str(exc), http=422) from exc
 
     def _agents(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()

@@ -9,11 +9,13 @@ application or CLI.
 from __future__ import annotations
 
 import hashlib
+import os
 import stat
+import tempfile
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 import yaml
 
@@ -28,6 +30,62 @@ class ObsidianVaultError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+
+
+@runtime_checkable
+class VaultLocator(Protocol):
+    def locate(self) -> Path: ...
+
+
+@runtime_checkable
+class VaultReader(Protocol):
+    def read(self, path: str) -> dict[str, Any]: ...
+
+
+@runtime_checkable
+class VaultWriter(Protocol):
+    def write(self, path: str, content: str, *, baseline_hash: str | None = None) -> dict[str, Any]: ...
+
+
+@runtime_checkable
+class VaultScanner(Protocol):
+    def scan(self, prefix: str = "") -> list[str]: ...
+
+
+class MarkdownDocumentParser(Protocol):
+    def parse(self, content: str) -> dict[str, Any]: ...
+
+
+class FrontmatterAdapter(Protocol):
+    def parse(self, content: str) -> tuple[dict[str, Any], str]: ...
+
+
+class WikilinkResolver(Protocol):
+    def resolve(self, link: str) -> str | None: ...
+
+
+class AttachmentResolver(Protocol):
+    def resolve(self, link: str) -> str | None: ...
+
+
+class KnowledgeProjector(Protocol):
+    def project(self, document: Mapping[str, Any]) -> Mapping[str, Any]: ...
+
+
+class SyncPlanner(Protocol):
+    def plan(self, path: str, content: str, *, baseline_hash: str | None = None) -> dict[str, Any]: ...
+
+
+class ConflictDetector(Protocol):
+    def detect(self, baseline_hash: str | None, current_hash: str | None, candidate_hash: str) -> str: ...
+
+
+class ImportReceiptWriter(Protocol):
+    def write_import_receipt(self, receipt: Mapping[str, Any]) -> None: ...
+
+
+class ExportReceiptWriter(Protocol):
+    def write_export_receipt(self, receipt: Mapping[str, Any]) -> None: ...
 
 
 def _bounded_document(document: str | bytes | Mapping[str, Any], *, kind: str) -> Any:
@@ -264,20 +322,126 @@ def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
     }
 
 
-def export_vault_document(vault: Path | str, raw_path: str, content: str) -> dict[str, Any]:
+def export_vault_document(
+    vault: Path | str,
+    raw_path: str,
+    content: str,
+    *,
+    baseline_hash: str | None = None,
+    classification: str = "internal",
+    source: str = "product-forge",
+) -> dict[str, Any]:
+    """Export without silently overwriting a manually changed note.
+
+    A new note can be created directly. An existing note requires its current
+    hash as ``baseline_hash``; the old bytes are snapshotted before an atomic
+    replace and the post-write hash is verified.
+    """
     root = _resolved(Path(vault))
     if not root.is_dir():
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
     if len(content.encode("utf-8")) > MAX_VAULT_BYTES:
         raise ObsidianVaultError("OBSIDIAN-SIZE-LIMIT", "vault document exceeds the safe size limit")
     path = _safe(root, raw_path, for_write=True)
-    path.write_text(content, encoding="utf-8", newline="\n")
+    candidate_bytes = content.encode("utf-8")
+    candidate_hash = hashlib.sha256(candidate_bytes).hexdigest()
+    previous_hash = None
+    backup_path = None
+    if path.exists():
+        previous_bytes = path.read_bytes()
+        previous_hash = hashlib.sha256(previous_bytes).hexdigest()
+        if baseline_hash is None:
+            raise ObsidianVaultError(
+                "OBSIDIAN-CONFLICT",
+                "destination exists; provide baseline_hash before replacing it",
+            )
+        if baseline_hash != previous_hash:
+            raise ObsidianVaultError(
+                "OBSIDIAN-CONFLICT",
+                "destination changed after the sync baseline was captured",
+            )
+        backup_dir = root / ".forge" / "obsidian-backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        backup_path = backup_dir / f"{previous_hash}.md"
+        if not backup_path.exists():
+            _atomic_write(backup_path, previous_bytes)
+    _atomic_write(path, candidate_bytes)
+    if hashlib.sha256(path.read_bytes()).hexdigest() != candidate_hash:
+        raise ObsidianVaultError("OBSIDIAN-INTEGRITY", "post-write hash verification failed")
     return {
+        # Keep the original document schema/state for existing API consumers;
+        # the additive receipt fields expose the stronger sync contract.
         "schema": "productforge/ObsidianDocument/v1",
+        "receipt_schema": "forge/ObsidianSyncReceipt/v1",
         "path": path.relative_to(root).as_posix(),
         "title": _title(path, content),
-        "content_hash": hashlib.sha256(content.encode("utf-8")).hexdigest(),
-        "size": len(content.encode("utf-8")),
+        "content_hash": candidate_hash,
+        "previous_hash": previous_hash,
+        "size": len(candidate_bytes),
         "state": "exported",
+        "sync_state": "created" if previous_hash is None else "updated",
+        "outcome": "exported",
+        "classification": classification,
+        "source": source,
+        "backup_path": backup_path.relative_to(root).as_posix() if backup_path else None,
+        "warnings": [],
+        "unresolved": [],
         "provenance": {"adapter": "stdlib-obsidian-markdown", "vault": root.name, "cli_required": False},
     }
+
+
+def plan_vault_sync(
+    vault: Path | str,
+    raw_path: str,
+    content: str,
+    *,
+    baseline_hash: str | None = None,
+    classification: str = "internal",
+    source: str = "product-forge",
+) -> dict[str, Any]:
+    """Create a dry-run sync plan; it never mutates the vault."""
+    root = _resolved(Path(vault))
+    if not root.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
+    path = _safe(root, raw_path, for_write=True)
+    candidate_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    current_hash = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
+    if current_hash is None:
+        state = "created"
+    elif current_hash == candidate_hash:
+        state = "unchanged"
+    elif baseline_hash is None or baseline_hash != current_hash:
+        state = "conflict"
+    else:
+        state = "updated"
+    return {
+        "schema": "forge/ObsidianSyncPlan/v1",
+        "workspace": str(root.parent),
+        "vault_id": root.name,
+        "path": path.relative_to(root).as_posix(),
+        "source": source,
+        "classification": classification,
+        "content_hash": candidate_hash,
+        "previous_hash": current_hash,
+        "baseline_hash": baseline_hash,
+        "outcome": state,
+        "warnings": ["confirmation required for mutation"] if state in {"created", "updated"} else [],
+        "unresolved": ["manual conflict resolution required"] if state == "conflict" else [],
+        "planned_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+    }
+
+
+def _atomic_write(path: Path, content: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass

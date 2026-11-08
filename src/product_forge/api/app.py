@@ -47,7 +47,12 @@ from ..errors import (
     UrlCaptureForgeError,
     ValidationError,
 )
-from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
+from ..knowledge.obsidian import (
+    ObsidianVaultError,
+    export_vault_document,
+    import_vault_document,
+    plan_vault_sync,
+)
 from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..knowledge.versions import explorer_versions, prepare_version
 from ..security import TokenStore, redact, verify_oidc_token
@@ -1514,7 +1519,14 @@ def create_app(home: Path | None = None) -> FastAPI:
         if not raw_path or not content:
             raise ValidationError("path and content are required")
         try:
-            exported = export_vault_document(_obsidian_vault(), raw_path, content)
+            exported = export_vault_document(
+                _obsidian_vault(),
+                raw_path,
+                content,
+                baseline_hash=payload.get("baseline_hash"),
+                classification=str(payload.get("classification") or "internal"),
+                source=str(payload.get("source") or "product-forge"),
+            )
         except ObsidianVaultError as exc:
             raise ForgeError(str(exc), details={"code": exc.code}) from exc
         ctx.audit(
@@ -1526,6 +1538,28 @@ def create_app(home: Path | None = None) -> FastAPI:
             workspace_id=product.get("workspace_id", ""),
         )
         return envelope(exported)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/sync-plan")
+    def plan_obsidian_sync(pid: str, body: ScopedIn) -> dict:
+        if ctx.store.get("products", pid) is None:
+            raise NotFoundError(f"product {pid} not found")
+        payload = body.model_dump()
+        raw_path = str(payload.get("path", "")).strip()
+        content = str(payload.get("content", ""))
+        if not raw_path or not content:
+            raise ValidationError("path and content are required")
+        try:
+            plan = plan_vault_sync(
+                _obsidian_vault(),
+                raw_path,
+                content,
+                baseline_hash=payload.get("baseline_hash"),
+                classification=str(payload.get("classification") or "internal"),
+                source=str(payload.get("source") or "product-forge"),
+            )
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+        return envelope(plan)
 
     # -- agents runtime (Cycle 4) ---------------------------------------------
 
