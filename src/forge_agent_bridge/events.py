@@ -59,11 +59,13 @@ def envelope(
         "seq": _next_seq(),
         "type": event_type,
         "known_type": known,
-        "payload": payload,
+        "payload": redact(payload),
         "product_id": product_id,
         "workspace_id": workspace_id,
         "origin": "bridge",
-        "raw": raw,  # native event preserved for diagnostics when unmapped
+        # Native data remains available for diagnostics, but never carries a
+        # credential into an in-memory consumer such as Portal or Lens.
+        "raw": redact(raw) if raw is not None else None,
     }
 
 
@@ -107,15 +109,34 @@ _SECRET_KEYS = re.compile(
     re.IGNORECASE,
 )
 _REDACTED = "[redacted]"
+_SECRET_ASSIGNMENT = re.compile(
+    r"(\b(?:access[_-]?token|token|secret|password|api[_-]?key|"
+    r"authorization|credential)\b\s*[:=]\s*(?:Bearer\s+)?)"
+    r"([^\s,;&]+)", re.IGNORECASE)
+_BEARER = re.compile(r"(\bBearer\s+)([^\s,;&]+)", re.IGNORECASE)
+_KNOWN_TOKEN = re.compile(
+    r"\b(?:sk-[A-Za-z0-9_-]+|gh[pousr]_[A-Za-z0-9_-]+|xox[baprs]-[A-Za-z0-9-]+)\b")
+_URL_CREDENTIAL = re.compile(r"(://[^:/?#\s]+:)([^@/\s]+)(@)")
 
 
 def redact(obj: Any) -> Any:
-    """Recursively redact secret-looking keys before persistence."""
+    """Recursively redact secret-looking keys and values.
+
+    Key-based redaction handles structured provider payloads; the bounded
+    value patterns cover diagnostics that arrive as free text or URLs.  The
+    replacement preserves the surrounding field name and shape so operators
+    can still identify the failed operation without retaining its secret.
+    """
     if isinstance(obj, dict):
         return {k: (_REDACTED if _SECRET_KEYS.search(str(k)) else redact(v))
                 for k, v in obj.items()}
     if isinstance(obj, list):
         return [redact(v) for v in obj]
+    if isinstance(obj, str):
+        value = _SECRET_ASSIGNMENT.sub(r"\1" + _REDACTED, obj)
+        value = _BEARER.sub(r"\1" + _REDACTED, value)
+        value = _KNOWN_TOKEN.sub(_REDACTED, value)
+        return _URL_CREDENTIAL.sub(r"\1" + _REDACTED + r"\3", value)
     return obj
 
 
@@ -131,6 +152,10 @@ class DurableEventStore:
 
     def __init__(self, root: Path, *, max_events: int = 10_000,
                  max_bytes: int = 64 * 1024 * 1024) -> None:
+        if max_events < 1:
+            raise ValueError("max_events must be at least 1")
+        if max_bytes < 1:
+            raise ValueError("max_bytes must be positive")
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.max_events = max_events
@@ -154,6 +179,7 @@ class DurableEventStore:
                 path.chmod(0o600)
             except OSError:
                 pass
+            self._enforce_retention_locked(path, str(e["session_id"]))
 
     def replay(self, session_id: str, after_seq: int = 0
                ) -> list[dict[str, Any]]:
@@ -180,24 +206,72 @@ class DurableEventStore:
             f = self._file(session_id)
             if not f.exists():
                 return
-            lines = f.read_text(encoding="utf-8").splitlines()
-            while lines and (
-                    len(lines) > self.max_events
-                    or sum(len(line.encode("utf-8")) + 1 for line in lines)
-                    > self.max_bytes):
-                lines.pop(0)
-            if not lines:
-                return
+            self._enforce_retention_locked(f, session_id)
+
+    def _enforce_retention_locked(self, path: Path, session_id: str) -> None:
+        """Apply retention while the store lock is held.
+
+        A trim marker is metadata and counts toward both configured limits.
+        Once a session has been trimmed, one marker is retained and the
+        event budget becomes ``max_events - 1``.  Malformed JSONL is surfaced
+        instead of being silently discarded.
+        """
+        raw_lines = path.read_text(encoding="utf-8").splitlines()
+        if not raw_lines:
+            return
+        entries: list[tuple[str, dict[str, Any]]] = []
+        for line_number, line in enumerate(raw_lines, start=1):
+            try:
+                entries.append((line, json.loads(line)))
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"malformed event JSONL at {path}:{line_number}") from exc
+
+        marker_lines = [line for line, entry in entries
+                        if entry.get("type") == "session.retention-trim"]
+        event_lines = [line for line, entry in entries
+                       if entry.get("type") != "session.retention-trim"]
+        marker = marker_lines[0] if marker_lines else None
+
+        def size(lines: list[str], marker_line: str | None) -> int:
+            total = sum(len(line.encode("utf-8")) + 1 for line in lines)
+            if marker_line is not None:
+                total += len(marker_line.encode("utf-8")) + 1
+            return total
+
+        already_within_limits = (
+            len(event_lines) + (1 if marker is not None else 0)
+            <= self.max_events
+            and size(event_lines, marker) <= self.max_bytes
+        )
+        if already_within_limits and len(marker_lines) <= 1:
+            return
+
+        if marker is None:
             marker = json.dumps({
                 "schema": EVENT_SCHEMA, "id": new_id("evt"), "ts": utcnow(),
                 "provider": "bridge", "session_id": session_id,
                 "turn_id": None, "seq": 0, "type": "session.retention-trim",
-                "payload": {"note": "oldest events trimmed by retention"}})
-            f.write_text(marker + "\n" + "\n".join(lines) + "\n", encoding="utf-8")
-            try:
-                f.chmod(0o600)
-            except OSError:
-                pass
+                "payload": {"note": "oldest events trimmed by retention"}},
+                separators=(",", ":"))
+
+        while event_lines and (
+                len(event_lines) + 1 > self.max_events
+                or size(event_lines, marker) > self.max_bytes):
+            event_lines.pop(0)
+
+        if size(event_lines, marker) > self.max_bytes:
+            raise ValueError(
+                "max_bytes is too small to persist the retention marker")
+
+        content = marker + "\n"
+        if event_lines:
+            content += "\n".join(event_lines) + "\n"
+        path.write_text(content, encoding="utf-8")
+        try:
+            path.chmod(0o600)
+        except OSError:
+            pass
 
 
 # Minimal native→normalized mapping seeds. Providers extend per-adapter.
@@ -222,14 +296,33 @@ NATIVE_MAP: dict[str, str] = {
 
 
 def normalize(native: dict[str, Any], provider: str, session_id: str) -> dict[str, Any]:
-    """Map a provider-native event to the v1 envelope. Unknown native types
-    are preserved under `raw` with type `runtime.unknown` — never dropped."""
-    ntype = str(native.get("type") or native.get("method") or "unknown")
+    """Map a provider-native event to the v1 envelope.
+
+    An unmapped provider event is diagnostic information, not evidence that
+    the provider failed.  Keep real provider ``error`` events as
+    ``runtime.error`` while classifying unknown, malformed, or newly-added
+    native shapes as ``runtime.unknown`` and preserving them under ``raw``.
+    """
+    raw_type = native.get("type")
+    if raw_type is None:
+        raw_type = native.get("method")
+    if not isinstance(raw_type, str) or not raw_type:
+        ntype = ("unknown" if raw_type is None or raw_type == ""
+                 else f"<non-text:{type(raw_type).__name__}>")
+    else:
+        ntype = raw_type
+
     mapped = NATIVE_MAP.get(ntype)
+    native_payload = native.get("payload")
+    if native_payload is None:
+        native_payload = native.get("params")
+    payload = (native_payload if isinstance(native_payload, dict)
+               else ({"native_payload": native_payload}
+                     if native_payload is not None else {}))
     if mapped:
-        return envelope(mapped, provider, session_id,
-                        native.get("payload") or native.get("params") or {},
-                        raw=native)
-    return envelope("runtime.error", provider, session_id,
-                    {"reason": "unmapped-native-event", "native_type": ntype},
+        return envelope(mapped, provider, session_id, payload, raw=native)
+    return envelope("runtime.unknown", provider, session_id,
+                    {"reason": "unmapped-native-event", "native_type": ntype,
+                     "payload_shape": type(native_payload).__name__
+                     if native_payload is not None else None},
                     raw=native)

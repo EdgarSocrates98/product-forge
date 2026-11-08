@@ -2,8 +2,7 @@ import io
 
 from typer.testing import CliRunner
 
-from product_forge import __version__
-from product_forge import cli
+from product_forge import __version__, cli
 from product_forge.cli import app
 
 
