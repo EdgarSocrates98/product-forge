@@ -11,7 +11,7 @@ def test_defuddle_adapter_uses_stdin_json_and_preserves_provenance(monkeypatch):
 
     class Completed:
         returncode = 0
-        stdout = json.dumps({"title": "Runbook", "content": "# Safe path", "parseTime": 7})
+        stdout = json.dumps({"title": "Runbook", "contentMarkdown": "# Safe path", "parseTime": 7})
 
     monkeypatch.setattr("product_forge.knowledge.defuddle.executable", lambda _command=None: "defuddle")
 
@@ -28,6 +28,19 @@ def test_defuddle_adapter_uses_stdin_json_and_preserves_provenance(monkeypatch):
     assert result["schema"] == "productforge/DefuddleDocument/v1"
     assert result["extractor"] == "defuddle-cli"
     assert result["provenance"]["network_fetch"] == "stdlib-url"
+
+
+def test_defuddle_adapter_keeps_legacy_content_fallback(monkeypatch):
+    class Completed:
+        returncode = 0
+        stdout = json.dumps({"title": "Legacy", "content": "# Legacy content"})
+
+    monkeypatch.setattr("product_forge.knowledge.defuddle.executable", lambda _command=None: "defuddle")
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: Completed())
+
+    result = parse_defuddle("<p>safe</p>", "https://example.com/legacy")
+
+    assert result["content"] == "# Legacy content"
 
 
 def test_defuddle_adapter_fails_honestly_when_optional_tool_is_missing(monkeypatch):

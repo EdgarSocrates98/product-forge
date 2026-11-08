@@ -82,7 +82,13 @@ def parse_defuddle(
         raise DefuddleError("DEFUDDLE-INVALID-JSON", "the optional extractor returned invalid JSON") from exc
     if not isinstance(payload, dict):
         raise DefuddleError("DEFUDDLE-INVALID-JSON", "the optional extractor returned a non-object")
-    content = str(payload.get("content") or "").strip()
+    # Defuddle's JSON mode exposes Markdown as ``contentMarkdown``.  Keep the
+    # older ``content`` spelling as a compatibility fallback for pinned CLI
+    # releases, but never stringify a non-text payload into a false document.
+    content_value = payload.get("contentMarkdown")
+    if not isinstance(content_value, str) or not content_value.strip():
+        content_value = payload.get("content")
+    content = content_value.strip() if isinstance(content_value, str) else ""
     if not content:
         raise DefuddleError("DEFUDDLE-NO-CONTENT", "the optional extractor found no main content")
     title = str(payload.get("title") or payload.get("description") or "").strip()[:160]
