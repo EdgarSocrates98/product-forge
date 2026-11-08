@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import hashlib
 import html
+import http.client
 import ipaddress
 import re
 import socket
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -69,8 +71,12 @@ def _resolve_public(host: str, resolver: Callable[..., Any] = socket.getaddrinfo
     return values
 
 
-def validate_url(raw_url: str, *, resolver: Callable[..., Any] = socket.getaddrinfo) -> str:
-    """Validate URL syntax and resolve every address before a network request."""
+def _validate_url_target(
+    raw_url: str,
+    *,
+    resolver: Callable[..., Any] = socket.getaddrinfo,
+) -> tuple[str, list[str]]:
+    """Return a normalized URL and the public IPs authorized for its request."""
     value = str(raw_url or "").strip()
     try:
         parsed = urllib.parse.urlsplit(value)
@@ -96,7 +102,12 @@ def validate_url(raw_url: str, *, resolver: Callable[..., Any] = socket.getaddri
         raise UrlCaptureError("URL-SSRF-BLOCKED", "the URL host is not public")
     return urllib.parse.urlunsplit(
         (parsed.scheme.lower(), parsed.netloc, parsed.path or "/", parsed.query, "")
-    )
+    ), addresses
+
+
+def validate_url(raw_url: str, *, resolver: Callable[..., Any] = socket.getaddrinfo) -> str:
+    """Validate URL syntax and resolve every address before a network request."""
+    return _validate_url_target(raw_url, resolver=resolver)[0]
 
 
 def _looks_like_ip(host: str) -> bool:
@@ -106,6 +117,72 @@ def _looks_like_ip(host: str) -> bool:
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> Any:
         raise UrlCaptureError("URL-REDIRECT-REFUSED", "redirects are not followed for URL capture")
+
+
+class _PinnedHTTPConnection(http.client.HTTPConnection):
+    """HTTP connection that keeps the IP approved during URL validation."""
+
+    def __init__(self, host: str, *, resolved_ip: str, **kwargs: Any) -> None:
+        super().__init__(host, **kwargs)
+        self._resolved_ip = resolved_ip
+
+    def connect(self) -> None:
+        self.sock = socket.create_connection(
+            (self._resolved_ip, self.port), self.timeout, self.source_address)
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """HTTPS connection pinned to an approved IP while retaining SNI/cert checks."""
+
+    def __init__(self, host: str, *, resolved_ip: str, **kwargs: Any) -> None:
+        super().__init__(host, **kwargs)
+        self._resolved_ip = resolved_ip
+
+    def connect(self) -> None:
+        self.sock = socket.create_connection(
+            (self._resolved_ip, self.port), self.timeout, self.source_address)
+        if self._tunnel_host:
+            self._tunnel()
+        server_hostname = self._tunnel_host or self.host
+        self.sock = self._context.wrap_socket(
+            self.sock, server_hostname=server_hostname)
+
+
+class _PinnedHTTPHandler(urllib.request.HTTPHandler):
+    def __init__(self, resolved_ip: str) -> None:
+        super().__init__()
+        self._resolved_ip = resolved_ip
+
+    def http_open(self, req: Any) -> Any:
+        return self.do_open(
+            lambda host, **kwargs: _PinnedHTTPConnection(
+                host, resolved_ip=self._resolved_ip, **kwargs), req)
+
+
+class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, resolved_ip: str) -> None:
+        super().__init__(context=ssl.create_default_context())
+        self._resolved_ip = resolved_ip
+
+    def https_open(self, req: Any) -> Any:
+        return self.do_open(
+            lambda host, **kwargs: _PinnedHTTPSConnection(
+                host, resolved_ip=self._resolved_ip, **kwargs), req,
+            context=self._context, check_hostname=self._check_hostname)
+
+
+def _pinned_opener(addresses: list[str]) -> Any:
+    """Build a no-proxy opener pinned to the address validated for this hop."""
+    # Pick one approved address for the connection. Every address returned by
+    # DNS was checked above; pinning prevents a later DNS answer from changing
+    # the destination between validation and connect().
+    address = addresses[0]
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        _NoRedirect(),
+        _PinnedHTTPHandler(address),
+        _PinnedHTTPSHandler(address),
+    )
 
 
 class _PageParser(HTMLParser):
@@ -234,12 +311,12 @@ def fetch_url_document(
     """Fetch one public URL, without redirecting or executing remote code."""
     if extractor not in {"stdlib", "defuddle"}:
         raise UrlCaptureError("URL-EXTRACTOR-INVALID", "extractor must be stdlib or defuddle")
-    url = validate_url(raw_url, resolver=resolver)
+    url, addresses = _validate_url_target(raw_url, resolver=resolver)
     request = urllib.request.Request(  # noqa: S310 - scheme and host validated above
         url,
         headers={"Accept": "text/html, text/plain, application/xhtml+xml, application/json"},
     )
-    client = opener or urllib.request.build_opener(_NoRedirect())
+    client = opener or _pinned_opener(addresses)
     try:
         response = client.open(request, timeout=timeout_s)
         header_size = int(response.headers.get("Content-Length", "0") or 0)

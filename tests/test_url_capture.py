@@ -2,7 +2,12 @@ from email.message import Message
 
 import pytest
 
-from product_forge.knowledge.url import UrlCaptureError, fetch_url_document, validate_url
+from product_forge.knowledge.url import (
+    UrlCaptureError,
+    _PinnedHTTPConnection,
+    fetch_url_document,
+    validate_url,
+)
 
 
 def _public_resolver(host, *_args, **_kwargs):
@@ -133,3 +138,18 @@ def test_url_capture_rejects_unknown_extractor():
             resolver=_public_resolver,
             opener=_Opener(_Response(b"<p>safe</p>")),
         )
+
+
+def test_pinned_connection_uses_validated_ip(monkeypatch):
+    calls = {}
+
+    def fake_connect(address, timeout, source_address=None):
+        calls["address"] = address
+        calls["timeout"] = timeout
+        calls["source_address"] = source_address
+        return object()
+
+    monkeypatch.setattr("product_forge.knowledge.url.socket.create_connection", fake_connect)
+    connection = _PinnedHTTPConnection("example.com", resolved_ip="93.184.216.34")
+    connection.connect()
+    assert calls["address"] == ("93.184.216.34", 80)
