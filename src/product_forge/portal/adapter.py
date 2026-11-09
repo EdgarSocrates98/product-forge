@@ -34,6 +34,7 @@ from ..knowledge.obsidian import (
     export_vault_document,
     import_vault_document,
     list_obsidian_receipts,
+    obsidian_projection_metadata,
     plan_vault_sync,
 )
 from ..knowledge.search import search_knowledge
@@ -848,6 +849,7 @@ class ProductForgePortal(PortalAdapter):
                     "source": "obsidian",
                     "obsidian_path": imported["path"],
                     "size": imported["size"],
+                    "obsidian_projection": obsidian_projection_metadata(imported["markdown"]),
                     "provenance": imported["provenance"],
                 },
             )

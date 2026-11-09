@@ -8,6 +8,7 @@ from product_forge.knowledge.obsidian import (
     export_vault_document,
     import_vault_document,
     list_obsidian_receipts,
+    obsidian_projection_metadata,
     parse_markdown_document,
     plan_vault_sync,
     validate_base_document,
@@ -114,6 +115,16 @@ def test_markdown_projection_extracts_aliases_without_rewriting_content():
     projection = parse_markdown_document(content)
     assert projection["aliases"] == ["Spark diagnosis", "Spark runbook"]
     assert projection["content"] == content
+
+
+def test_persisted_projection_is_structural_and_excludes_frontmatter_and_body():
+    projection = parse_markdown_document(
+        "---\ntoken: do-not-persist\n---\n# Note\nSee [[Other]].\n"
+    )
+    safe = obsidian_projection_metadata(projection)
+    assert safe["wikilinks"] == ["Other"]
+    assert "frontmatter" not in safe
+    assert "content" not in safe
 
 
 @pytest.mark.parametrize("raw_path", ["../outside.md", "notes/data.json", "notes/missing.md"])

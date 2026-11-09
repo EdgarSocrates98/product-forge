@@ -27,6 +27,17 @@ _CANVAS_NODE_TYPES = {"text", "file", "link", "group"}
 _CANVAS_SIDES = {"top", "right", "bottom", "left"}
 _CANVAS_ENDS = {"none", "arrow"}
 _CLASSIFICATIONS = {"public", "internal", "confidential", "restricted"}
+_PROJECTION_FIELDS = (
+    "aliases",
+    "wikilinks",
+    "embeds",
+    "tags",
+    "callouts",
+    "code_blocks",
+    "block_references",
+    "relative_links",
+    "attachments",
+)
 
 
 class ObsidianVaultError(ValueError):
@@ -417,6 +428,11 @@ def parse_markdown_document(content: str) -> dict[str, Any]:
         "content": content,
         "unknown_syntax_preserved": True,
     }
+
+
+def obsidian_projection_metadata(markdown: Mapping[str, Any]) -> dict[str, Any]:
+    """Return body-free structural metadata safe to persist with a document."""
+    return {field: list(markdown.get(field) or []) for field in _PROJECTION_FIELDS}
 
 
 def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
