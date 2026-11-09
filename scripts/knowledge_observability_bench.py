@@ -3,8 +3,9 @@
 The receipt covers the operations that exist in the current product: safe vault
 scan, bounded import, wikilink resolution, one atomic export and SQLite/FTS
 reindex/search.  Peak Python allocation is captured with ``tracemalloc``.
-Provider token usage is reported separately as ``NOT_RUN`` because this offline
-benchmark has no model provider. Retrieval-context budget and citation quality
+Provider token usage is measured through a controlled subprocess fixture that
+uses the same gateway and budget ledger as a real provider. Real provider usage
+remains explicitly ``NOT_RUN``. Retrieval-context budget and citation quality
 are measured against a deterministic fixture corpus.
 """
 
@@ -25,6 +26,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_ROOT / "src"))
 sys.path.insert(0, str(_ROOT / "forge-obsidian" / "src"))
 
+from product_forge.gateway.synthesis import synthesize  # noqa: E402
 from product_forge.knowledge.ingest import chunk_text  # noqa: E402
 from product_forge.knowledge.obsidian import (  # noqa: E402
     export_vault_document,
@@ -199,10 +201,87 @@ def _retrieval_quality() -> tuple[dict[str, Any], dict[str, Any]]:
                 )
                 if context_token_counts
                 else 0,
-                "provider_usage": "NOT_RUN",
-                "provider_usage_reason": "no model provider is used by the offline benchmark",
+                "provider_usage": "FIXTURE_PROVIDER",
+                "real_provider_usage": "NOT_RUN",
+                "provider_usage_reason": (
+                    "the benchmark uses a controlled provider fixture; real provider usage "
+                    "requires a governed model-provider run"
+                ),
             }
             return token_budget, citation_quality
+        finally:
+            store.close()
+
+
+def _provider_usage() -> dict[str, Any]:
+    """Exercise the production gateway boundary with a deterministic provider.
+
+    This does not claim model quality or real-provider cost. It proves that a
+    provider response with honest token counts is accepted and recorded in the
+    same daily budget ledger used by runtime synthesis.
+    """
+    reported_tokens_in = 17
+    reported_tokens_out = 29
+    with tempfile.TemporaryDirectory(prefix="productforge-provider-fixture-") as directory:
+        root = Path(directory)
+        provider = root / "provider.py"
+        provider.write_text(
+            "import json,sys\n"
+            "request=json.loads(sys.stdin.read())\n"
+            "assert request['schema']=='productforge/SynthesisRequest/v1'\n"
+            "print(json.dumps({'text':'fixture grounded answer',"
+            f"'tokens_in':{reported_tokens_in},'tokens_out':{reported_tokens_out}" +
+            "}))\n",
+            encoding="utf-8",
+        )
+        store = Store(root / "usage.db")
+        try:
+            result = synthesize(
+                store,
+                "observability-product",
+                "What does the fixture prove?",
+                [{"chunk_id": "fixture-chunk", "snippet": "fixture evidence"}],
+                {
+                    "gateway_profile": "economy",
+                    "gateway": {
+                        "provider_cmd": [sys.executable, str(provider)],
+                        "timeout_s": 15,
+                    },
+                },
+            )
+            if result.get("status") != "ok":
+                return {
+                    "status": "FAIL",
+                    "scope": "controlled subprocess provider fixture",
+                    "error": result,
+                    "real_provider_usage": "NOT_RUN",
+                }
+            from product_forge.domain.models import utcnow
+
+            day = utcnow()[:10]
+            ledger = store.get("budget_ledger", f"budget:observability-product:{day}")
+            matches = (
+                int(result.get("tokens_in", -1)) == reported_tokens_in
+                and int(result.get("tokens_out", -1)) == reported_tokens_out
+                and int(ledger.get("tokens_in", -1)) == reported_tokens_in
+                and int(ledger.get("tokens_out", -1)) == reported_tokens_out
+                and int(ledger.get("runs", -1)) == 1
+            )
+            return {
+                "status": "PASS" if matches else "FAIL",
+                "scope": "controlled subprocess provider fixture",
+                "reported_tokens_in": result.get("tokens_in"),
+                "reported_tokens_out": result.get("tokens_out"),
+                "ledger_tokens_in": ledger.get("tokens_in"),
+                "ledger_tokens_out": ledger.get("tokens_out"),
+                "ledger_runs": ledger.get("runs"),
+                "profile": result.get("profile"),
+                "request_schema": "productforge/SynthesisRequest/v1",
+                "real_provider_usage": "NOT_RUN",
+                "real_provider_usage_reason": (
+                    "the receipt intentionally runs only a controlled provider fixture"
+                ),
+            }
         finally:
             store.close()
 
@@ -226,6 +305,7 @@ def _row(size: int) -> dict[str, Any]:
             lambda: run_store_benchmark((size,), 1)["results"][0]
         )
         token_budget, citation_quality = _retrieval_quality()
+        token_usage = _provider_usage()
         return {
             "documents": size,
             "scan": {
@@ -260,10 +340,7 @@ def _row(size: int) -> dict[str, Any]:
                 **store_receipt,
             },
             "token_budget": token_budget,
-            "token_usage": {
-                "status": "NOT_RUN",
-                "reason": "provider token usage requires a governed model-provider run",
-            },
+            "token_usage": token_usage,
             "citation_quality": citation_quality,
         }
     finally:
@@ -294,7 +371,10 @@ def run(sizes: tuple[int, ...], iterations: int = 1) -> dict[str, Any]:
         "limitations": [
             "tracemalloc measures Python allocations, not resident process memory",
             "export measures one document per size, not a bulk export API",
-            "provider token usage is NOT_RUN without a governed model-provider run",
+            (
+                "token usage is proven only through a controlled provider fixture; "
+                "real provider usage is NOT_RUN"
+            ),
             "citation quality is fixture-scoped and does not represent provider answer quality",
         ],
         "results": rows,
