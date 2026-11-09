@@ -33,6 +33,10 @@ The same canonical source is also packaged by the `forge-obsidian` subproject
 (`forge-obsidian/src/forge_obsidian`) in this repository. The standalone wheel/sdist can be published independently
 without copying the engine or making another user-facing Forge. Product Forge
 continues to ship the namespace in its own wheel so its runtime remains
-self-contained. Before adoption by another Forge, pin the published package
-version and run its adapter conformance suite against the Forge's own
-authorization and receipt stores.
+self-contained. The standalone release is governed by
+`.github/workflows/publish-forge-obsidian.yml`: it builds once, verifies
+checksums, publishes through PyPI Trusted Publishing/OIDC and installs the
+published version in a clean environment. Before adoption by another Forge,
+pin the published package version and run its adapter conformance suite
+against the Forge's own authorization and receipt stores; until that release
+has completed, adapters must keep the Obsidian feature optional.
