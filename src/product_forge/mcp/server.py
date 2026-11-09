@@ -50,7 +50,7 @@ def tool_specs() -> list[dict[str, Any]]:
         {"name": "obsidian_files",
          "description": "List bounded authorized Obsidian Markdown paths without document bodies",
          "inputSchema": {"type": "object", "properties": {
-             "prefix": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 2000}
+             "prefix": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 10000}
          }}},
         {"name": "agent_list", "description": "List agent definitions for a product",
          "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}},  # noqa: E501

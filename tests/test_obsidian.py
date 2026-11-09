@@ -67,7 +67,7 @@ def test_scan_refuses_traversal_and_unbounded_limits(tmp_path: Path):
     with pytest.raises(ObsidianVaultError, match="scan prefix"):
         scan_vault_documents(vault, prefix="../outside")
     with pytest.raises(ObsidianVaultError, match="scan limit"):
-        scan_vault_documents(vault, limit=2_001)
+        scan_vault_documents(vault, limit=10_001)
 
 
 def test_export_requires_baseline_for_existing_note_and_preserves_backup(tmp_path: Path):

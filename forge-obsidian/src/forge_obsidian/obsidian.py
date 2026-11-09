@@ -604,8 +604,8 @@ def scan_vault_documents(
     never follows symlinks/reparse points and Forge-managed directories are
     excluded by policy.
     """
-    if not 1 <= limit <= 2_000:
-        raise ObsidianVaultError("OBSIDIAN-SCAN-LIMIT", "scan limit must be between 1 and 2000")
+    if not 1 <= limit <= 10_000:
+        raise ObsidianVaultError("OBSIDIAN-SCAN-LIMIT", "scan limit must be between 1 and 10000")
     root = validate_vault_authorization(vault)
     if not root.is_dir():
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
