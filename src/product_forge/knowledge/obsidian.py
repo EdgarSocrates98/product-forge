@@ -372,7 +372,7 @@ def export_vault_document(
         # Keep the original document schema/state for existing API consumers;
         # the additive receipt fields expose the stronger sync contract.
         "schema": "productforge/ObsidianDocument/v1",
-        "receipt_schema": "forge/ObsidianSyncReceipt/v1",
+        "receipt_schema": "theforge/ObsidianSyncReceipt/v1",
         "path": path.relative_to(root).as_posix(),
         "title": _title(path, content),
         "content_hash": candidate_hash,
@@ -417,7 +417,7 @@ def plan_vault_sync(
     else:
         state = "updated"
     return {
-        "schema": "forge/ObsidianSyncPlan/v1",
+        "schema": "theforge/ObsidianSyncPlan/v1",
         "workspace": str(root.parent),
         "vault_id": root.name,
         "path": path.relative_to(root).as_posix(),
