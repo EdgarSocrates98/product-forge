@@ -373,6 +373,7 @@ def export_vault_document(
         # the additive receipt fields expose the stronger sync contract.
         "schema": "productforge/ObsidianDocument/v1",
         "receipt_schema": "theforge/ObsidianSyncReceipt/v1",
+        "version": "v1",
         "path": path.relative_to(root).as_posix(),
         "title": _title(path, content),
         "content_hash": candidate_hash,
@@ -418,6 +419,7 @@ def plan_vault_sync(
         state = "updated"
     return {
         "schema": "theforge/ObsidianSyncPlan/v1",
+        "version": "v1",
         "workspace": str(root.parent),
         "vault_id": root.name,
         "path": path.relative_to(root).as_posix(),
