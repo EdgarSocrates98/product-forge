@@ -82,6 +82,8 @@ def test_obisidian_vault_connection_isolated_and_revoke_is_non_destructive(
     )
     assert alice_status.status_code == 200, alice_status.text
     assert alice_status.json()["data"]["detected"] is True
+    assert alice_status.json()["data"]["vault_record_id"] == alice_vault_record["vault_record_id"]
+    assert alice_status.json()["data"]["path"] == "."
 
     bob_status = client.get(
         f"/api/v1/products/{product_id}/documents/obsidian/status", headers=bob
@@ -116,3 +118,4 @@ def test_obisidian_vault_connection_isolated_and_revoke_is_non_destructive(
     )
     assert after_revoke.status_code == 200, after_revoke.text
     assert after_revoke.json()["data"]["detected"] is False
+    assert "vault_record_id" not in after_revoke.json()["data"]
