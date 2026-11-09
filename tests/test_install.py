@@ -75,6 +75,7 @@ def test_mcp_tools_expanded(tmp_path, monkeypatch):
 
     names = {t["name"] for t in tool_specs()}
     assert {"productforge_status", "product_list", "product_context", "knowledge_query",
+            "knowledge_evidence", "obsidian_preview",
             "agent_list", "product_graph", "knowledge_health", "query_validate",
             "dashboard_list", "roadmap", "alerts_list", "audit_list",
             "agent_run", "agent_eval"} <= names

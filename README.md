@@ -76,6 +76,10 @@ productforge workspace create "My Company"
 productforge product create <workspace_id> "Payments" --domain fintech
 productforge knowledge import <product_id> docs/payments.md
 productforge knowledge query <product_id> "retry policy"
+# Configure FORGE_OBSIDIAN_VAULT with the authorized vault directory first.
+productforge knowledge obsidian preview notes/runbook.md
+productforge knowledge obsidian sync-plan notes/runbook.md candidate.md
+productforge knowledge obsidian export notes/runbook.md candidate.md --yes
 productforge agent create <product_id> "Payments Analyst" --template product-analyst
 productforge api serve            # local API on 127.0.0.1
 productforge portal               # opens the Product Forge PM/PA portal and manages the local Agent Bridge
@@ -95,7 +99,7 @@ productforge mcp serve            # MCP tools for agent hosts
 
 ## MCP
 
-`productforge mcp serve` — stdio JSON-RPC server exposing 14 tools: `productforge_status`, `product_list`, `product_context`, `knowledge_query`, `agent_list`, `product_graph`, `knowledge_health`, `query_validate`, `dashboard_list`, `roadmap`, `alerts_list`, `audit_list`, `agent_run`, `agent_eval`. `install --scope project` registers it in `.mcp.json` for host auto-discovery.
+`productforge mcp serve` — stdio JSON-RPC server exposing 16 tools, including body-free `knowledge_evidence` and authorized `obsidian_preview`. Mutating Obsidian operations remain explicit CLI/API flows with receipts and conflict checks. `install --scope project` registers it in `.mcp.json` for host auto-discovery.
 
 ## Status
 

@@ -32,6 +32,41 @@
       "command": ["{cli}", "knowledge", "import", "{product_id}", "{file}"],
       "description": "Import a local Markdown document with an auditable receipt",
       "read_only": false
+    },
+    {
+      "id": "obsidian-preview",
+      "mode": "DIAGNOSTIC_ONLY",
+      "command": ["{cli}", "knowledge", "obsidian", "preview", "{path}"],
+      "description": "Preview authorized Obsidian note metadata and projection",
+      "read_only": true
+    },
+    {
+      "id": "obsidian-import",
+      "mode": "DIRECT_CAPABILITY",
+      "command": ["{cli}", "knowledge", "obsidian", "import", "{product_id}", "{path}"],
+      "description": "Import one selected authorized Obsidian note into product knowledge",
+      "read_only": false
+    },
+    {
+      "id": "obsidian-sync-plan",
+      "mode": "DIRECT_CAPABILITY",
+      "command": ["{cli}", "knowledge", "obsidian", "sync-plan", "{path}", "{file}"],
+      "description": "Plan a reviewed Obsidian sync without mutation",
+      "read_only": true
+    },
+    {
+      "id": "obsidian-sync-apply",
+      "mode": "DIRECT_CAPABILITY",
+      "command": ["{cli}", "knowledge", "obsidian", "export", "{path}", "{file}", "--yes"],
+      "description": "Apply an explicitly reviewed Obsidian sync and emit a receipt",
+      "read_only": false
+    },
+    {
+      "id": "knowledge-evidence-list",
+      "mode": "DIAGNOSTIC_ONLY",
+      "command": ["{cli}", "knowledge", "evidence", "{product_id}"],
+      "description": "List body-free knowledge evidence and provenance",
+      "read_only": true
     }
   ],
   "skills": [],

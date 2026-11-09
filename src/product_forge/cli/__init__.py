@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -21,6 +22,7 @@ app = typer.Typer(name="productforge", no_args_is_help=True,
 ws_app = typer.Typer(help="Workspace management")
 prd_app = typer.Typer(help="Product management")
 kn_app = typer.Typer(help="Knowledge operations")
+obsidian_app = typer.Typer(help="Authorized Obsidian operations")
 ag_app = typer.Typer(help="Agent registry")
 api_app = typer.Typer(help="Local HTTP API")
 mcp_app = typer.Typer(help="MCP server")
@@ -28,6 +30,7 @@ store_app = typer.Typer(help="Persistence backend management")
 app.add_typer(ws_app, name="workspace")
 app.add_typer(prd_app, name="product")
 app.add_typer(kn_app, name="knowledge")
+kn_app.add_typer(obsidian_app, name="obsidian")
 app.add_typer(ag_app, name="agent")
 app.add_typer(api_app, name="api")
 app.add_typer(mcp_app, name="mcp")
@@ -433,6 +436,158 @@ def kn_import(product_id: str, file: Path) -> None:
             "rollback_available": False,
         },
     })
+
+
+def _cli_obsidian_vault() -> Path:
+    """Resolve the operator-configured vault without accepting a web path."""
+    raw = os.environ.get("FORGE_OBSIDIAN_VAULT", "").strip()
+    if not raw:
+        raise typer.BadParameter(
+            "FORGE_OBSIDIAN_VAULT is not configured; the CLI never accepts a vault root "
+            "as an untrusted web input"
+        )
+    return Path(raw)
+
+
+@obsidian_app.command("preview")
+def obsidian_preview(path: str) -> None:
+    """Preview one authorized vault note without returning its body."""
+    from ..knowledge.obsidian import import_vault_document, obsidian_projection_metadata
+
+    imported = import_vault_document(_cli_obsidian_vault(), path)
+    _out({
+        "schema": "theforge/ObsidianPreview/v1",
+        "path": imported["path"],
+        "title": imported["title"],
+        "content_hash": imported["content_hash"],
+        "size": imported["size"],
+        "projection": obsidian_projection_metadata(imported["markdown"]),
+        "provenance": imported["provenance"],
+    })
+
+
+@obsidian_app.command("import")
+def obsidian_import(product_id: str, path: str) -> None:
+    """Import one selected vault note into Product Forge knowledge."""
+    from ..domain.models import Document, DocumentStatus, new_id
+    from ..knowledge.ingest import chunk_text
+    from ..knowledge.obsidian import import_vault_document, obsidian_projection_metadata
+
+    st = _store()
+    st.get("products", product_id)
+    imported = import_vault_document(_cli_obsidian_vault(), path)
+    existing = next(
+        (
+            doc
+            for doc in st.list("documents", product_id=product_id)
+            if (doc.get("metadata") or {}).get("obsidian_path") == imported["path"]
+            and doc.get("content_hash") == imported["content_hash"]
+        ),
+        None,
+    )
+    if existing:
+        st.close()
+        _out({**existing, "state": "already_imported", "source_path": imported["path"]})
+        return
+    doc = Document(
+        id=new_id("doc"),
+        product_id=product_id,
+        title=imported["title"],
+        content_hash=imported["content_hash"],
+        status=DocumentStatus.IMPORTED,
+        metadata={
+            "source": "obsidian",
+            "source_kind": "obsidian",
+            "obsidian_path": imported["path"],
+            "classification": "internal",
+            "obsidian_projection": obsidian_projection_metadata(imported["markdown"]),
+        },
+    )
+    st.put("documents", doc)
+    doc.chunk_count = st.put_chunks(doc.id, product_id, chunk_text(imported["content"]))
+    doc.status = DocumentStatus.INDEXED
+    st.put("documents", doc)
+    st.close()
+    _out({
+        **doc.model_dump(mode="json", by_alias=True),
+        "state": "imported",
+        "source_path": imported["path"],
+        "source_kind": "obsidian",
+        "receipt": {
+            "schema": "theforge/ObsidianKnowledgeImportReceipt/v1",
+            "operation": "import",
+            "document_id": doc.id,
+            "content_hash": imported["content_hash"],
+            "source_path": imported["path"],
+        },
+    })
+
+
+@obsidian_app.command("sync-plan")
+def obsidian_sync_plan(
+    path: str,
+    file: Path,
+    baseline_hash: str | None = typer.Option(None, "--baseline-hash"),
+    classification: str = typer.Option("internal", "--classification"),
+) -> None:
+    """Create a dry-run sync plan from a local candidate file."""
+    from ..knowledge.obsidian import plan_vault_sync
+
+    content = file.read_text(encoding="utf-8")
+    _out(plan_vault_sync(
+        _cli_obsidian_vault(),
+        path,
+        content,
+        baseline_hash=baseline_hash,
+        classification=classification,
+        source="product-forge-cli",
+    ))
+
+
+@obsidian_app.command("export")
+def obsidian_export(
+    path: str,
+    file: Path,
+    baseline_hash: str | None = typer.Option(None, "--baseline-hash"),
+    classification: str = typer.Option("internal", "--classification"),
+    yes: bool = typer.Option(False, "--yes", help="Confirm the reviewed sync plan"),
+) -> None:
+    """Apply a reviewed sync plan and emit the real Obsidian receipt."""
+    if not yes:
+        raise typer.BadParameter(
+            "export mutates the vault; pass --yes after reviewing "
+            "knowledge obsidian sync-plan"
+        )
+    from ..knowledge.obsidian import export_vault_document
+
+    content = file.read_text(encoding="utf-8")
+    _out(export_vault_document(
+        _cli_obsidian_vault(),
+        path,
+        content,
+        baseline_hash=baseline_hash,
+        classification=classification,
+        source="product-forge-cli",
+    ))
+
+
+@kn_app.command("evidence")
+def kn_evidence(product_id: str) -> None:
+    """List body-free knowledge evidence for a product."""
+    st = _store()
+    st.get("products", product_id)
+    items = []
+    for doc in st.list("documents", product_id=product_id):
+        items.append({
+            "id": doc.get("id"),
+            "title": doc.get("title"),
+            "content_hash": doc.get("content_hash"),
+            "status": doc.get("status"),
+            "chunk_count": doc.get("chunk_count"),
+            "metadata": doc.get("metadata") or {},
+        })
+    st.close()
+    _out({"schema": "theforge/KnowledgeEvidenceList/v1", "product_id": product_id, "items": items})
 
 
 @kn_app.command("query")

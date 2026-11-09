@@ -62,7 +62,7 @@ def test_http_transport_auth_and_calls(tmp_path, monkeypatch):
         r = httpx.post("http://127.0.0.1:18471/mcp",
                        json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
                        headers=h)
-        assert len(r.json()["result"]["tools"]) == 14
+        assert len(r.json()["result"]["tools"]) == 16
         assert httpx.post("http://127.0.0.1:18471/mcp",
                           json={"jsonrpc": "2.0", "id": 3, "method": "ping"}
                           ).status_code == 401
