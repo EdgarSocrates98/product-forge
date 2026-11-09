@@ -20,6 +20,8 @@ def source_document_key(metadata: dict[str, Any]) -> str | None:
         if source == "workspace"
         else metadata.get("obsidian_path")
         if source == "obsidian"
+        else metadata.get("investigation_correlation_id")
+        if source == "the-forge"
         else None
     )
     if not source or not locator:

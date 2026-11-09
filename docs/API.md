@@ -66,6 +66,7 @@ All product-scoped collections below live under `/api/v1/products/{pid}/…`.
 | Method | Path | Purpose |
 |---|---|---|
 | GET·POST | `/documents` | document list / import (content is redacted before persist) |
+| POST | `/products/{pid}/documents/from-investigation` | confirmed The Forge `OrchestrationReport/v1` import; idempotent by correlation + content hash, starts as `draft`/`captured` |
 | GET | `/documents/search` | backward-compatible indexed document search |
 | GET | `/knowledge/search` | bounded body-free search across documents, sources, entities and relations |
 | GET | `/products/{pid}/documents/url/preview?url=…&extractor=stdlib|defuddle` | safe URL preview; `defuddle` is optional |
@@ -82,6 +83,13 @@ extraction. `stdlib` is the default, dependency-free extractor. `defuddle`
 passes that already-validated HTML to the optional Defuddle CLI over stdin;
 set `FORGE_DEFUDDLE_BIN` when the executable is not on `PATH`. It never passes
 the remote URL to the optional process and never executes page scripts.
+
+The investigation import is a trust-boundary adapter, not a second
+orchestrator: it accepts only a completed, already-redacted
+`theforge/OrchestrationReport/v1`, preserves correlation/provenance fields,
+indexes a deterministic Markdown projection and refuses secret-shaped payloads.
+It does not write the vault. Use the existing Obsidian sync-plan → reviewed
+export flow when a human wants to materialize the projection in Obsidian.
 
 ### Obsidian interoperability
 

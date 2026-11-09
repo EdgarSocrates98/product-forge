@@ -49,6 +49,7 @@ from ..errors import (
     UrlCaptureForgeError,
     ValidationError,
 )
+from ..knowledge.investigation import InvestigationImportError, project_report
 from ..knowledge.obsidian import (
     ObsidianVaultError,
     export_vault_document,
@@ -1507,6 +1508,103 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.store.put("documents", doc)
         ctx.audit(req, "document.import", "documents", doc.id, product_id=pid)
         return envelope(doc.model_dump(mode="json", by_alias=True))
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-investigation", status_code=201)
+    def import_investigation_doc(pid: str, body: ScopedIn, req: Request) -> dict:
+        """Index one explicit, redacted The Forge investigation receipt.
+
+        The endpoint is intentionally separate from the generic document
+        importer: it validates the producer schema, preserves correlation and
+        provenance, starts the document in ``draft``/``captured`` state and is
+        idempotent for the same report hash.  It never writes an Obsidian vault;
+        reviewed export remains the existing plan/sync flow.
+        """
+        from ..domain.models import Document, DocumentStatus
+        from ..errors import ValidationError
+        from ..knowledge.ingest import chunk_text
+
+        product = ctx.store.get("products", pid)
+        payload = body.model_dump()
+        if str(payload.get("confirm", "")) != "import":
+            raise ValidationError("confirm=import is required")
+        classification = str(payload.get("classification") or "internal")
+        try:
+            projection = project_report(payload.get("report"), classification=classification)
+        except InvestigationImportError as exc:
+            raise ValidationError(str(exc), details={"code": "PF-INVESTIGATION-REFUSED"}) from exc
+
+        existing = next(
+            (
+                doc
+                for doc in ctx.store.list("documents", product_id=pid, limit=5000)
+                if (doc.get("metadata") or {}).get("source") == "the-forge"
+                and (doc.get("metadata") or {}).get("investigation_correlation_id")
+                == projection["correlation_id"]
+                and doc.get("content_hash") == projection["content_hash"]
+            ),
+            None,
+        )
+        if existing:
+            return envelope(
+                {
+                    **existing,
+                    "state": "already_imported",
+                    "source_kind": "the-forge-investigation",
+                    "suggested_obsidian_path": projection["path"],
+                }
+            )
+
+        metadata, _ = prepare_version(
+            ctx.store,
+            pid,
+            {
+                "source": "the-forge",
+                "source_kind": "investigation",
+                "source_id": projection["source_id"],
+                "investigation_correlation_id": projection["correlation_id"],
+                "investigation_schema": projection["provenance"]["report_schema"],
+                "classification": classification,
+                "trust_state": projection["trust_state"],
+                "freshness": projection["freshness"],
+                "provenance": projection["provenance"],
+                "suggested_obsidian_path": projection["path"],
+            },
+        )
+        doc = Document(
+            id=new_id("doc"),
+            product_id=pid,
+            title=str(payload.get("title") or projection["title"]),
+            content_hash=projection["content_hash"],
+            status=DocumentStatus.IMPORTED,
+            metadata=metadata,
+        )
+        ctx.store.put("documents", doc)
+        doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(projection["content"]))
+        doc.status = DocumentStatus.INDEXED
+        ctx.store.put("documents", doc)
+        ctx.audit(
+            req,
+            "investigation.document.import",
+            "documents",
+            doc.id,
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
+        return envelope(
+            {
+                **doc.model_dump(mode="json", by_alias=True),
+                "state": "imported",
+                "source_kind": "the-forge-investigation",
+                "suggested_obsidian_path": projection["path"],
+                "projection": {
+                    "schema": projection["schema"],
+                    "content_hash": projection["content_hash"],
+                    "classification": projection["classification"],
+                    "trust_state": projection["trust_state"],
+                    "freshness": projection["freshness"],
+                },
+            }
+        )
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents")
     def list_docs(pid: str) -> dict:
