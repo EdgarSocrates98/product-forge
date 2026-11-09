@@ -47,6 +47,11 @@ def tool_specs() -> list[dict[str, Any]]:
          "description": "Preview authorized Obsidian note metadata without its body",
          "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}},  # noqa: E501
                          "required": ["path"]}},
+        {"name": "obsidian_files",
+         "description": "List bounded authorized Obsidian Markdown paths without document bodies",
+         "inputSchema": {"type": "object", "properties": {
+             "prefix": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 2000}
+         }}},
         {"name": "agent_list", "description": "List agent definitions for a product",
          "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}},  # noqa: E501
         {"name": "product_graph", "description": "Entity/relation graph projection for a product",
@@ -121,6 +126,14 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                 "projection": obsidian_projection_metadata(imported["markdown"]),
                 "provenance": imported["provenance"],
             }
+        if name == "obsidian_files":
+            from ..knowledge.obsidian import scan_vault_documents
+
+            return scan_vault_documents(
+                _obsidian_vault(),
+                prefix=str(args.get("prefix") or ""),
+                limit=int(args.get("limit", 200)),
+            )
         if name == "agent_list":
             return {"items": st.list("agents", product_id=args["product_id"])}
         if name == "product_graph":

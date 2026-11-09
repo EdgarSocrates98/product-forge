@@ -76,6 +76,7 @@ def test_mcp_tools_expanded(tmp_path, monkeypatch):
     names = {t["name"] for t in tool_specs()}
     assert {"productforge_status", "product_list", "product_context", "knowledge_query",
             "knowledge_evidence", "obsidian_preview",
+            "obsidian_files",
             "agent_list", "product_graph", "knowledge_health", "query_validate",
             "dashboard_list", "roadmap", "alerts_list", "audit_list",
             "agent_run", "agent_eval"} <= names
@@ -91,6 +92,11 @@ def test_mcp_tools_expanded(tmp_path, monkeypatch):
     assert not call_tool("query_validate", {"statement": "DELETE FROM t"})["ok"]
     assert call_tool("product_list", {})["items"]
     assert call_tool("roadmap", {"product_id": "p1"})["lanes"]
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "runbook.md").write_text("# Runbook\n", encoding="utf-8")
+    monkeypatch.setenv("FORGE_OBSIDIAN_VAULT", str(vault))
+    assert call_tool("obsidian_files", {})["items"][0]["path"] == "runbook.md"
     from product_forge.errors import NotFoundError
     with pytest.raises(NotFoundError):
         call_tool("agent_run", {"agent_id": "nope", "input": "hi"})

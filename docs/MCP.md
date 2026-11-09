@@ -1,6 +1,6 @@
 # Product Forge — MCP tools
 
-`productforge mcp serve` exposes 16 tools over stdio (JSON-RPC). Hosts
+`productforge mcp serve` exposes 17 tools over stdio (JSON-RPC). Hosts
 register it via `.mcp.json` (the `mcp` install component writes the entry):
 
 ```json
@@ -19,6 +19,7 @@ HTTP transport is also available: `productforge mcp serve --transport http`.
 | `knowledge_query` | `product_id`, `question` | FTS chunks **with citations** |
 | `knowledge_evidence` | `product_id` | body-free evidence metadata and provenance |
 | `obsidian_preview` | `path` | authorized note metadata/projection; never the note body |
+| `obsidian_files` | — (`prefix`/`limit`?) | bounded authorized Markdown path index; never document bodies |
 | `knowledge_health` | `product_id` | coverage/citation health |
 | `product_graph` | `product_id` | entity/relation graph projection |
 | `agent_list` | `product_id` | agent definitions |
