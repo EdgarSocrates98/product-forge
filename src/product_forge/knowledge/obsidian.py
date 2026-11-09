@@ -26,6 +26,7 @@ MAX_INTEROP_BYTES = 1 * 1024 * 1024
 _CANVAS_NODE_TYPES = {"text", "file", "link", "group"}
 _CANVAS_SIDES = {"top", "right", "bottom", "left"}
 _CANVAS_ENDS = {"none", "arrow"}
+_CLASSIFICATIONS = {"public", "internal", "confidential", "restricted"}
 
 
 class ObsidianVaultError(ValueError):
@@ -88,6 +89,12 @@ class ImportReceiptWriter(Protocol):
 
 class ExportReceiptWriter(Protocol):
     def write_export_receipt(self, receipt: Mapping[str, Any]) -> None: ...
+
+
+def _classification(value: str) -> str:
+    if value not in _CLASSIFICATIONS:
+        raise ObsidianVaultError("OBSIDIAN-CLASSIFICATION-INVALID", "unsupported document classification")
+    return value
 
 
 def _bounded_document(document: str | bytes | Mapping[str, Any], *, kind: str) -> Any:
@@ -429,6 +436,7 @@ def export_vault_document(
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
     if len(content.encode("utf-8")) > MAX_VAULT_BYTES:
         raise ObsidianVaultError("OBSIDIAN-SIZE-LIMIT", "vault document exceeds the safe size limit")
+    classification = _classification(classification)
     path = _safe(root, raw_path, for_write=True)
     candidate_bytes = content.encode("utf-8")
     candidate_hash = hashlib.sha256(candidate_bytes).hexdigest()
@@ -500,6 +508,7 @@ def plan_vault_sync(
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
     if len(content.encode("utf-8")) > MAX_VAULT_BYTES:
         raise ObsidianVaultError("OBSIDIAN-SIZE-LIMIT", "vault document exceeds the safe size limit")
+    classification = _classification(classification)
     path = _safe(root, raw_path, for_write=True)
     candidate_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
     current_hash = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
@@ -539,6 +548,11 @@ def list_obsidian_receipts(vault: Path | str, *, limit: int = 50) -> list[dict[s
     receipt_dir = root / ".forge" / "obsidian-receipts"
     if not receipt_dir.is_dir():
         return []
+    if _reparse(receipt_dir):
+        raise ObsidianVaultError(
+            "OBSIDIAN-SYMLINK-REFUSED",
+            "vault receipt ledger is a symlink or reparse point",
+        )
     entries: list[tuple[float, dict[str, Any]]] = []
     for path in receipt_dir.glob("*.json"):
         try:

@@ -148,6 +148,13 @@ def test_vault_refuses_hardlinked_document(tmp_path: Path):
         import_vault_document(vault, "linked.md")
 
 
+def test_export_refuses_unknown_classification(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    with pytest.raises(ObsidianVaultError, match="classification"):
+        export_vault_document(vault, "note.md", "# Note\n", classification="secret")
+
+
 @pytest.mark.parametrize("payload", [b"\xff\xfe", b"# note\x00\x01"])
 def test_vault_refuses_invalid_utf8_and_binary_markdown(tmp_path: Path, payload: bytes):
     vault = tmp_path / "vault"
