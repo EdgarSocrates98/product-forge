@@ -31,6 +31,17 @@ TEMPLATE_IDS = (
     "cross-forge-investigation",
 )
 
+BASE_DASHBOARD_SPECS = (
+    ("open-investigations", "Open Investigations", 'knowledge_state == "draft"'),
+    ("verified-knowledge", "Verified Knowledge", 'knowledge_state == "validated"'),
+    ("stale-knowledge", "Stale Knowledge", 'freshness == "stale"'),
+    ("unresolved-findings", "Unresolved Findings", "unresolved_count > 0"),
+    ("api-contract-changes", "API Contract Changes", 'forge_domain == "api"'),
+    ("spark-incidents", "Spark Incidents", 'forge_domain == "spark"'),
+    ("platform-incidents", "Platform Incidents", 'forge_domain == "platform"'),
+    ("cross-forge-decisions", "Cross-Forge Decisions", 'forge_domain == "cross-forge"'),
+)
+
 
 def _slug(value: str) -> str:
     result = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
@@ -89,6 +100,9 @@ def build_canvas_document(
     central_note: str,
     evidence: Iterable[str] = (),
     hypotheses: Iterable[str] = (),
+    causes: Iterable[str] = (),
+    resources: Iterable[str] = (),
+    contracts: Iterable[str] = (),
     decisions: Iterable[str] = (),
     next_steps: Iterable[str] = (),
 ) -> dict[str, Any]:
@@ -100,6 +114,9 @@ def build_canvas_document(
     groups = (
         ("evidence", "Evidence", evidence),
         ("hypotheses", "Hypotheses", hypotheses),
+        ("causes", "Causes", causes),
+        ("resources", "Resources", resources),
+        ("contracts", "Contracts", contracts),
         ("decisions", "Decisions", decisions),
         ("next-steps", "Next steps", next_steps),
     )
@@ -160,9 +177,28 @@ def build_base_document(*, dashboard_id: str, title: str, filter_expression: str
     }
 
 
+def build_base_dashboard_catalog() -> list[dict[str, Any]]:
+    """Build the bounded dashboard set used by the knowledge workspace.
+
+    Filters are emitted as source syntax only. The caller still owns review,
+    vault authorization and the reviewed sync path; this function never
+    evaluates a Bases expression or reads vault state.
+    """
+    return [
+        build_base_document(
+            dashboard_id=dashboard_id,
+            title=title,
+            filter_expression=filter_expression,
+        )
+        for dashboard_id, title, filter_expression in BASE_DASHBOARD_SPECS
+    ]
+
+
 __all__ = [
     "TEMPLATE_IDS",
+    "BASE_DASHBOARD_SPECS",
     "build_base_document",
+    "build_base_dashboard_catalog",
     "build_canvas_document",
     "render_obsidian_template",
 ]
