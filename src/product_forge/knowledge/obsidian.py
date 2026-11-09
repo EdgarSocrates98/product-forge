@@ -1088,10 +1088,11 @@ def list_obsidian_receipts(vault: Path | str, *, limit: int = 50) -> list[dict[s
 
 
 def _atomic_write(path: Path, content: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    original_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else None
-    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    temporary: str | None = None
     try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        original_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else None
+        fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
         if original_mode is not None:
             os.chmod(temporary, original_mode)
         with os.fdopen(fd, "wb") as handle:
@@ -1102,8 +1103,13 @@ def _atomic_write(path: Path, content: bytes) -> None:
             os.replace(temporary, path)
         except OSError as exc:
             raise ObsidianVaultError("OBSIDIAN-WRITE-FAILED", "atomic vault replace failed") from exc
+    except ObsidianVaultError:
+        raise
+    except OSError as exc:
+        raise ObsidianVaultError("OBSIDIAN-WRITE-FAILED", "atomic vault write failed") from exc
     finally:
-        try:
-            os.unlink(temporary)
-        except FileNotFoundError:
-            pass
+        if temporary is not None:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
