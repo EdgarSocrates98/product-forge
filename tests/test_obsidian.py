@@ -83,6 +83,10 @@ reviewed: true
 # Spark
 
 See [[Spark Runtime#Skew|the skew section]] and ![[diagram.png]].
+See [the source](docs/source.md) and [the PDF](assets/guide.pdf).
+This paragraph has a stable anchor. ^diagnostic-anchor
+
+aliases: not body metadata
 
 #diagnostics #spark/runtime
 > [!warning] Check partitions
@@ -97,8 +101,19 @@ print('keep')
     assert projection["tags"] == ["diagnostics", "spark/runtime"]
     assert projection["callouts"] == ["warning"]
     assert projection["code_blocks"] == ["python"]
+    assert projection["aliases"] == []
+    assert projection["block_references"] == ["diagnostic-anchor"]
+    assert projection["relative_links"] == ["assets/guide.pdf", "docs/source.md"]
+    assert projection["attachments"] == ["assets/guide.pdf", "diagram.png"]
     assert projection["content"] == content
     assert projection["unknown_syntax_preserved"] is True
+
+
+def test_markdown_projection_extracts_aliases_without_rewriting_content():
+    content = "---\naliases:\n  - Spark diagnosis\n  - Spark runbook\n---\n# Diagnosis\n"
+    projection = parse_markdown_document(content)
+    assert projection["aliases"] == ["Spark diagnosis", "Spark runbook"]
+    assert projection["content"] == content
 
 
 @pytest.mark.parametrize("raw_path", ["../outside.md", "notes/data.json", "notes/missing.md"])

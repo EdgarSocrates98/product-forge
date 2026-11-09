@@ -84,6 +84,7 @@ def test_obsidian_routes_are_optional_and_explicitly_gated() -> None:
     portal = ProductForgePortal()
     routes = {(op.method, op.path, op.confirm) for op in portal.ops}
     assert ("GET", "/products/{pid}/documents/obsidian/preview", None) in routes
+    assert ("GET", "/products/{pid}/documents/obsidian/status", None) in routes
     assert ("POST", "/products/{pid}/documents/from-obsidian", "import") in routes
     assert ("POST", "/products/{pid}/documents/to-obsidian", "export") in routes
 

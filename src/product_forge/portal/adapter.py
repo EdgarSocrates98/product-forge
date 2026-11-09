@@ -7,6 +7,7 @@ every op to real Store calls — nothing fabricates state.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import urllib.error
@@ -213,6 +214,7 @@ class ProductForgePortal(PortalAdapter):
             )
         )
         self.register(Operation("GET", "/products/{pid}/documents/obsidian/preview", self._obsidian_preview))
+        self.register(Operation("GET", "/products/{pid}/documents/obsidian/status", self._obsidian_status))
         self.register(Operation("GET", "/products/{pid}/documents/obsidian/history", self._obsidian_history))
         self.register(
             Operation(
@@ -753,6 +755,50 @@ class ProductForgePortal(PortalAdapter):
         except ObsidianVaultError as exc:
             raise PortalError(exc.code, str(exc), http=422) from exc
         return {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
+
+    def _obsidian_status(self, ctx: RequestContext) -> dict[str, Any]:
+        st = _store()
+        try:
+            product = _require(st, "products", ctx.params["pid"])
+            workspace = str(product.get("workspace_id") or "local")
+        finally:
+            st.close()
+        raw = os.environ.get("FORGE_OBSIDIAN_VAULT", "").strip()
+        if not raw:
+            return {
+                "schema": "theforge/ObsidianVaultDescriptor/v1",
+                "version": "v1",
+                "workspace": workspace,
+                "vault_id": "unconfigured",
+                "path": ".",
+                "source": "product-forge",
+                "classification": "internal",
+                "detected": False,
+                "capabilities": [],
+                "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT"},
+                "warnings": ["an authorized vault is not configured"],
+                "unresolved": ["configure FORGE_OBSIDIAN_VAULT on the Product Forge service"],
+            }
+        root = Path(raw).expanduser()
+        resolved = root.resolve(strict=False)
+        path_hash = hashlib.sha256(str(resolved).encode("utf-8")).hexdigest()
+        detected = root.is_dir()
+        return {
+            "schema": "theforge/ObsidianVaultDescriptor/v1",
+            "version": "v1",
+            "workspace": workspace,
+            "vault_id": f"vault-{path_hash[:16]}",
+            "path": ".",
+            "source": "product-forge",
+            "classification": "internal",
+            "detected": detected,
+            "capabilities": ["preview", "import_read_only", "sync_plan", "reviewed_sync", "history"]
+            if detected
+            else [],
+            "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT", "path_hash": path_hash},
+            "warnings": [] if detected else ["configured vault is not an accessible directory"],
+            "unresolved": [] if detected else ["verify the configured vault directory"],
+        }
 
     def _obsidian_history(self, ctx: RequestContext) -> dict[str, Any]:
         raw_limit = _q1(ctx, "limit") or "50"

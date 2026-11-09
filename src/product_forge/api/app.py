@@ -6,6 +6,7 @@ Mutations require the local bearer token (productforge api token --show).
 
 from __future__ import annotations
 
+import hashlib
 import os
 import threading
 import time
@@ -259,6 +260,46 @@ def _obsidian_vault() -> Path:
     if not raw:
         raise ForgeError("Obsidian vault is not configured", details={"code": "OBSIDIAN-NOT-CONFIGURED"})
     return Path(raw)
+
+
+def _obsidian_descriptor(product: dict[str, Any]) -> dict[str, Any]:
+    """Expose vault capability metadata without returning the host path."""
+    workspace = str(product.get("workspace_id") or "local")
+    raw = os.environ.get("FORGE_OBSIDIAN_VAULT", "").strip()
+    if not raw:
+        return {
+            "schema": "theforge/ObsidianVaultDescriptor/v1",
+            "version": "v1",
+            "workspace": workspace,
+            "vault_id": "unconfigured",
+            "path": ".",
+            "source": "product-forge",
+            "classification": "internal",
+            "detected": False,
+            "capabilities": [],
+            "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT"},
+            "warnings": ["an authorized vault is not configured"],
+            "unresolved": ["configure FORGE_OBSIDIAN_VAULT on the Product Forge service"],
+        }
+    root = Path(raw).expanduser()
+    path_hash = hashlib.sha256(str(root.resolve(strict=False)).encode("utf-8")).hexdigest()
+    detected = root.is_dir()
+    return {
+        "schema": "theforge/ObsidianVaultDescriptor/v1",
+        "version": "v1",
+        "workspace": workspace,
+        "vault_id": f"vault-{path_hash[:16]}",
+        "path": ".",
+        "source": "product-forge",
+        "classification": "internal",
+        "detected": detected,
+        "capabilities": ["preview", "import_read_only", "sync_plan", "reviewed_sync", "history"]
+        if detected
+        else [],
+        "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT", "path_hash": path_hash},
+        "warnings": [] if detected else ["configured vault is not an accessible directory"],
+        "unresolved": [] if detected else ["verify the configured vault directory"],
+    }
 
 
 def _oidc_workspaces(claims: dict[str, Any] | None) -> set[str]:
@@ -1435,6 +1476,11 @@ def create_app(home: Path | None = None) -> FastAPI:
         return envelope(
             {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
         )
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/status")
+    def obsidian_status(pid: str) -> dict:
+        product = ctx.store.get("products", pid)
+        return envelope(_obsidian_descriptor(product))
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/history")
     def obsidian_history(pid: str, limit: int = 50) -> dict:

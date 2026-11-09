@@ -326,7 +326,7 @@ def parse_markdown_document(content: str) -> dict[str, Any]:
     """
     if not isinstance(content, str):
         raise ObsidianVaultError("OBSIDIAN-MARKDOWN-TYPE", "Markdown content must be text")
-    frontmatter: dict[str, str | bool] = {}
+    frontmatter: dict[str, Any] = {}
     frontmatter_raw = ""
     body = content
     lines = content.splitlines()
@@ -341,10 +341,16 @@ def parse_markdown_document(content: str) -> dict[str, Any]:
                     continue
                 normalized = value.strip()
                 if normalized.lower() in {"true", "false"}:
-                    parsed: str | bool = normalized.lower() == "true"
+                    parsed: Any = normalized.lower() == "true"
                 else:
                     parsed = normalized.strip("'\"")
                 frontmatter[key.strip()] = parsed
+            try:
+                parsed_frontmatter = yaml.safe_load(frontmatter_raw)
+            except yaml.YAMLError:
+                parsed_frontmatter = None
+            if isinstance(parsed_frontmatter, Mapping):
+                frontmatter = dict(parsed_frontmatter)
     wikilinks = sorted(
         {
             match.group(1).strip()
@@ -366,6 +372,35 @@ def parse_markdown_document(content: str) -> dict[str, Any]:
         for language in re.findall(r"^```([^\r\n]*)", body, flags=re.MULTILINE)
         if language.strip()
     ]
+    def _string_list(value: Any) -> list[str]:
+        values = value if isinstance(value, list) else [value]
+        return sorted({str(item).strip() for item in values if str(item).strip()})
+
+    aliases = _string_list(frontmatter.get("aliases", frontmatter.get("alias", [])))
+    block_references = sorted(
+        set(re.findall(r"(?<![\w])\^([A-Za-z0-9][A-Za-z0-9_-]{0,79})\b", body))
+    )
+    relative_links = sorted(
+        {
+            match.group(1).strip()
+            for match in re.finditer(r"(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+['\"][^)]*['\"])?\)", body)
+            if match.group(1).strip()
+            and not match.group(1).startswith(("#", "/", "//"))
+            and not re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", match.group(1))
+        }
+    )
+    attachment_extensions = {
+        ".avif", ".bmp", ".gif", ".jpeg", ".jpg", ".m4a", ".mp3", ".mp4",
+        ".ogg", ".pdf", ".png", ".svg", ".wav", ".webm", ".webp",
+    }
+    attachments = sorted(
+        {
+            reference.split("#", 1)[0].split("?", 1)[0]
+            for reference in [*embeds, *relative_links]
+            if Path(reference.split("#", 1)[0].split("?", 1)[0]).suffix.lower()
+            in attachment_extensions
+        }
+    )
     return {
         "schema": "productforge/ObsidianMarkdown/v1",
         "frontmatter": frontmatter,
@@ -375,6 +410,10 @@ def parse_markdown_document(content: str) -> dict[str, Any]:
         "tags": tags,
         "callouts": callouts,
         "code_blocks": code_blocks,
+        "aliases": aliases,
+        "block_references": block_references,
+        "relative_links": relative_links,
+        "attachments": attachments,
         "content": content,
         "unknown_syntax_preserved": True,
     }
@@ -483,6 +522,7 @@ def export_vault_document(
         "receipt_path": f".forge/obsidian-receipts/{candidate_hash}.json",
         "warnings": [],
         "unresolved": [],
+        "exported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "provenance": {"adapter": "stdlib-obsidian-markdown", "vault": root.name, "cli_required": False},
     }
     receipt_path = root / ".forge" / "obsidian-receipts" / f"{candidate_hash}.json"

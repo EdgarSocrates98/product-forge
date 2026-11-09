@@ -218,6 +218,11 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
         _obsidian_vault()
     monkeypatch.setenv("FORGE_OBSIDIAN_VAULT", str(db.parent))
     assert _obsidian_vault() == db.parent
+    status = call("GET", f"/api/v1/products/{pid}/documents/obsidian/status")
+    assert status["schema"] == "theforge/ObsidianVaultDescriptor/v1"
+    assert status["detected"] is True
+    assert "path_hash" in status["provenance"]
+    assert str(db.parent) not in str(status)
     history = call("GET", f"/api/v1/products/{pid}/documents/obsidian/history")
     assert history["items"] == []
 
