@@ -87,6 +87,8 @@ def test_obsidian_routes_are_optional_and_explicitly_gated() -> None:
     assert ("GET", "/products/{pid}/documents/obsidian/status", None) in routes
     assert ("POST", "/products/{pid}/documents/from-obsidian", "import") in routes
     assert ("POST", "/products/{pid}/documents/to-obsidian", "export") in routes
+    assert ("POST", "/products/{pid}/documents/obsidian/sync-plan", None) in routes
+    assert ("POST", "/products/{pid}/documents/obsidian/rollback", "rollback") in routes
 
 
 def test_document_explorer_route_is_product_scoped() -> None:

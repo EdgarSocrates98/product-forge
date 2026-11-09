@@ -493,6 +493,17 @@ def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
     }
 
 
+def _persist_sync_receipt(root: Path, receipt: dict[str, Any]) -> dict[str, Any]:
+    receipt_key = str(receipt.pop("_receipt_key", receipt["content_hash"]))
+    receipt_path = root / ".forge" / "obsidian-receipts" / f"{receipt_key}.json"
+    receipt["receipt_path"] = receipt_path.relative_to(root).as_posix()
+    _atomic_write(
+        receipt_path,
+        json.dumps(receipt, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8"),
+    )
+    return receipt
+
+
 def export_vault_document(
     vault: Path | str,
     raw_path: str,
@@ -522,6 +533,36 @@ def export_vault_document(
     if path.exists():
         previous_bytes = path.read_bytes()
         previous_hash = hashlib.sha256(previous_bytes).hexdigest()
+        if previous_hash == candidate_hash:
+            return _persist_sync_receipt(
+                root,
+                {
+                    "schema": "productforge/ObsidianDocument/v1",
+                    "receipt_schema": "theforge/ObsidianSyncReceipt/v1",
+                    "version": "v1",
+                    "workspace": str(root.parent),
+                    "vault_id": root.name,
+                    "path": path.relative_to(root).as_posix(),
+                    "title": _title(path, content),
+                    "content_hash": candidate_hash,
+                    "previous_hash": previous_hash,
+                    "size": len(candidate_bytes),
+                    "state": "exported",
+                    "sync_state": "unchanged",
+                    "outcome": "unchanged",
+                    "classification": classification,
+                    "source": source,
+                    "backup_path": None,
+                    "warnings": ["candidate already matches the vault document"],
+                    "unresolved": [],
+                    "exported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+                    "provenance": {
+                        "adapter": "stdlib-obsidian-markdown",
+                        "vault": root.name,
+                        "cli_required": False,
+                    },
+                },
+            )
         if baseline_hash is None:
             raise ObsidianVaultError(
                 "OBSIDIAN-CONFLICT",
@@ -546,6 +587,8 @@ def export_vault_document(
         "schema": "productforge/ObsidianDocument/v1",
         "receipt_schema": "theforge/ObsidianSyncReceipt/v1",
         "version": "v1",
+        "workspace": str(root.parent),
+        "vault_id": root.name,
         "path": path.relative_to(root).as_posix(),
         "title": _title(path, content),
         "content_hash": candidate_hash,
@@ -557,18 +600,114 @@ def export_vault_document(
         "classification": classification,
         "source": source,
         "backup_path": backup_path.relative_to(root).as_posix() if backup_path else None,
-        "receipt_path": f".forge/obsidian-receipts/{candidate_hash}.json",
         "warnings": [],
         "unresolved": [],
         "exported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "provenance": {"adapter": "stdlib-obsidian-markdown", "vault": root.name, "cli_required": False},
     }
-    receipt_path = root / ".forge" / "obsidian-receipts" / f"{candidate_hash}.json"
-    _atomic_write(
-        receipt_path,
-        json.dumps(receipt, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8"),
+    return _persist_sync_receipt(root, receipt)
+
+
+def rollback_vault_document(
+    vault: Path | str,
+    raw_path: str,
+    *,
+    receipt_path: str,
+    source: str = "product-forge",
+) -> dict[str, Any]:
+    """Restore the exact backup referenced by a receipt after explicit review.
+
+    Rollback is conditional: the destination must still contain the hash from
+    the receipt being reverted. A later manual edit therefore becomes a
+    conflict instead of being silently replaced.
+    """
+    root = validate_vault_authorization(vault)
+    if not root.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
+    receipt_file = _resolved(root / receipt_path)
+    if not _inside(receipt_file, root) or receipt_file.parts[-3:] != (
+        ".forge",
+        "obsidian-receipts",
+        receipt_file.name,
+    ):
+        raise ObsidianVaultError(
+            "OBSIDIAN-RECEIPT-REFUSED",
+            "receipt must come from the vault receipt ledger",
+        )
+    if (
+        _reparse(receipt_file)
+        or not receipt_file.is_file()
+        or receipt_file.stat().st_size > MAX_INTEROP_BYTES
+    ):
+        raise ObsidianVaultError("OBSIDIAN-RECEIPT-REFUSED", "receipt is not a safe regular file")
+    try:
+        receipt = json.loads(receipt_file.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ObsidianVaultError("OBSIDIAN-RECEIPT-INVALID", "receipt is not valid JSON") from exc
+    if not isinstance(receipt, dict) or receipt.get("receipt_schema") != "theforge/ObsidianSyncReceipt/v1":
+        raise ObsidianVaultError("OBSIDIAN-RECEIPT-INVALID", "receipt schema is unsupported")
+    if str(receipt.get("path")) != raw_path.replace("\\", "/"):
+        raise ObsidianVaultError("OBSIDIAN-ROLLBACK-PATH", "rollback path does not match the receipt")
+    backup_path = str(receipt.get("backup_path") or "")
+    backup_file = _resolved(root / backup_path)
+    if (
+        not backup_path
+        or not _inside(backup_file, root)
+        or not backup_path.startswith(".forge/obsidian-backups/")
+    ):
+        raise ObsidianVaultError("OBSIDIAN-BACKUP-REFUSED", "receipt does not reference a vault backup")
+    if _reparse(backup_file) or not backup_file.is_file() or backup_file.stat().st_size > MAX_VAULT_BYTES:
+        raise ObsidianVaultError("OBSIDIAN-BACKUP-REFUSED", "backup is not a safe regular file")
+    path = _safe(root, raw_path, for_write=True)
+    if not path.exists():
+        raise ObsidianVaultError("OBSIDIAN-ROLLBACK-CONFLICT", "destination was removed after export")
+    current_bytes = path.read_bytes()
+    current_hash = hashlib.sha256(current_bytes).hexdigest()
+    if current_hash != str(receipt.get("content_hash")):
+        raise ObsidianVaultError(
+            "OBSIDIAN-ROLLBACK-CONFLICT",
+            "destination changed after the export; review the manual edit before rollback",
+        )
+    restored_bytes = backup_file.read_bytes()
+    restored_hash = hashlib.sha256(restored_bytes).hexdigest()
+    if restored_hash != str(receipt.get("previous_hash")):
+        raise ObsidianVaultError("OBSIDIAN-BACKUP-INTEGRITY", "backup hash does not match the receipt")
+    _atomic_write(path, restored_bytes)
+    if hashlib.sha256(path.read_bytes()).hexdigest() != restored_hash:
+        raise ObsidianVaultError("OBSIDIAN-INTEGRITY", "post-rollback hash verification failed")
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    rollback_id = hashlib.sha256(f"{current_hash}:{restored_hash}:{timestamp}".encode()).hexdigest()[:24]
+    return _persist_sync_receipt(
+        root,
+        {
+            "schema": "productforge/ObsidianDocument/v1",
+            "receipt_schema": "theforge/ObsidianSyncReceipt/v1",
+            "version": "v1",
+            "workspace": str(root.parent),
+            "vault_id": root.name,
+            "path": path.relative_to(root).as_posix(),
+            "title": _title(path, restored_bytes.decode("utf-8")),
+            "content_hash": restored_hash,
+            "previous_hash": current_hash,
+            "size": len(restored_bytes),
+            "state": "exported",
+            "sync_state": "rolled_back",
+            "outcome": "rolled_back",
+            "classification": str(receipt.get("classification") or "internal"),
+            "source": source,
+            "backup_path": backup_path,
+            "warnings": [f"rollback of receipt {receipt_file.name}"],
+            "unresolved": [],
+            "exported_at": timestamp,
+            "provenance": {
+                "adapter": "stdlib-obsidian-markdown",
+                "vault": root.name,
+                "cli_required": False,
+                "rollback_id": rollback_id,
+            },
+            "_receipt_key": f"{restored_hash}.rollback-{rollback_id}",
+        },
     )
-    return receipt
 
 
 def plan_vault_sync(

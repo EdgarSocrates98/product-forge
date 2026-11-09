@@ -11,6 +11,7 @@ from product_forge.knowledge.obsidian import (
     obsidian_projection_metadata,
     parse_markdown_document,
     plan_vault_sync,
+    rollback_vault_document,
     validate_base_document,
     validate_canvas_document,
     validate_vault_authorization,
@@ -56,6 +57,59 @@ def test_export_requires_baseline_for_existing_note_and_preserves_backup(tmp_pat
     assert len(history) == 1
     assert history[0]["receipt_schema"] == "theforge/ObsidianSyncReceipt/v1"
     assert "content" not in history[0]
+
+
+def test_reexport_of_identical_note_is_unchanged_and_does_not_need_baseline(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    first = export_vault_document(vault, "note.md", "# Note\n")
+    second = export_vault_document(vault, "note.md", "# Note\n")
+
+    assert first["sync_state"] == "created"
+    assert second["sync_state"] == "unchanged"
+    assert second["outcome"] == "unchanged"
+    assert second["backup_path"] is None
+
+
+def test_rollback_restores_backup_and_keeps_a_distinct_receipt(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    first = export_vault_document(vault, "note.md", "# Original\n")
+    plan = plan_vault_sync(vault, "note.md", "# Candidate\n")
+    exported = export_vault_document(
+        vault,
+        "note.md",
+        "# Candidate\n",
+        baseline_hash=plan["previous_hash"],
+    )
+
+    rolled_back = rollback_vault_document(
+        vault,
+        "note.md",
+        receipt_path=exported["receipt_path"],
+    )
+
+    assert rolled_back["sync_state"] == "rolled_back"
+    assert (vault / "note.md").read_text(encoding="utf-8") == "# Original\n"
+    assert rolled_back["receipt_path"] != first["receipt_path"]
+    assert len(list_obsidian_receipts(vault)) == 3
+
+
+def test_rollback_refuses_a_manual_edit_after_export(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    export_vault_document(vault, "note.md", "# Original\n")
+    plan = plan_vault_sync(vault, "note.md", "# Candidate\n")
+    exported = export_vault_document(
+        vault,
+        "note.md",
+        "# Candidate\n",
+        baseline_hash=plan["previous_hash"],
+    )
+    (vault / "note.md").write_text("# Manual\n", encoding="utf-8")
+
+    with pytest.raises(ObsidianVaultError, match="manual edit"):
+        rollback_vault_document(vault, "note.md", receipt_path=exported["receipt_path"])
 
 
 def test_export_refuses_manual_change_after_plan(tmp_path: Path):

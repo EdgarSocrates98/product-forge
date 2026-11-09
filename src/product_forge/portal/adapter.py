@@ -36,6 +36,7 @@ from ..knowledge.obsidian import (
     list_obsidian_receipts,
     obsidian_projection_metadata,
     plan_vault_sync,
+    rollback_vault_document,
     validate_vault_authorization,
 )
 from ..knowledge.search import search_knowledge
@@ -244,6 +245,15 @@ class ProductForgePortal(PortalAdapter):
                 "POST",
                 "/products/{pid}/documents/obsidian/sync-plan",
                 self._obsidian_sync_plan,
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/obsidian/rollback",
+                self._obsidian_rollback,
+                mutating=True,
+                confirm="rollback",
             )
         )
         self.register(Operation("GET", "/products/{pid}/agents", self._agents))
@@ -818,7 +828,14 @@ class ProductForgePortal(PortalAdapter):
             "source": "product-forge",
             "classification": "internal",
             "detected": detected,
-            "capabilities": ["preview", "import_read_only", "sync_plan", "reviewed_sync", "history"]
+            "capabilities": [
+                "preview",
+                "import_read_only",
+                "sync_plan",
+                "reviewed_sync",
+                "rollback",
+                "history",
+            ]
             if detected
             else [],
             "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT", "path_hash": path_hash},
@@ -961,6 +978,43 @@ class ProductForgePortal(PortalAdapter):
             )
         except ObsidianVaultError as exc:
             raise PortalError(exc.code, str(exc), http=422) from exc
+
+    def _obsidian_rollback(self, ctx: RequestContext) -> dict[str, Any]:
+        pid = ctx.params["pid"]
+        body = ctx.body or {}
+        raw_path = str(body.get("path") or "").strip()
+        receipt_path = str(body.get("receipt_path") or "").strip()
+        if not raw_path or not receipt_path:
+            raise PortalError(
+                "OBSIDIAN-ROLLBACK-REQUIRED",
+                "path and receipt_path are required",
+                http=422,
+            )
+        st = _store()
+        try:
+            product = _require(st, "products", pid)
+            try:
+                rolled_back = rollback_vault_document(
+                    _obsidian_vault(),
+                    raw_path,
+                    receipt_path=receipt_path,
+                    source=str(body.get("source") or "product-forge"),
+                )
+            except ObsidianVaultError as exc:
+                raise PortalError(exc.code, str(exc), http=422) from exc
+            _record_audit(
+                st,
+                ctx,
+                "obsidian.document.rollback",
+                "obsidian",
+                rolled_back["path"],
+                product_id=pid,
+                workspace_id=product.get("workspace_id"),
+            )
+            ctx.emit("obsidian.document.rolled_back", resource_id=rolled_back["path"], product_id=pid)
+            return rolled_back
+        finally:
+            st.close()
 
     def _agents(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()

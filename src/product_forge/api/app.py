@@ -55,6 +55,7 @@ from ..knowledge.obsidian import (
     list_obsidian_receipts,
     obsidian_projection_metadata,
     plan_vault_sync,
+    rollback_vault_document,
     validate_vault_authorization,
 )
 from ..knowledge.url import UrlCaptureError, fetch_url_document
@@ -312,7 +313,14 @@ def _obsidian_descriptor(product: dict[str, Any]) -> dict[str, Any]:
         "source": "product-forge",
         "classification": "internal",
         "detected": detected,
-        "capabilities": ["preview", "import_read_only", "sync_plan", "reviewed_sync", "history"]
+        "capabilities": [
+            "preview",
+            "import_read_only",
+            "sync_plan",
+            "reviewed_sync",
+            "rollback",
+            "history",
+        ]
         if detected
         else [],
         "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT", "path_hash": path_hash},
@@ -1648,6 +1656,35 @@ def create_app(home: Path | None = None) -> FastAPI:
         except ObsidianVaultError as exc:
             raise ForgeError(str(exc), details={"code": exc.code}) from exc
         return envelope(plan)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/rollback")
+    def rollback_obsidian_sync(pid: str, body: ScopedIn, req: Request) -> dict:
+        product = ctx.store.get("products", pid)
+        payload = body.model_dump()
+        if str(payload.get("confirm", "")) != "rollback":
+            raise ValidationError("confirm=rollback is required")
+        raw_path = str(payload.get("path", "")).strip()
+        receipt_path = str(payload.get("receipt_path", "")).strip()
+        if not raw_path or not receipt_path:
+            raise ValidationError("path and receipt_path are required")
+        try:
+            rolled_back = rollback_vault_document(
+                _obsidian_vault(),
+                raw_path,
+                receipt_path=receipt_path,
+                source=str(payload.get("source") or "product-forge"),
+            )
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+        ctx.audit(
+            req,
+            "obsidian.document.rollback",
+            "obsidian",
+            rolled_back["path"],
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
+        return envelope(rolled_back)
 
     # -- agents runtime (Cycle 4) ---------------------------------------------
 
