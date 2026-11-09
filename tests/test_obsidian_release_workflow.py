@@ -8,7 +8,6 @@ from typing import Any
 
 import yaml
 
-
 WORKFLOW = Path(__file__).parents[1] / ".github" / "workflows" / "publish-forge-obsidian.yml"
 
 
