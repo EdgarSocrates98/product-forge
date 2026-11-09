@@ -143,6 +143,16 @@ def test_vault_refuses_hardlinked_document(tmp_path: Path):
         import_vault_document(vault, "linked.md")
 
 
+@pytest.mark.parametrize("payload", [b"\xff\xfe", b"# note\x00\x01"])
+def test_vault_refuses_invalid_utf8_and_binary_markdown(tmp_path: Path, payload: bytes):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "invalid.md").write_bytes(payload)
+
+    with pytest.raises(ObsidianVaultError, match="UTF-8|binary"):
+        import_vault_document(vault, "invalid.md")
+
+
 def test_atomic_replace_failure_is_named_and_leaves_no_temp_file(tmp_path: Path, monkeypatch):
     vault = tmp_path / "vault"
     vault.mkdir()

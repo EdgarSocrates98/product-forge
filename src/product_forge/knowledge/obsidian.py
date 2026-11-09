@@ -381,7 +381,16 @@ def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
     size = path.stat().st_size
     if size > MAX_VAULT_BYTES:
         raise ObsidianVaultError("OBSIDIAN-SIZE-LIMIT", "vault document exceeds the safe size limit")
-    content = path.read_bytes().decode("utf-8", errors="replace")
+    try:
+        content = path.read_bytes().decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ObsidianVaultError(
+            "OBSIDIAN-UTF8-INVALID", "vault document is not valid UTF-8"
+        ) from exc
+    if "\x00" in content:
+        raise ObsidianVaultError(
+            "OBSIDIAN-BINARY-REFUSED", "binary content is not a Markdown document"
+        )
     return {
         "schema": "productforge/ObsidianDocument/v1",
         "path": path.relative_to(root).as_posix(),
