@@ -90,7 +90,7 @@ path = "src/product_forge/__init__.py"
 [tool.hatch.build.targets.wheel]
 # Product Forge is self-contained: the portal supervisor starts the bundled
 # Agent Bridge even when the user installs only this distribution.
-packages = ["src/product_forge", "src/forge_agent_bridge"]
+packages = ["src/product_forge", "src/forge_agent_bridge", "src/forge_obsidian"]
 
 [tool.hatch.build.targets.wheel.force-include]
 # Ship domain skills + agent profiles inside the wheel so `productforge
