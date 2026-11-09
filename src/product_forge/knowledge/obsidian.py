@@ -403,6 +403,8 @@ def plan_vault_sync(
     root = _resolved(Path(vault))
     if not root.is_dir():
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
+    if len(content.encode("utf-8")) > MAX_VAULT_BYTES:
+        raise ObsidianVaultError("OBSIDIAN-SIZE-LIMIT", "vault document exceeds the safe size limit")
     path = _safe(root, raw_path, for_write=True)
     candidate_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
     current_hash = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None

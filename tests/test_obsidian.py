@@ -59,6 +59,14 @@ def test_export_refuses_manual_change_after_plan(tmp_path: Path):
         export_vault_document(vault, "note.md", "candidate", baseline_hash=plan["previous_hash"])
 
 
+def test_sync_plan_applies_the_same_size_limit_as_export(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    oversized = "x" * (16 * 1024 * 1024 + 1)
+    with pytest.raises(ObsidianVaultError, match="size limit"):
+        plan_vault_sync(vault, "large.md", oversized)
+
+
 @pytest.mark.parametrize("raw_path", ["../outside.md", "notes/data.json", "notes/missing.md"])
 def test_vault_refuses_traversal_non_markdown_and_missing_files(tmp_path: Path, raw_path: str):
     vault = tmp_path / "vault"
