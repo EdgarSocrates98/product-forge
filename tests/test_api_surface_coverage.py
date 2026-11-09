@@ -218,5 +218,7 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
         _obsidian_vault()
     monkeypatch.setenv("FORGE_OBSIDIAN_VAULT", str(db.parent))
     assert _obsidian_vault() == db.parent
+    history = call("GET", f"/api/v1/products/{pid}/documents/obsidian/history")
+    assert history["items"] == []
 
     assert metric["name"] == "event count"
