@@ -74,6 +74,7 @@ def test_mcp_tools_expanded(tmp_path, monkeypatch):
     from product_forge.store.sqlite import Store
 
     names = {t["name"] for t in tool_specs()}
+    assert len(names) == 17
     assert {"productforge_status", "product_list", "product_context", "knowledge_query",
             "knowledge_evidence", "obsidian_preview",
             "obsidian_files",
