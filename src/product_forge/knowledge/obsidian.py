@@ -15,6 +15,7 @@ import re
 import stat
 import tempfile
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -290,34 +291,71 @@ def _reparse(path: Path) -> bool:
         return True
 
 
-def _safe(root: Path, raw_path: str, *, for_write: bool = False) -> Path:
+def _reparse_stat(info: os.stat_result) -> bool:
+    if stat.S_ISLNK(info.st_mode):
+        return True
+    return bool(
+        getattr(info, "st_file_attributes", 0)
+        & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    )
+
+
+def _safe(
+    root: Path,
+    raw_path: str,
+    *,
+    for_write: bool = False,
+    checked_directories: set[Path] | None = None,
+) -> Path:
     if not raw_path or "\x00" in raw_path:
         raise ObsidianVaultError("OBSIDIAN-PATH-REQUIRED", "vault path is required")
-    candidate = _resolved(root / raw_path)
-    resolved_root = _resolved(root)
-    relative_parts = (
-        candidate.relative_to(resolved_root).parts if _inside(candidate, resolved_root) else ()
-    )
+    normalized = raw_path.replace("\\", "/")
+    if normalized.startswith(("/", "//")) or ":" in normalized.split("/", 1)[0]:
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "path must be Markdown inside the vault")
+    parts = tuple(part for part in normalized.split("/") if part not in {"", "."})
+    if not parts or ".." in parts:
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "path traversal is not allowed")
+    candidate = root.joinpath(*parts)
+    relative_parts = candidate.relative_to(root).parts
     blocked_dirs = {".git", ".obsidian", ".forge", ".cache", "__pycache__"}
     if any(part.lower() in blocked_dirs for part in relative_parts[:-1]):
         raise ObsidianVaultError(
             "OBSIDIAN-HIDDEN-REFUSED",
             "vault internal or cache directories are not import/export targets",
         )
-    if not _inside(candidate, resolved_root) or candidate.suffix.lower() != ".md":
+    if candidate.suffix.lower() != ".md":
         raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "path must be Markdown inside the vault")
-    current = _resolved(root)
+    current = root
     for part in candidate.relative_to(current).parts[:-1]:
         current = current / part
-        if _reparse(current):
+        if checked_directories is not None and current in checked_directories:
+            continue
+        try:
+            directory_info = current.lstat()
+        except OSError as exc:
+            raise ObsidianVaultError(
+                "OBSIDIAN-SYMLINK-REFUSED", "vault path contains an unreadable directory"
+            ) from exc
+        if _reparse_stat(directory_info):
             raise ObsidianVaultError(
                 "OBSIDIAN-SYMLINK-REFUSED", "vault path contains a symlink or reparse point"
             )
-    if candidate.exists() and _reparse(candidate):
-        raise ObsidianVaultError("OBSIDIAN-SYMLINK-REFUSED", "vault path is a symlink or reparse point")
-    if candidate.exists() and candidate.stat().st_nlink > 1:
-        raise ObsidianVaultError("OBSIDIAN-HARDLINK-REFUSED", "vault document is a hardlink")
-    if not for_write and not candidate.is_file():
+        if checked_directories is not None:
+            checked_directories.add(current)
+    try:
+        file_info = candidate.lstat()
+    except FileNotFoundError:
+        file_info = None
+    except OSError as exc:
+        raise ObsidianVaultError("OBSIDIAN-READ-FAILED", "vault document could not be inspected") from exc
+    if file_info is not None:
+        if _reparse_stat(file_info):
+            raise ObsidianVaultError("OBSIDIAN-SYMLINK-REFUSED", "vault path is a symlink or reparse point")
+        if file_info.st_nlink > 1:
+            raise ObsidianVaultError("OBSIDIAN-HARDLINK-REFUSED", "vault document is a hardlink")
+        if not stat.S_ISREG(file_info.st_mode):
+            raise ObsidianVaultError("OBSIDIAN-NOT-FOUND", "vault document was not a regular file")
+    elif not for_write:
         raise ObsidianVaultError("OBSIDIAN-NOT-FOUND", "vault document was not found")
     if for_write and not candidate.parent.is_dir():
         raise ObsidianVaultError("OBSIDIAN-PARENT-MISSING", "vault destination directory was not found")
@@ -459,14 +497,27 @@ def validate_vault_authorization(vault: Path | str) -> Path:
 
 def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
     root = validate_vault_authorization(vault)
+    return _import_vault_document_from_root(root, raw_path)
+
+
+def _import_vault_document_from_root(
+    root: Path,
+    raw_path: str,
+    *,
+    checked_directories: set[Path] | None = None,
+) -> dict[str, Any]:
     if not root.is_dir():
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
-    path = _safe(root, raw_path)
-    size = path.stat().st_size
+    path = _safe(root, raw_path, checked_directories=checked_directories)
+    try:
+        raw_content = path.read_bytes()
+    except OSError as exc:
+        raise ObsidianVaultError("OBSIDIAN-READ-FAILED", "vault document could not be read") from exc
+    size = len(raw_content)
     if size > MAX_VAULT_BYTES:
         raise ObsidianVaultError("OBSIDIAN-SIZE-LIMIT", "vault document exceeds the safe size limit")
     try:
-        content = path.read_bytes().decode("utf-8")
+        content = raw_content.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise ObsidianVaultError(
             "OBSIDIAN-UTF8-INVALID", "vault document is not valid UTF-8"
@@ -491,6 +542,27 @@ def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
             "imported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         },
     }
+
+
+def import_vault_documents(vault: Path | str, raw_paths: list[str] | tuple[str, ...]) -> list[dict[str, Any]]:
+    """Import a bounded selection with one vault authorization/canonicalization pass."""
+    if len(raw_paths) > 10_000:
+        raise ObsidianVaultError("OBSIDIAN-BATCH-LIMIT", "batch import is limited to 10000 documents")
+    root = validate_vault_authorization(vault)
+    if not root.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
+    checked_directories: set[Path] = set()
+
+    def _read(raw_path: str) -> dict[str, Any]:
+        return _import_vault_document_from_root(
+            root,
+            raw_path,
+            checked_directories=checked_directories,
+        )
+
+    workers = min(8, max(1, len(raw_paths)))
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="obsidian-read") as pool:
+        return list(pool.map(_read, raw_paths))
 
 
 def _persist_sync_receipt(root: Path, receipt: dict[str, Any]) -> dict[str, Any]:

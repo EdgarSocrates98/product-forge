@@ -5,11 +5,11 @@ from time import perf_counter
 
 import pytest
 
-from product_forge.knowledge.obsidian import import_vault_document
+from product_forge.knowledge.obsidian import import_vault_documents
 
 
 @pytest.mark.benchmark
-@pytest.mark.parametrize("count", [100, 1000])
+@pytest.mark.parametrize("count", [100, 1000, 10000])
 def test_import_projection_scales_to_target_note_counts(tmp_path: Path, count: int) -> None:
     vault = tmp_path / "vault"
     notes = vault / "notes"
@@ -21,10 +21,10 @@ def test_import_projection_scales_to_target_note_counts(tmp_path: Path, count: i
         )
 
     started = perf_counter()
-    imported = [
-        import_vault_document(vault, f"notes/note-{index:04d}.md")
-        for index in range(count)
-    ]
+    imported = import_vault_documents(
+        vault,
+        [f"notes/note-{index:04d}.md" for index in range(count)],
+    )
     elapsed = perf_counter() - started
 
     assert len(imported) == count
