@@ -593,13 +593,23 @@ def _internal_dir(root: Path, name: str) -> Path:
     forge_dir = root / ".forge"
     if forge_dir.exists() and (_reparse(forge_dir) or not forge_dir.is_dir()):
         raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault adapter directory is not a safe directory")
-    forge_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        forge_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ObsidianVaultError(
+            "OBSIDIAN-PATH-REFUSED", "vault adapter directory could not be created"
+        ) from exc
     if _reparse(forge_dir) or not forge_dir.is_dir():
         raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault adapter directory is not a safe directory")
     directory = forge_dir / name
     if directory.exists() and (_reparse(directory) or not directory.is_dir()):
         raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault adapter directory is not a safe directory")
-    directory.mkdir(parents=True, exist_ok=True)
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ObsidianVaultError(
+            "OBSIDIAN-PATH-REFUSED", "vault adapter directory could not be created"
+        ) from exc
     if _reparse(directory) or not directory.is_dir():
         raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault adapter directory is not a safe directory")
     return directory
@@ -742,8 +752,7 @@ def _export_vault_document_unlocked(
                 "OBSIDIAN-CONFLICT",
                 "destination changed after the sync baseline was captured",
             )
-        backup_dir = root / ".forge" / "obsidian-backups"
-        backup_dir.mkdir(parents=True, exist_ok=True)
+        backup_dir = _internal_dir(root, "obsidian-backups")
         backup_path = backup_dir / f"{previous_hash}.md"
         if not backup_path.exists():
             _atomic_write(backup_path, previous_bytes)
@@ -1047,10 +1056,18 @@ def list_obsidian_receipts(vault: Path | str, *, limit: int = 50) -> list[dict[s
     root = validate_vault_authorization(vault)
     if not root.is_dir():
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
-    receipt_dir = root / ".forge" / "obsidian-receipts"
-    if not receipt_dir.is_dir():
+    forge_dir = root / ".forge"
+    if not forge_dir.exists():
         return []
-    if _reparse(receipt_dir):
+    if _reparse(forge_dir) or not forge_dir.is_dir():
+        raise ObsidianVaultError(
+            "OBSIDIAN-SYMLINK-REFUSED",
+            "vault receipt ledger parent is a symlink or reparse point",
+        )
+    receipt_dir = forge_dir / "obsidian-receipts"
+    if not receipt_dir.exists():
+        return []
+    if _reparse(receipt_dir) or not receipt_dir.is_dir():
         raise ObsidianVaultError(
             "OBSIDIAN-SYMLINK-REFUSED",
             "vault receipt ledger is a symlink or reparse point",

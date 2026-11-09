@@ -309,6 +309,20 @@ def test_vault_refuses_symlinked_document(tmp_path: Path):
         import_vault_document(vault, "link.md")
 
 
+def test_vault_refuses_symlinked_adapter_directory(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    try:
+        (vault / ".forge").symlink_to(outside, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation unavailable")
+
+    with pytest.raises(ObsidianVaultError):
+        export_vault_document(vault, "note.md", "# Note\n")
+
+
 @pytest.mark.parametrize("raw_path", [".obsidian/app.md", ".git/note.md", ".forge/note.md"])
 def test_vault_refuses_internal_hidden_directories(tmp_path: Path, raw_path: str):
     vault = tmp_path / "vault"
