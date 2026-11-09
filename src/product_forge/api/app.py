@@ -56,6 +56,7 @@ from ..knowledge.obsidian import (
     obsidian_projection_metadata,
     plan_vault_sync,
     rollback_vault_document,
+    skip_vault_sync,
     validate_vault_authorization,
 )
 from ..knowledge.url import UrlCaptureError, fetch_url_document
@@ -318,6 +319,7 @@ def _obsidian_descriptor(product: dict[str, Any]) -> dict[str, Any]:
             "import_read_only",
             "sync_plan",
             "reviewed_sync",
+                "sync_skip",
             "rollback",
             "history",
         ]
@@ -1685,6 +1687,39 @@ def create_app(home: Path | None = None) -> FastAPI:
             workspace_id=product.get("workspace_id", ""),
         )
         return envelope(rolled_back)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/sync-skip")
+    def skip_obsidian_sync(pid: str, body: ScopedIn, req: Request) -> dict:
+        product = ctx.store.get("products", pid)
+        payload = body.model_dump()
+        if str(payload.get("confirm", "")) != "skip":
+            raise ValidationError("confirm=skip is required")
+        raw_path = str(payload.get("path", "")).strip()
+        content = str(payload.get("content", ""))
+        if not raw_path or not content:
+            raise ValidationError("path and content are required")
+        try:
+            skipped = skip_vault_sync(
+                _obsidian_vault(),
+                raw_path,
+                content,
+                reason=str(payload.get("reason") or "operation skipped by policy"),
+                classification=str(payload.get("classification") or "internal"),
+                source=str(payload.get("source") or "product-forge"),
+            )
+        except ObsidianVaultError as exc:
+            raise ForgeError(
+                str(exc), details={"code": exc.code, "sync_state": exc.sync_state}
+            ) from exc
+        ctx.audit(
+            req,
+            "obsidian.document.sync_skipped",
+            "obsidian",
+            skipped["path"],
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
+        return envelope(skipped)
 
     # -- agents runtime (Cycle 4) ---------------------------------------------
 

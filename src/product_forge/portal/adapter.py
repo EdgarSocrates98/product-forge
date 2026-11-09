@@ -37,6 +37,7 @@ from ..knowledge.obsidian import (
     obsidian_projection_metadata,
     plan_vault_sync,
     rollback_vault_document,
+    skip_vault_sync,
     validate_vault_authorization,
 )
 from ..knowledge.search import search_knowledge
@@ -254,6 +255,15 @@ class ProductForgePortal(PortalAdapter):
                 self._obsidian_rollback,
                 mutating=True,
                 confirm="rollback",
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/obsidian/sync-skip",
+                self._obsidian_sync_skip,
+                mutating=True,
+                confirm="skip",
             )
         )
         self.register(Operation("GET", "/products/{pid}/agents", self._agents))
@@ -833,6 +843,7 @@ class ProductForgePortal(PortalAdapter):
                 "import_read_only",
                 "sync_plan",
                 "reviewed_sync",
+                "sync_skip",
                 "rollback",
                 "history",
             ]
@@ -1028,6 +1039,46 @@ class ProductForgePortal(PortalAdapter):
             )
             ctx.emit("obsidian.document.rolled_back", resource_id=rolled_back["path"], product_id=pid)
             return rolled_back
+        finally:
+            st.close()
+
+    def _obsidian_sync_skip(self, ctx: RequestContext) -> dict[str, Any]:
+        pid = ctx.params["pid"]
+        body = ctx.body or {}
+        raw_path = str(body.get("path") or "").strip()
+        content = str(body.get("content") or "")
+        if not raw_path or not content:
+            raise PortalError("OBSIDIAN-SKIP-REQUIRED", "path and content are required", http=422)
+        st = _store()
+        try:
+            product = _require(st, "products", pid)
+            try:
+                skipped = skip_vault_sync(
+                    _obsidian_vault(),
+                    raw_path,
+                    content,
+                    reason=str(body.get("reason") or "operation skipped by policy"),
+                    classification=str(body.get("classification") or "internal"),
+                    source=str(body.get("source") or "product-forge"),
+                )
+            except ObsidianVaultError as exc:
+                raise PortalError(
+                    exc.code,
+                    str(exc),
+                    http=422,
+                    details={"sync_state": exc.sync_state},
+                ) from exc
+            _record_audit(
+                st,
+                ctx,
+                "obsidian.document.sync_skipped",
+                "obsidian",
+                skipped["path"],
+                product_id=pid,
+                workspace_id=product.get("workspace_id"),
+            )
+            ctx.emit("obsidian.document.sync_skipped", resource_id=skipped["path"], product_id=pid)
+            return skipped
         finally:
             st.close()
 

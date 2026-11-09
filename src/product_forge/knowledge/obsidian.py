@@ -671,6 +671,11 @@ def export_vault_document(
         backup_path = backup_dir / f"{previous_hash}.md"
         if not backup_path.exists():
             _atomic_write(backup_path, previous_bytes)
+    # Revalidate the destination immediately before the replace. This closes
+    # the common parent-swap window without pretending a portable pathlib
+    # check is an OS-level capability handle.
+    if _safe(root, raw_path, for_write=True) != path:
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault destination changed during validation")
     _atomic_write(path, candidate_bytes)
     if hashlib.sha256(path.read_bytes()).hexdigest() != candidate_hash:
         raise ObsidianVaultError("OBSIDIAN-INTEGRITY", "post-write hash verification failed")
@@ -700,6 +705,57 @@ def export_vault_document(
         "provenance": {"adapter": "stdlib-obsidian-markdown", "vault": root.name, "cli_required": False},
     }
     return _persist_sync_receipt(root, receipt)
+
+
+def skip_vault_sync(
+    vault: Path | str,
+    raw_path: str,
+    content: str,
+    *,
+    reason: str = "operation skipped by policy",
+    classification: str = "internal",
+    source: str = "product-forge",
+) -> dict[str, Any]:
+    """Record an intentional no-op without mutating the note body."""
+    root = validate_vault_authorization(vault)
+    if not root.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
+    if len(content.encode("utf-8")) > MAX_VAULT_BYTES:
+        raise ObsidianVaultError("OBSIDIAN-SIZE-LIMIT", "vault document exceeds the safe size limit")
+    classification = _classification(classification)
+    path = _safe(root, raw_path, for_write=True)
+    previous_hash = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
+    candidate_bytes = content.encode("utf-8")
+    return _persist_sync_receipt(
+        root,
+        {
+            "schema": "productforge/ObsidianDocument/v1",
+            "receipt_schema": "theforge/ObsidianSyncReceipt/v1",
+            "version": "v1",
+            "workspace": str(root.parent),
+            "vault_id": root.name,
+            "path": path.relative_to(root).as_posix(),
+            "title": _title(path, content),
+            "content_hash": hashlib.sha256(candidate_bytes).hexdigest(),
+            "previous_hash": previous_hash,
+            "size": len(candidate_bytes),
+            "state": "skipped",
+            "sync_state": "skipped",
+            "outcome": "skipped",
+            "classification": classification,
+            "source": source,
+            "backup_path": None,
+            "warnings": [reason[:240]],
+            "unresolved": [],
+            "exported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "provenance": {
+                "adapter": "stdlib-obsidian-markdown",
+                "vault": root.name,
+                "cli_required": False,
+                "mutation": "none",
+            },
+        },
+    )
 
 
 def rollback_vault_document(

@@ -12,6 +12,7 @@ from product_forge.knowledge.obsidian import (
     parse_markdown_document,
     plan_vault_sync,
     rollback_vault_document,
+    skip_vault_sync,
     validate_base_document,
     validate_canvas_document,
     validate_vault_authorization,
@@ -71,6 +72,20 @@ def test_reexport_of_identical_note_is_unchanged_and_does_not_need_baseline(tmp_
     assert second["backup_path"] is None
 
 
+def test_skip_records_a_receipt_without_mutating_the_vault(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    note = vault / "note.md"
+    note.write_text("# Manual\n", encoding="utf-8")
+
+    skipped = skip_vault_sync(vault, "note.md", "# Candidate\n", reason="operator deferred")
+
+    assert skipped["sync_state"] == "skipped"
+    assert skipped["outcome"] == "skipped"
+    assert note.read_text(encoding="utf-8") == "# Manual\n"
+    assert skipped["backup_path"] is None
+
+
 def test_rollback_restores_backup_and_keeps_a_distinct_receipt(tmp_path: Path):
     vault = tmp_path / "vault"
     vault.mkdir()
@@ -121,6 +136,42 @@ def test_export_refuses_manual_change_after_plan(tmp_path: Path):
     note.write_text("manual", encoding="utf-8")
     with pytest.raises(ObsidianVaultError, match="changed"):
         export_vault_document(vault, "note.md", "candidate", baseline_hash=plan["previous_hash"])
+
+
+def test_import_tracks_rename_and_removal_without_fallback_content(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    original = vault / "original.md"
+    renamed = vault / "renamed.md"
+    original.write_bytes(b"# Stable\n")
+    original.rename(renamed)
+
+    with pytest.raises(ObsidianVaultError, match="found"):
+        import_vault_document(vault, "original.md")
+    assert import_vault_document(vault, "renamed.md")["content"] == "# Stable\n"
+
+    renamed.unlink()
+    with pytest.raises(ObsidianVaultError, match="found"):
+        import_vault_document(vault, "renamed.md")
+
+
+def test_export_revalidates_destination_before_atomic_replace(tmp_path: Path, monkeypatch):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    original_safe = obsidian._safe
+    calls = 0
+
+    def final_validation_refuses(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise ObsidianVaultError("OBSIDIAN-SYMLINK-REFUSED", "destination changed during validation")
+        return original_safe(*args, **kwargs)
+
+    monkeypatch.setattr(obsidian, "_safe", final_validation_refuses)
+    with pytest.raises(ObsidianVaultError, match="destination changed"):
+        export_vault_document(vault, "note.md", "# Note\n")
+    assert not (vault / "note.md").exists()
 
 
 def test_sync_plan_applies_the_same_size_limit_as_export(tmp_path: Path):
