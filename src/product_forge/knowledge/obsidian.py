@@ -14,8 +14,10 @@ import os
 import re
 import stat
 import tempfile
-from collections.abc import Mapping
+import time
+from collections.abc import Iterator, Mapping
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -586,9 +588,83 @@ def import_vault_documents(vault: Path | str, raw_paths: list[str] | tuple[str, 
         return list(pool.map(_read, raw_paths))
 
 
+def _internal_dir(root: Path, name: str) -> Path:
+    """Return a safe adapter-owned directory below the vault's .forge area."""
+    forge_dir = root / ".forge"
+    if forge_dir.exists() and (_reparse(forge_dir) or not forge_dir.is_dir()):
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault adapter directory is not a safe directory")
+    forge_dir.mkdir(parents=True, exist_ok=True)
+    if _reparse(forge_dir) or not forge_dir.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault adapter directory is not a safe directory")
+    directory = forge_dir / name
+    if directory.exists() and (_reparse(directory) or not directory.is_dir()):
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault adapter directory is not a safe directory")
+    directory.mkdir(parents=True, exist_ok=True)
+    if _reparse(directory) or not directory.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault adapter directory is not a safe directory")
+    return directory
+
+
+@contextmanager
+def _vault_write_lock(vault: Path | str, raw_path: str) -> Iterator[None]:
+    """Serialize sync mutations for one canonical vault/document across processes."""
+    root = validate_vault_authorization(vault)
+    if not root.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
+    path = _safe(root, raw_path, for_write=True)
+    lock_dir = _internal_dir(root, "obsidian-locks")
+    lock_name = hashlib.sha256(path.relative_to(root).as_posix().encode("utf-8")).hexdigest()
+    lock_path = lock_dir / f"{lock_name}.lock"
+    if lock_path.exists() and _reparse(lock_path):
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "vault lock is not a safe regular file")
+    open_flags = os.O_CREAT | os.O_RDWR
+    if hasattr(os, "O_NOFOLLOW"):
+        open_flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(lock_path, open_flags, 0o600)
+    except OSError as exc:
+        raise ObsidianVaultError("OBSIDIAN-LOCK-FAILED", "vault document lock could not be opened") from exc
+    lock_file = os.fdopen(descriptor, "a+b")
+    try:
+        if lock_file.seek(0, os.SEEK_END) == 0:
+            lock_file.write(b"0")
+            lock_file.flush()
+        lock_file.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            acquired = False
+            while not acquired:
+                try:
+                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+                    acquired = True
+                except OSError:
+                    time.sleep(0.05)
+        else:
+            import fcntl
+
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        yield
+    except OSError as exc:
+        raise ObsidianVaultError("OBSIDIAN-LOCK-FAILED", "vault document lock could not be acquired") from exc
+    finally:
+        try:
+            lock_file.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        finally:
+            lock_file.close()
+
+
 def _persist_sync_receipt(root: Path, receipt: dict[str, Any]) -> dict[str, Any]:
     receipt_key = str(receipt.pop("_receipt_key", receipt["content_hash"]))
-    receipt_path = root / ".forge" / "obsidian-receipts" / f"{receipt_key}.json"
+    receipt_path = _internal_dir(root, "obsidian-receipts") / f"{receipt_key}.json"
     receipt["receipt_path"] = receipt_path.relative_to(root).as_posix()
     _atomic_write(
         receipt_path,
@@ -597,7 +673,7 @@ def _persist_sync_receipt(root: Path, receipt: dict[str, Any]) -> dict[str, Any]
     return receipt
 
 
-def export_vault_document(
+def _export_vault_document_unlocked(
     vault: Path | str,
     raw_path: str,
     content: str,
@@ -707,7 +783,28 @@ def export_vault_document(
     return _persist_sync_receipt(root, receipt)
 
 
-def skip_vault_sync(
+def export_vault_document(
+    vault: Path | str,
+    raw_path: str,
+    content: str,
+    *,
+    baseline_hash: str | None = None,
+    classification: str = "internal",
+    source: str = "product-forge",
+) -> dict[str, Any]:
+    """Export a document while serializing concurrent writers for its path."""
+    with _vault_write_lock(vault, raw_path):
+        return _export_vault_document_unlocked(
+            vault,
+            raw_path,
+            content,
+            baseline_hash=baseline_hash,
+            classification=classification,
+            source=source,
+        )
+
+
+def _skip_vault_sync_unlocked(
     vault: Path | str,
     raw_path: str,
     content: str,
@@ -758,7 +855,28 @@ def skip_vault_sync(
     )
 
 
-def rollback_vault_document(
+def skip_vault_sync(
+    vault: Path | str,
+    raw_path: str,
+    content: str,
+    *,
+    reason: str = "operation skipped by policy",
+    classification: str = "internal",
+    source: str = "product-forge",
+) -> dict[str, Any]:
+    """Record an intentional no-op while serializing concurrent sync decisions."""
+    with _vault_write_lock(vault, raw_path):
+        return _skip_vault_sync_unlocked(
+            vault,
+            raw_path,
+            content,
+            reason=reason,
+            classification=classification,
+            source=source,
+        )
+
+
+def _rollback_vault_document_unlocked(
     vault: Path | str,
     raw_path: str,
     *,
@@ -858,6 +976,23 @@ def rollback_vault_document(
             "_receipt_key": f"{restored_hash}.rollback-{rollback_id}",
         },
     )
+
+
+def rollback_vault_document(
+    vault: Path | str,
+    raw_path: str,
+    *,
+    receipt_path: str,
+    source: str = "product-forge",
+) -> dict[str, Any]:
+    """Restore a reviewed backup while serializing concurrent mutations."""
+    with _vault_write_lock(vault, raw_path):
+        return _rollback_vault_document_unlocked(
+            vault,
+            raw_path,
+            receipt_path=receipt_path,
+            source=source,
+        )
 
 
 def plan_vault_sync(

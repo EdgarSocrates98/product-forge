@@ -1,3 +1,6 @@
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -70,6 +73,34 @@ def test_reexport_of_identical_note_is_unchanged_and_does_not_need_baseline(tmp_
     assert second["sync_state"] == "unchanged"
     assert second["outcome"] == "unchanged"
     assert second["backup_path"] is None
+
+
+def test_concurrent_exports_are_serialized_per_document(tmp_path: Path, monkeypatch):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    original = obsidian._export_vault_document_unlocked
+    active = 0
+    maximum_active = 0
+    counter_lock = threading.Lock()
+
+    def observed_export(*args, **kwargs):
+        nonlocal active, maximum_active
+        with counter_lock:
+            active += 1
+            maximum_active = max(maximum_active, active)
+        try:
+            time.sleep(0.05)
+            return original(*args, **kwargs)
+        finally:
+            with counter_lock:
+                active -= 1
+
+    monkeypatch.setattr(obsidian, "_export_vault_document_unlocked", observed_export)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: export_vault_document(vault, "note.md", "# Note\n"), range(2)))
+
+    assert maximum_active == 1
+    assert {result["sync_state"] for result in results} == {"created", "unchanged"}
 
 
 def test_skip_records_a_receipt_without_mutating_the_vault(tmp_path: Path):
