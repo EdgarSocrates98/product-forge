@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import stat
 import tempfile
 from collections.abc import Mapping
@@ -296,6 +297,69 @@ def _title(path: Path, content: str) -> str:
     return path.stem.replace("-", " ").replace("_", " ").strip().title()
 
 
+def parse_markdown_document(content: str) -> dict[str, Any]:
+    """Extract Obsidian-native metadata without rewriting the source text.
+
+    The raw Markdown remains the authority.  This bounded parser only projects
+    stable references useful to graph and knowledge adapters; unknown syntax is
+    deliberately retained in ``content`` and marked as preserved.
+    """
+    if not isinstance(content, str):
+        raise ObsidianVaultError("OBSIDIAN-MARKDOWN-TYPE", "Markdown content must be text")
+    frontmatter: dict[str, str | bool] = {}
+    frontmatter_raw = ""
+    body = content
+    lines = content.splitlines()
+    if lines and lines[0].strip() == "---":
+        end = next((i for i in range(1, min(len(lines), 201)) if lines[i].strip() == "---"), None)
+        if end is not None:
+            frontmatter_raw = "\n".join(lines[1:end])
+            body = "\n".join(lines[end + 1 :])
+            for line in lines[1:end]:
+                key, separator, value = line.partition(":")
+                if not separator or not key.strip():
+                    continue
+                normalized = value.strip()
+                if normalized.lower() in {"true", "false"}:
+                    parsed: str | bool = normalized.lower() == "true"
+                else:
+                    parsed = normalized.strip("'\"")
+                frontmatter[key.strip()] = parsed
+    wikilinks = sorted(
+        {
+            match.group(1).strip()
+            for match in re.finditer(r"(?<!!)\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|[^\]]+)?\]\]", body)
+            if match.group(1).strip()
+        }
+    )
+    embeds = sorted(
+        {
+            match.group(1).strip()
+            for match in re.finditer(r"!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", body)
+            if match.group(1).strip()
+        }
+    )
+    tags = sorted(set(re.findall(r"(?<![\w#])#([A-Za-z][\w/-]*)", body)))
+    callouts = sorted(set(re.findall(r"^>\s*\[!([^\]]+)\]", body, flags=re.MULTILINE)))
+    code_blocks = [
+        language.strip()
+        for language in re.findall(r"^```([^\r\n]*)", body, flags=re.MULTILINE)
+        if language.strip()
+    ]
+    return {
+        "schema": "productforge/ObsidianMarkdown/v1",
+        "frontmatter": frontmatter,
+        "frontmatter_raw": frontmatter_raw,
+        "wikilinks": wikilinks,
+        "embeds": embeds,
+        "tags": tags,
+        "callouts": callouts,
+        "code_blocks": code_blocks,
+        "content": content,
+        "unknown_syntax_preserved": True,
+    }
+
+
 def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
     root = _resolved(Path(vault))
     if not root.is_dir():
@@ -313,6 +377,7 @@ def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
         "content_hash": hashlib.sha256(content.encode("utf-8")).hexdigest(),
         "size": size,
         "state": "ready_for_import",
+        "markdown": parse_markdown_document(content),
         "provenance": {
             "adapter": "stdlib-obsidian-markdown",
             "vault": root.name,

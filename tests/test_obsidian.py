@@ -6,6 +6,7 @@ from product_forge.knowledge.obsidian import (
     ObsidianVaultError,
     export_vault_document,
     import_vault_document,
+    parse_markdown_document,
     plan_vault_sync,
     validate_base_document,
     validate_canvas_document,
@@ -65,6 +66,32 @@ def test_sync_plan_applies_the_same_size_limit_as_export(tmp_path: Path):
     oversized = "x" * (16 * 1024 * 1024 + 1)
     with pytest.raises(ObsidianVaultError, match="size limit"):
         plan_vault_sync(vault, "large.md", oversized)
+
+
+def test_markdown_projection_preserves_obsidian_native_syntax():
+    content = """---
+type: runbook
+reviewed: true
+---
+# Spark
+
+See [[Spark Runtime#Skew|the skew section]] and ![[diagram.png]].
+
+#diagnostics #spark/runtime
+> [!warning] Check partitions
+```python
+print('keep')
+```
+"""
+    projection = parse_markdown_document(content)
+    assert projection["frontmatter"] == {"type": "runbook", "reviewed": True}
+    assert projection["wikilinks"] == ["Spark Runtime"]
+    assert projection["embeds"] == ["diagram.png"]
+    assert projection["tags"] == ["diagnostics", "spark/runtime"]
+    assert projection["callouts"] == ["warning"]
+    assert projection["code_blocks"] == ["python"]
+    assert projection["content"] == content
+    assert projection["unknown_syntax_preserved"] is True
 
 
 @pytest.mark.parametrize("raw_path", ["../outside.md", "notes/data.json", "notes/missing.md"])
