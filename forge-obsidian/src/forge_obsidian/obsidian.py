@@ -256,30 +256,113 @@ def validate_canvas_document(document: str | bytes | Mapping[str, Any]) -> dict[
 
 
 def validate_base_document(document: str | bytes | Mapping[str, Any]) -> dict[str, Any]:
-    """Validate the bounded Obsidian Bases interchange shape.
+    """Validate the safe, official YAML shape used by Obsidian Bases.
 
-    Bases evolves independently of Product Forge.  We therefore validate the
-    container and known section types, preserve unknown fields, and avoid
-    claiming full Bases query/view semantics.
+    This validates the file contract documented by Obsidian without evaluating
+    filters or formulas.  View-specific plugin keys are deliberately preserved
+    and accepted, while top-level keys and the core view/filter shapes are
+    constrained so generated ``.base`` files remain portable.
     """
     value = _bounded_document(document, kind="base")
-    expected_types = {
-        "properties": Mapping,
-        "formulas": Mapping,
-        "views": list,
-        "filters": (str, list, Mapping),
-    }
-    for key, expected in expected_types.items():
-        if key in value and not isinstance(value[key], expected):
-            raise ObsidianVaultError("OBSIDIAN-BASE-INVALID", f"base field '{key}' has an invalid shape")
+    allowed_top_level = {"filters", "formulas", "properties", "summaries", "views"}
+    unknown = sorted(set(value) - allowed_top_level)
+    if unknown:
+        raise ObsidianVaultError(
+            "OBSIDIAN-BASE-INVALID",
+            f"base contains unsupported top-level keys: {', '.join(str(item) for item in unknown)}",
+        )
+
+    def validate_filter(item: Any, *, location: str = "filters") -> None:
+        if isinstance(item, str):
+            if not item.strip():
+                raise ObsidianVaultError("OBSIDIAN-BASE-INVALID", f"base {location} cannot be empty")
+            return
+        if not isinstance(item, Mapping) or len(item) != 1:
+            raise ObsidianVaultError(
+                "OBSIDIAN-BASE-INVALID",
+                f"base {location} must be a string or one logical filter object",
+            )
+        operator, clauses = next(iter(item.items()))
+        if operator not in {"and", "or", "not"} or not isinstance(clauses, list) or not clauses:
+            raise ObsidianVaultError(
+                "OBSIDIAN-BASE-INVALID",
+                f"base {location} must use non-empty and/or/not lists",
+            )
+        for index, clause in enumerate(clauses):
+            validate_filter(clause, location=f"{location}.{operator}[{index}]")
+
+    if "filters" in value:
+        validate_filter(value["filters"])
+    for section in ("formulas", "summaries"):
+        if section in value:
+            if not isinstance(value[section], Mapping):
+                raise ObsidianVaultError(
+                    "OBSIDIAN-BASE-INVALID", f"base field '{section}' has an invalid shape"
+                )
+            if any(
+                not isinstance(key, str) or not isinstance(item, str)
+                for key, item in value[section].items()
+            ):
+                raise ObsidianVaultError(
+                    "OBSIDIAN-BASE-INVALID", f"base field '{section}' must map names to strings"
+                )
+    if "properties" in value:
+        if not isinstance(value["properties"], Mapping) or any(
+            not isinstance(key, str) or not isinstance(item, Mapping)
+            for key, item in value["properties"].items()
+        ):
+            raise ObsidianVaultError(
+                "OBSIDIAN-BASE-INVALID", "base field 'properties' must map names to objects"
+            )
     if "views" in value:
-        for view in value["views"]:
+        if not isinstance(value["views"], list):
+            raise ObsidianVaultError("OBSIDIAN-BASE-INVALID", "base field 'views' has an invalid shape")
+        for index, view in enumerate(value["views"]):
             if not isinstance(view, Mapping):
                 raise ObsidianVaultError("OBSIDIAN-BASE-INVALID", "every base view must be an object")
+            if not isinstance(view.get("type"), str) or not view["type"].strip():
+                raise ObsidianVaultError(
+                    "OBSIDIAN-BASE-INVALID", f"base view {index} requires a non-empty string type"
+                )
+            if not isinstance(view.get("name"), str) or not view["name"].strip():
+                raise ObsidianVaultError(
+                    "OBSIDIAN-BASE-INVALID", f"base view {index} requires a non-empty string name"
+                )
+            if "filters" in view:
+                validate_filter(view["filters"], location=f"views[{index}].filters")
+            if "limit" in view and (
+                isinstance(view["limit"], bool)
+                or not isinstance(view["limit"], int)
+                or view["limit"] < 0
+            ):
+                raise ObsidianVaultError(
+                    "OBSIDIAN-BASE-INVALID", f"base view {index} limit must be a non-negative integer"
+                )
+            if "order" in view and (
+                not isinstance(view["order"], list)
+                or any(not isinstance(item, str) or not item.strip() for item in view["order"])
+            ):
+                raise ObsidianVaultError(
+                    "OBSIDIAN-BASE-INVALID", f"base view {index} order must be a list of strings"
+                )
+            if "groupBy" in view:
+                group_by = view["groupBy"]
+                if not isinstance(group_by, Mapping) or not isinstance(group_by.get("property"), str):
+                    raise ObsidianVaultError(
+                        "OBSIDIAN-BASE-INVALID", f"base view {index} groupBy must name a property"
+                    )
+                if group_by.get("direction") not in {"ASC", "DESC"}:
+                    raise ObsidianVaultError(
+                        "OBSIDIAN-BASE-INVALID", f"base view {index} groupBy direction must be ASC or DESC"
+                    )
+            if "groupOrder" in view and not isinstance(view["groupOrder"], list):
+                raise ObsidianVaultError(
+                    "OBSIDIAN-BASE-INVALID", f"base view {index} groupOrder must be a list"
+                )
 
     warnings = [
-        "validation covers the interchange container and known section shapes; "
-        "full Bases semantics are not implemented"
+        "filters and formulas are validated as official YAML shapes but are not evaluated by Product Forge; "
+        "Obsidian remains the execution engine"
     ]
     return {
         "schema": "productforge/ObsidianBaseValidation/v1",
@@ -289,6 +372,26 @@ def validate_base_document(document: str | bytes | Mapping[str, Any]) -> dict[st
         "views": len(value.get("views", [])) if isinstance(value.get("views"), list) else 0,
         "warnings": warnings,
     }
+
+
+def serialize_base_document(document: Mapping[str, Any]) -> str:
+    """Serialize a validated Bases document as deterministic official YAML.
+
+    Serialization is intentionally passive: it never evaluates filters or
+    formulas.  The returned text is ready to save as an Obsidian ``.base``
+    file after the caller applies its own authorized vault write policy.
+    """
+    value = _bounded_document(document, kind="base")
+    validate_base_document(value)
+    try:
+        return yaml.safe_dump(
+            value,
+            sort_keys=False,
+            allow_unicode=True,
+            default_flow_style=False,
+        )
+    except yaml.YAMLError as exc:
+        raise ObsidianVaultError("OBSIDIAN-BASE-INVALID", "base document could not be serialized") from exc
 
 
 def _resolved(path: Path) -> Path:

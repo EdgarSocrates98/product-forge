@@ -14,6 +14,8 @@ from typing import Any
 
 import yaml
 
+from product_forge.knowledge.obsidian import serialize_base_document
+
 TEMPLATE_IDS = (
     "investigation-note",
     "spark-diagnostic",
@@ -162,19 +164,29 @@ def build_canvas_document(
 
 
 def build_base_document(*, dashboard_id: str, title: str, filter_expression: str) -> dict[str, Any]:
-    """Build the bounded Bases container understood by the validator.
+    """Build a valid official Bases document understood by Obsidian.
 
-    Filters are emitted as source syntax only; Product Forge never evaluates
-    formulas or claims compatibility with undocumented Bases expressions.
+    The dashboard id selects the caller's destination filename; it is not
+    emitted as an undocumented top-level Bases field. Filters are emitted as
+    source syntax only; Product Forge never evaluates formulas.
     """
     if not dashboard_id.strip() or not title.strip() or not filter_expression.strip():
         raise ValueError("dashboard_id, title and filter_expression are required")
     return {
-        "name": dashboard_id.strip(),
-        "views": [{"name": title.strip(), "type": "table", "filters": filter_expression.strip()}],
         "filters": filter_expression.strip(),
-        "metadata": {"generator": "product-forge", "formula_engine": "not_implemented"},
+        "views": [{"type": "table", "name": title.strip()}],
     }
+
+
+def render_base_document(*, dashboard_id: str, title: str, filter_expression: str) -> str:
+    """Render one official ``.base`` file as deterministic YAML."""
+    return serialize_base_document(
+        build_base_document(
+            dashboard_id=dashboard_id,
+            title=title,
+            filter_expression=filter_expression,
+        )
+    )
 
 
 def build_base_dashboard_catalog() -> list[dict[str, Any]]:
@@ -200,5 +212,6 @@ __all__ = [
     "build_base_document",
     "build_base_dashboard_catalog",
     "build_canvas_document",
+    "render_base_document",
     "render_obsidian_template",
 ]

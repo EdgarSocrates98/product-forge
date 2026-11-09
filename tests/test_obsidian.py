@@ -572,6 +572,45 @@ def test_base_validation_is_explicit_about_partial_semantics():
     assert result["warnings"]
 
 
+def test_base_validation_accepts_official_nested_filters_and_rejects_internal_keys():
+    result = validate_base_document(
+        {
+            "filters": {
+                "and": [
+                    'knowledge_state == "draft"',
+                    {"not": ['classification == "restricted"']},
+                ]
+            },
+            "formulas": {"age": "now() - file.mtime"},
+            "properties": {"knowledge_state": {"displayName": "State"}},
+            "summaries": {"age": "Average"},
+            "views": [{
+                "type": "table",
+                "name": "Open investigations",
+                "limit": 10,
+                "order": ["file.mtime"],
+            }],
+        }
+    )
+    assert result["state"] == "validated"
+    with pytest.raises(ObsidianVaultError, match="top-level"):
+        validate_base_document({"name": "internal-id", "views": []})
+
+
+def test_base_serialization_is_deterministic_and_round_trips():
+    from forge_obsidian import serialize_base_document
+
+    document = {
+        "filters": 'knowledge_state == "draft"',
+        "views": [{"type": "table", "name": "Open investigations"}],
+    }
+    first = serialize_base_document(document)
+    second = serialize_base_document(document)
+    assert first == second
+    assert first.endswith("\n")
+    assert validate_base_document(first)["state"] == "validated"
+
+
 @pytest.mark.parametrize(
     "document",
     ["views: [broken", {"views": ["not-an-object"]}, {"filters": 42}, b"\xff"],

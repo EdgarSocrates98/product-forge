@@ -5,6 +5,7 @@ from product_forge.knowledge.obsidian_templates import (
     build_base_dashboard_catalog,
     build_base_document,
     build_canvas_document,
+    render_base_document,
     render_obsidian_template,
 )
 
@@ -64,19 +65,28 @@ def test_base_projection_is_bounded_and_does_not_evaluate_formulas():
     document = build_base_document(
         dashboard_id="open-investigations",
         title="Open investigations",
-        filter_expression="knowledge_state = 'draft'",
+        filter_expression='knowledge_state == "draft"',
     )
     result = validate_base_document(document)
     assert result["state"] == "validated"
-    assert "full Bases semantics are not implemented" in result["warnings"][0]
-    assert document["metadata"]["formula_engine"] == "not_implemented"
+    assert "are not evaluated" in result["warnings"][0]
+    assert document == {
+        "filters": 'knowledge_state == "draft"',
+        "views": [{"type": "table", "name": "Open investigations"}],
+    }
+    rendered = render_base_document(
+        dashboard_id="open-investigations",
+        title="Open investigations",
+        filter_expression='knowledge_state == "draft"',
+    )
+    assert validate_base_document(rendered)["state"] == "validated"
+    assert "metadata:" not in rendered
 
 
 def test_base_dashboard_catalog_covers_the_governed_knowledge_views():
     catalog = build_base_dashboard_catalog()
 
     assert len(catalog) == 8
-    assert {item["name"] for item in catalog} == {item[0] for item in BASE_DASHBOARD_SPECS}
     assert {item["views"][0]["name"] for item in catalog} == {
         "Open Investigations",
         "Verified Knowledge",
@@ -88,3 +98,11 @@ def test_base_dashboard_catalog_covers_the_governed_knowledge_views():
         "Cross-Forge Decisions",
     }
     assert all(validate_base_document(item)["state"] == "validated" for item in catalog)
+    assert all(
+        "metadata:" not in render_base_document(
+            dashboard_id=dashboard_id,
+            title=title,
+            filter_expression=filter_expression,
+        )
+        for dashboard_id, title, filter_expression in BASE_DASHBOARD_SPECS
+    )
