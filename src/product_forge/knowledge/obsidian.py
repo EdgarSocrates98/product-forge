@@ -653,6 +653,7 @@ def export_vault_document(
     _atomic_write(path, candidate_bytes)
     if hashlib.sha256(path.read_bytes()).hexdigest() != candidate_hash:
         raise ObsidianVaultError("OBSIDIAN-INTEGRITY", "post-write hash verification failed")
+    sync_state = "created" if previous_hash is None else "updated"
     receipt = {
         # Keep the original document schema/state for existing API consumers;
         # the additive receipt fields expose the stronger sync contract.
@@ -667,8 +668,8 @@ def export_vault_document(
         "previous_hash": previous_hash,
         "size": len(candidate_bytes),
         "state": "exported",
-        "sync_state": "created" if previous_hash is None else "updated",
-        "outcome": "exported",
+        "sync_state": sync_state,
+        "outcome": sync_state,
         "classification": classification,
         "source": source,
         "backup_path": backup_path.relative_to(root).as_posix() if backup_path else None,
