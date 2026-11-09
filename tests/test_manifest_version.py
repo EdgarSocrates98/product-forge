@@ -41,6 +41,7 @@ def test_agentic_manifest_publishes_implemented_knowledge_capabilities() -> None
     expected = {
         "obsidian.preview",
         "obsidian.import",
+        "obsidian.export",
         "obsidian.sync.plan",
         "obsidian.sync.apply",
         "knowledge.context.project",

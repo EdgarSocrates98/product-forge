@@ -48,6 +48,13 @@
       "read_only": false
     },
     {
+      "id": "obsidian.export",
+      "mode": "DIRECT_CAPABILITY",
+      "command": ["{cli}", "knowledge", "obsidian", "export", "{path}", "{file}", "--yes"],
+      "description": "Export a reviewed knowledge document to the authorized Obsidian vault",
+      "read_only": false
+    },
+    {
       "id": "obsidian.sync.plan",
       "mode": "DIRECT_CAPABILITY",
       "command": ["{cli}", "knowledge", "obsidian", "sync-plan", "{path}", "{file}"],
