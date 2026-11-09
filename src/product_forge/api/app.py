@@ -1499,7 +1499,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         try:
             imported = import_vault_document(_obsidian_vault(), path)
         except ObsidianVaultError as exc:
-            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         return envelope(
             {
                 k: v for k, v in imported.items() if k not in {"content", "markdown"}
@@ -1521,7 +1521,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         try:
             items = list_obsidian_receipts(_obsidian_vault(), limit=limit)
         except ObsidianVaultError as exc:
-            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         return envelope(
             {
                 "schema": "theforge/ObsidianSyncHistory/v1",
@@ -1546,7 +1546,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         try:
             imported = import_vault_document(_obsidian_vault(), raw_path)
         except ObsidianVaultError as exc:
-            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         existing = [
             doc
             for doc in ctx.store.list("documents", product_id=pid)
@@ -1624,7 +1624,7 @@ def create_app(home: Path | None = None) -> FastAPI:
                 source=str(payload.get("source") or "product-forge"),
             )
         except ObsidianVaultError as exc:
-            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         ctx.audit(
             req,
             "obsidian.document.export",
@@ -1654,7 +1654,7 @@ def create_app(home: Path | None = None) -> FastAPI:
                 source=str(payload.get("source") or "product-forge"),
             )
         except ObsidianVaultError as exc:
-            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         return envelope(plan)
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/rollback")
@@ -1675,7 +1675,7 @@ def create_app(home: Path | None = None) -> FastAPI:
                 source=str(payload.get("source") or "product-forge"),
             )
         except ObsidianVaultError as exc:
-            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         ctx.audit(
             req,
             "obsidian.document.rollback",

@@ -46,9 +46,30 @@ _PROJECTION_FIELDS = (
 
 
 class ObsidianVaultError(ValueError):
-    def __init__(self, code: str, message: str) -> None:
+    _DENIED_CODES = {
+        "OBSIDIAN-VAULT-OUTSIDE-AUTHORIZED-ROOT",
+        "OBSIDIAN-HIDDEN-REFUSED",
+        "OBSIDIAN-PATH-REFUSED",
+        "OBSIDIAN-PATH-REQUIRED",
+        "OBSIDIAN-SYMLINK-REFUSED",
+        "OBSIDIAN-HARDLINK-REFUSED",
+        "OBSIDIAN-BINARY-REFUSED",
+        "OBSIDIAN-CLASSIFICATION-INVALID",
+        "OBSIDIAN-SIZE-LIMIT",
+        "OBSIDIAN-BATCH-LIMIT",
+        "OBSIDIAN-PARENT-MISSING",
+    }
+
+    def __init__(self, code: str, message: str, *, sync_state: str | None = None) -> None:
         super().__init__(message)
         self.code = code
+        self.sync_state = sync_state or (
+            "conflict"
+            if code in {"OBSIDIAN-CONFLICT", "OBSIDIAN-ROLLBACK-CONFLICT"}
+            else "denied"
+            if code in self._DENIED_CODES
+            else "failed"
+        )
 
 
 @runtime_checkable

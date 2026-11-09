@@ -68,7 +68,7 @@ def _obsidian_vault() -> Path:
     try:
         return validate_vault_authorization(Path(raw))
     except ObsidianVaultError as exc:
-        raise PortalError(exc.code, str(exc), http=422) from exc
+        raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
 
 
 def _require(st: Store, collection: str, key: str) -> dict[str, Any]:
@@ -768,7 +768,7 @@ class ProductForgePortal(PortalAdapter):
         try:
             imported = import_vault_document(_obsidian_vault(), raw_path)
         except ObsidianVaultError as exc:
-            raise PortalError(exc.code, str(exc), http=422) from exc
+            raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
         return {
             k: v for k, v in imported.items() if k not in {"content", "markdown"}
         } | {
@@ -852,7 +852,7 @@ class ProductForgePortal(PortalAdapter):
         try:
             items = list_obsidian_receipts(_obsidian_vault(), limit=limit)
         except ObsidianVaultError as exc:
-            raise PortalError(exc.code, str(exc), http=422) from exc
+            raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
         return {"schema": "theforge/ObsidianSyncHistory/v1", "items": items, "count": len(items)}
 
     def _obsidian_import(self, ctx: RequestContext) -> dict[str, Any]:
@@ -867,7 +867,12 @@ class ProductForgePortal(PortalAdapter):
             try:
                 imported = import_vault_document(_obsidian_vault(), raw_path)
             except ObsidianVaultError as exc:
-                raise PortalError(exc.code, str(exc), http=422) from exc
+                raise PortalError(
+                    exc.code,
+                    str(exc),
+                    http=422,
+                    details={"sync_state": exc.sync_state},
+                ) from exc
             existing = [
                 doc
                 for doc in st.list("documents", product_id=pid)
@@ -946,7 +951,12 @@ class ProductForgePortal(PortalAdapter):
                     source=str(body.get("source") or "product-forge"),
                 )
             except ObsidianVaultError as exc:
-                raise PortalError(exc.code, str(exc), http=422) from exc
+                raise PortalError(
+                    exc.code,
+                    str(exc),
+                    http=422,
+                    details={"sync_state": exc.sync_state},
+                ) from exc
             _record_audit(
                 st,
                 ctx,
@@ -977,7 +987,7 @@ class ProductForgePortal(PortalAdapter):
                 source=str(body.get("source") or "product-forge"),
             )
         except ObsidianVaultError as exc:
-            raise PortalError(exc.code, str(exc), http=422) from exc
+            raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
 
     def _obsidian_rollback(self, ctx: RequestContext) -> dict[str, Any]:
         pid = ctx.params["pid"]
@@ -1001,7 +1011,12 @@ class ProductForgePortal(PortalAdapter):
                     source=str(body.get("source") or "product-forge"),
                 )
             except ObsidianVaultError as exc:
-                raise PortalError(exc.code, str(exc), http=422) from exc
+                raise PortalError(
+                    exc.code,
+                    str(exc),
+                    http=422,
+                    details={"sync_state": exc.sync_state},
+                ) from exc
             _record_audit(
                 st,
                 ctx,
