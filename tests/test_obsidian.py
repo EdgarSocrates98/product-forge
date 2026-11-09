@@ -1,3 +1,7 @@
+import json
+import os
+import subprocess
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -101,6 +105,37 @@ def test_concurrent_exports_are_serialized_per_document(tmp_path: Path, monkeypa
 
     assert maximum_active == 1
     assert {result["sync_state"] for result in results} == {"created", "unchanged"}
+
+
+def test_concurrent_exports_are_serialized_across_processes(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    script = """
+import json
+import sys
+from product_forge.knowledge.obsidian import export_vault_document
+
+result = export_vault_document(sys.argv[1], "note.md", "# Note\\n")
+print(json.dumps({"sync_state": result["sync_state"]}))
+"""
+    processes = [
+        subprocess.Popen(  # noqa: S603 - test invokes the current interpreter with a fixed script
+            [sys.executable, "-c", script, str(vault)],
+            cwd=Path(__file__).parents[1],
+            env=os.environ.copy(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        for _ in range(2)
+    ]
+    outputs = []
+    for process in processes:
+        stdout, stderr = process.communicate(timeout=20)
+        assert process.returncode == 0, stderr
+        outputs.append(json.loads(stdout))
+
+    assert {result["sync_state"] for result in outputs} == {"created", "unchanged"}
 
 
 def test_skip_records_a_receipt_without_mutating_the_vault(tmp_path: Path):
