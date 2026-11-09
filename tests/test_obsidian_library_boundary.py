@@ -11,6 +11,7 @@ def test_neutral_library_does_not_import_product_forge_runtime() -> None:
     assert canonical.__name__ == "forge_obsidian.obsidian"
     assert "product_forge" not in canonical.__dict__
     assert forge_obsidian.ObsidianVaultError is canonical.ObsidianVaultError
+    assert forge_obsidian.obsidian_projection_metadata is canonical.obsidian_projection_metadata
 
 
 def test_product_forge_path_is_a_compatibility_facade() -> None:
