@@ -59,3 +59,4 @@ __all__ = [
     "validate_canvas_document",
     "validate_vault_authorization",
 ]
+

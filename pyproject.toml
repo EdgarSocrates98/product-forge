@@ -90,7 +90,7 @@ path = "src/product_forge/__init__.py"
 [tool.hatch.build.targets.wheel]
 # Product Forge is self-contained: the portal supervisor starts the bundled
 # Agent Bridge even when the user installs only this distribution.
-packages = ["src/product_forge", "src/forge_agent_bridge", "src/forge_obsidian"]
+packages = ["src/product_forge", "src/forge_agent_bridge"]
 
 [tool.hatch.build.targets.wheel.force-include]
 # Ship domain skills + agent profiles inside the wheel so `productforge
@@ -101,12 +101,14 @@ packages = ["src/product_forge", "src/forge_agent_bridge", "src/forge_obsidian"]
 "src/product_forge/forge.agentic.json" = "product_forge/forge.agentic.json"
 "src/forge_agent_bridge/forge.json" = "forge_agent_bridge/forge.json"
 "src/forge_agent_bridge/forge.agentic.json" = "forge_agent_bridge/forge.agentic.json"
+"forge-obsidian/src/forge_obsidian" = "forge_obsidian"
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "schemas", "knowledge", "docs", "skills", "agents", "rules", "factory", "README.md", "CHANGELOG.md", "LICENSE", "AGENTS.md", "CLAUDE.md", "forge.json", "forge.agentic.json"]
+include = ["src", "forge-obsidian", "tests", "schemas", "knowledge", "docs", "skills", "agents", "rules", "factory", "README.md", "CHANGELOG.md", "LICENSE", "AGENTS.md", "CLAUDE.md", "forge.json", "forge.agentic.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "forge-obsidian/src"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: tests requiring external services",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import forge_obsidian
@@ -29,3 +30,11 @@ def test_library_surface_has_no_filesystem_relative_imports() -> None:
     source = Path(canonical.__file__).read_text(encoding="utf-8")
     assert "from product_forge" not in source
     assert "import product_forge" not in source
+
+
+def test_standalone_distribution_targets_the_canonical_source() -> None:
+    manifest = tomllib.loads(
+        Path(__file__).parents[1].joinpath("forge-obsidian", "pyproject.toml").read_text(encoding="utf-8")
+    )
+    assert manifest["project"]["name"] == "forge-obsidian"
+    assert manifest["tool"]["hatch"]["build"]["targets"]["wheel"]["packages"] == ["src/forge_obsidian"]

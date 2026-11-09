@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "forge-obsidian"
+version = "0.1.0"
+description = "Neutral, safe Obsidian interoperability primitives for Forge adapters"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Edgar Socrates Caria" }]
+keywords = ["obsidian", "forge", "knowledge", "synchronization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+]
+dependencies = ["PyYAML>=6.0,<7"]
+
+[project.urls]
+Repository = "https://github.com/EdgarSocrates98/product-forge"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/forge_obsidian"]
+
+[tool.hatch.build.targets.sdist]
+include = ["README.md", "pyproject.toml", "src/forge_obsidian"]

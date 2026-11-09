@@ -29,9 +29,10 @@ metadata only and never reads document bodies.
 
 ## Extraction contract
 
-This package is shipped inside Product Forge for the current release so the
-runtime remains self-contained. Its dependency-free application boundary and
-explicit ownership make it publishable as a standalone technical distribution
-without changing the Product Forge adapters. Before adoption by another Forge,
-pin the package version and run its adapter conformance suite against the
-Forge's own authorization and receipt stores.
+The same canonical source is also packaged by the `forge-obsidian` subproject
+(`forge-obsidian/src/forge_obsidian`) in this repository. The standalone wheel/sdist can be published independently
+without copying the engine or making another user-facing Forge. Product Forge
+continues to ship the namespace in its own wheel so its runtime remains
+self-contained. Before adoption by another Forge, pin the published package
+version and run its adapter conformance suite against the Forge's own
+authorization and receipt stores.
