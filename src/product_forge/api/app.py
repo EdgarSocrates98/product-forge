@@ -1504,6 +1504,7 @@ def create_app(home: Path | None = None) -> FastAPI:
             title=str(body.model_dump().get("title", "untitled")),
             content_hash=sha256_text(text),
             status=DocumentStatus.IMPORTED,
+            metadata={"knowledge_state": "captured"},
         )
         ctx.store.put("documents", doc)
         doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(text))
@@ -1569,6 +1570,7 @@ def create_app(home: Path | None = None) -> FastAPI:
                 "classification": classification,
                 "trust_state": projection["trust_state"],
                 "freshness": projection["freshness"],
+                "knowledge_state": "draft",
                 "provenance": projection["provenance"],
                 "suggested_obsidian_path": projection["path"],
             },
@@ -1613,6 +1615,40 @@ def create_app(home: Path | None = None) -> FastAPI:
     def list_docs(pid: str) -> dict:
         ctx.store.get("products", pid)
         return envelope({"items": ctx.store.list("documents", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/{{did}}/knowledge-state")
+    def transition_knowledge_state(pid: str, did: str, body: ScopedIn, req: Request) -> dict:
+        """Move knowledge through an explicit, evidence-gated lifecycle."""
+        from ..errors import ValidationError
+        from ..knowledge.lifecycle import KnowledgeLifecycleError, transition
+
+        if str(body.model_dump().get("confirm", "")) != "transition":
+            raise ValidationError("confirm=transition is required")
+        try:
+            doc = ctx.store.get("documents", did)
+        except KeyError as exc:
+            from ..errors import NotFoundError
+
+            raise NotFoundError("document not found") from exc
+        if doc.get("product_id") != pid:
+            from ..errors import NotFoundError
+
+            raise NotFoundError("document not in product")
+        payload = body.model_dump()
+        try:
+            metadata, receipt = transition(
+                doc.get("metadata") or {},
+                str(payload.get("state") or ""),
+                evidence_refs=payload.get("evidence_refs") or [],
+                reason=str(payload.get("reason") or ""),
+                actor=str(getattr(req.state, "principal_id", "local")),
+            )
+        except KnowledgeLifecycleError as exc:
+            raise ValidationError(str(exc), details={"code": "PF-KNOWLEDGE-TRANSITION-REFUSED"}) from exc
+        doc["metadata"] = metadata
+        ctx.store.put_doc("documents", doc)
+        ctx.audit(req, "knowledge.state.transition", "documents", did, product_id=pid)
+        return envelope({"document": doc, "transition": receipt})
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/search")
     def search_docs(pid: str, q: str = "", limit: int = 20) -> dict:

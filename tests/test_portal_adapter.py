@@ -99,6 +99,7 @@ def test_document_explorer_route_is_product_scoped() -> None:
     assert ("GET", "/products/{pid}/documents/{did}", None) in routes
     assert ("GET", "/products/{pid}/documents/search", None) in routes
     assert ("GET", "/products/{pid}/knowledge/search", None) in routes
+    assert ("POST", "/products/{pid}/documents/{did}/knowledge-state", "transition") in routes
 
 
 def test_bridge_unavailable_is_honest(monkeypatch) -> None:

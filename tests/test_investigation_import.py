@@ -84,6 +84,7 @@ def test_imports_redacted_investigation_with_provenance_and_is_idempotent(tmp_pa
     assert data["source_kind"] == "the-forge-investigation"
     assert data["metadata"]["trust_state"] == "draft"
     assert data["metadata"]["freshness"] == "captured"
+    assert data["metadata"]["knowledge_state"] == "draft"
     assert data["metadata"]["investigation_correlation_id"] == "orch-investigation-001"
     assert data["suggested_obsidian_path"].startswith("investigations/")
     assert "content" not in data
@@ -145,3 +146,44 @@ def test_import_requires_explicit_confirmation(tmp_path, monkeypatch):
     )
     assert response.status_code == 422
     assert "confirm=import" in response.json()["error"]["message"]
+
+
+def test_knowledge_lifecycle_requires_evidence_to_validate(tmp_path, monkeypatch):
+    client, headers = _api(tmp_path, monkeypatch)
+    pid = _product(client, headers)
+    imported = client.post(
+        f"/api/v1/products/{pid}/documents/from-investigation",
+        headers=headers,
+        json={"confirm": "import", "report": _report(correlation_id="orch-lifecycle-001")},
+    ).json()["data"]
+    did = imported["id"]
+
+    reviewed = client.post(
+        f"/api/v1/products/{pid}/documents/{did}/knowledge-state",
+        headers=headers,
+        json={"confirm": "transition", "state": "reviewed", "reason": "human review"},
+    )
+    assert reviewed.status_code == 200, reviewed.text
+
+    refused = client.post(
+        f"/api/v1/products/{pid}/documents/{did}/knowledge-state",
+        headers=headers,
+        json={"confirm": "transition", "state": "validated"},
+    )
+    assert refused.status_code == 422
+    assert "evidence" in refused.json()["error"]["message"]
+
+    validated = client.post(
+        f"/api/v1/products/{pid}/documents/{did}/knowledge-state",
+        headers=headers,
+        json={
+            "confirm": "transition",
+            "state": "validated",
+            "evidence_refs": ["spark-job-42"],
+            "reason": "receipt checked",
+        },
+    )
+    assert validated.status_code == 200, validated.text
+    data = validated.json()["data"]
+    assert data["document"]["metadata"]["knowledge_state"] == "validated"
+    assert data["transition"]["evidence_refs"] == ["spark-job-42"]

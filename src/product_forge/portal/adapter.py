@@ -200,6 +200,15 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}/documents/search", self._document_search))
         self.register(Operation("GET", "/products/{pid}/knowledge/search", self._knowledge_search))
         self.register(Operation("GET", "/products/{pid}/documents/{did}", self._document_detail))
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/{did}/knowledge-state",
+                self._knowledge_state_transition,
+                mutating=True,
+                confirm="transition",
+            )
+        )
         self.register(Operation("GET", "/workspace/discovery", self._workspace_discovery))
         self.register(Operation("GET", "/workspace/discovery/preview", self._workspace_preview))
         self.register(
@@ -566,9 +575,40 @@ class ProductForgePortal(PortalAdapter):
                         "snippet": hit["snip"],
                         "source": metadata.get("source"),
                         "version": metadata.get("version", 1),
+                        "knowledge_state": metadata.get("knowledge_state", "captured"),
                     }
                 )
             return {"schema": "productforge/DocumentSearch/v1", "items": items}
+        finally:
+            st.close()
+
+    def _knowledge_state_transition(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..knowledge.lifecycle import KnowledgeLifecycleError, transition
+
+        body = ctx.body or {}
+        if str(body.get("confirm") or "") != "transition":
+            raise PortalError("KNOWLEDGE-CONFIRM-REQUIRED", "confirm=transition is required", http=422)
+        st = _store()
+        try:
+            pid, did = ctx.params["pid"], ctx.params["did"]
+            doc = _require(st, "documents", did)
+            if doc.get("product_id") != pid:
+                raise PortalError("PORTAL-NOT-FOUND", "document not in product", http=404)
+            try:
+                metadata, receipt = transition(
+                    doc.get("metadata") or {},
+                    str(body.get("state") or ""),
+                    evidence_refs=body.get("evidence_refs") or [],
+                    reason=str(body.get("reason") or ""),
+                    actor="portal",
+                )
+            except KnowledgeLifecycleError as exc:
+                raise PortalError(
+                    "KNOWLEDGE-TRANSITION-REFUSED", str(exc), http=422
+                ) from exc
+            doc["metadata"] = metadata
+            st.put_doc("documents", doc)
+            return {"document": doc, "transition": receipt}
         finally:
             st.close()
 

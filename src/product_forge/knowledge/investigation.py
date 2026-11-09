@@ -91,6 +91,7 @@ def project_report(report: dict[str, Any], *, classification: str = "internal") 
         "classification": classification,
         "trust_state": "draft",
         "freshness": "captured",
+        "knowledge_state": "draft",
         "generated_at": _text(report.get("generated_at"), limit=80),
     }
 
@@ -175,6 +176,7 @@ def project_report(report: dict[str, Any], *, classification: str = "internal") 
         "classification": classification,
         "trust_state": "draft",
         "freshness": "captured",
+        "knowledge_state": "draft",
         "provenance": {
             "source": "the-forge",
             "report_schema": ORCHESTRATION_REPORT_SCHEMA,

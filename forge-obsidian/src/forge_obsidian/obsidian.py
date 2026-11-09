@@ -554,7 +554,10 @@ def _import_vault_document_from_root(
         "path": path.relative_to(root).as_posix(),
         "title": _title(path, content),
         "content": content,
-        "content_hash": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+        # Hash the bounded bytes already read; re-encoding the decoded body
+        # doubles the work in the 10k-note import path without changing the
+        # UTF-8 identity of the document.
+        "content_hash": hashlib.sha256(raw_content).hexdigest(),
         "size": size,
         "state": "ready_for_import",
         "markdown": parse_markdown_document(content),
