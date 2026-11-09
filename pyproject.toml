@@ -129,6 +129,9 @@ exclude = [
 select = ["E", "F", "I", "B", "UP", "S", "W"]
 ignore = ["S101", "B008"]
 
+[tool.ruff.lint.isort]
+known-third-party = ["forge_obsidian"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = false

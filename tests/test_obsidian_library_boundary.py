@@ -5,6 +5,7 @@ from pathlib import Path
 
 import forge_obsidian
 from forge_obsidian import obsidian as canonical
+
 from product_forge.knowledge import obsidian as compatibility
 
 
