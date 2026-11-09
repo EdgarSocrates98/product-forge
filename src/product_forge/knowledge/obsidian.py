@@ -531,7 +531,10 @@ def _atomic_write(path: Path, content: bytes) -> None:
             handle.write(content)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temporary, path)
+        try:
+            os.replace(temporary, path)
+        except OSError as exc:
+            raise ObsidianVaultError("OBSIDIAN-WRITE-FAILED", "atomic vault replace failed") from exc
     finally:
         try:
             os.unlink(temporary)

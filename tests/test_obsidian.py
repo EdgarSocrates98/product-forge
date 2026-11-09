@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+import product_forge.knowledge.obsidian as obsidian
 from product_forge.knowledge.obsidian import (
     ObsidianVaultError,
     export_vault_document,
@@ -140,6 +141,20 @@ def test_vault_refuses_hardlinked_document(tmp_path: Path):
         pytest.skip("hardlink creation unavailable")
     with pytest.raises(ObsidianVaultError, match="hardlink"):
         import_vault_document(vault, "linked.md")
+
+
+def test_atomic_replace_failure_is_named_and_leaves_no_temp_file(tmp_path: Path, monkeypatch):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+
+    def fail_replace(_temporary, _destination):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(obsidian.os, "replace", fail_replace)
+    with pytest.raises(ObsidianVaultError, match="atomic vault replace failed"):
+        export_vault_document(vault, "note.md", "# Note\n")
+    assert not (vault / "note.md").exists()
+    assert list(vault.glob(".*.tmp")) == []
 
 
 def test_canvas_validation_checks_graph_integrity_without_rendering():
