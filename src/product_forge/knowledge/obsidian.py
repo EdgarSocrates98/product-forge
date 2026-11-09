@@ -9,6 +9,7 @@ application or CLI.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import stat
@@ -271,7 +272,17 @@ def _safe(root: Path, raw_path: str, *, for_write: bool = False) -> Path:
     if not raw_path or "\x00" in raw_path:
         raise ObsidianVaultError("OBSIDIAN-PATH-REQUIRED", "vault path is required")
     candidate = _resolved(root / raw_path)
-    if not _inside(candidate, _resolved(root)) or candidate.suffix.lower() != ".md":
+    resolved_root = _resolved(root)
+    relative_parts = (
+        candidate.relative_to(resolved_root).parts if _inside(candidate, resolved_root) else ()
+    )
+    blocked_dirs = {".git", ".obsidian", ".forge", ".cache", "__pycache__"}
+    if any(part.lower() in blocked_dirs for part in relative_parts[:-1]):
+        raise ObsidianVaultError(
+            "OBSIDIAN-HIDDEN-REFUSED",
+            "vault internal or cache directories are not import/export targets",
+        )
+    if not _inside(candidate, resolved_root) or candidate.suffix.lower() != ".md":
         raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "path must be Markdown inside the vault")
     current = _resolved(root)
     for part in candidate.relative_to(current).parts[:-1]:
@@ -282,6 +293,8 @@ def _safe(root: Path, raw_path: str, *, for_write: bool = False) -> Path:
             )
     if candidate.exists() and _reparse(candidate):
         raise ObsidianVaultError("OBSIDIAN-SYMLINK-REFUSED", "vault path is a symlink or reparse point")
+    if candidate.exists() and candidate.stat().st_nlink > 1:
+        raise ObsidianVaultError("OBSIDIAN-HARDLINK-REFUSED", "vault document is a hardlink")
     if not for_write and not candidate.is_file():
         raise ObsidianVaultError("OBSIDIAN-NOT-FOUND", "vault document was not found")
     if for_write and not candidate.parent.is_dir():
@@ -433,7 +446,7 @@ def export_vault_document(
     _atomic_write(path, candidate_bytes)
     if hashlib.sha256(path.read_bytes()).hexdigest() != candidate_hash:
         raise ObsidianVaultError("OBSIDIAN-INTEGRITY", "post-write hash verification failed")
-    return {
+    receipt = {
         # Keep the original document schema/state for existing API consumers;
         # the additive receipt fields expose the stronger sync contract.
         "schema": "productforge/ObsidianDocument/v1",
@@ -450,10 +463,17 @@ def export_vault_document(
         "classification": classification,
         "source": source,
         "backup_path": backup_path.relative_to(root).as_posix() if backup_path else None,
+        "receipt_path": f".forge/obsidian-receipts/{candidate_hash}.json",
         "warnings": [],
         "unresolved": [],
         "provenance": {"adapter": "stdlib-obsidian-markdown", "vault": root.name, "cli_required": False},
     }
+    receipt_path = root / ".forge" / "obsidian-receipts" / f"{candidate_hash}.json"
+    _atomic_write(
+        receipt_path,
+        json.dumps(receipt, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8"),
+    )
+    return receipt
 
 
 def plan_vault_sync(
@@ -502,8 +522,11 @@ def plan_vault_sync(
 
 def _atomic_write(path: Path, content: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    original_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else None
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     try:
+        if original_mode is not None:
+            os.chmod(temporary, original_mode)
         with os.fdopen(fd, "wb") as handle:
             handle.write(content)
             handle.flush()

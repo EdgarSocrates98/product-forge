@@ -47,6 +47,7 @@ def test_export_requires_baseline_for_existing_note_and_preserves_backup(tmp_pat
     assert exported["state"] == "exported"
     assert exported["sync_state"] == "updated"
     assert (vault / exported["backup_path"]).read_text(encoding="utf-8") == "# Original\n"
+    assert (vault / exported["receipt_path"]).is_file()
 
 
 def test_export_refuses_manual_change_after_plan(tmp_path: Path):
@@ -117,6 +118,28 @@ def test_vault_refuses_symlinked_document(tmp_path: Path):
 
     with pytest.raises(ObsidianVaultError):
         import_vault_document(vault, "link.md")
+
+
+@pytest.mark.parametrize("raw_path", [".obsidian/app.md", ".git/note.md", ".forge/note.md"])
+def test_vault_refuses_internal_hidden_directories(tmp_path: Path, raw_path: str):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    with pytest.raises(ObsidianVaultError, match="internal|cache|target"):
+        export_vault_document(vault, raw_path, "# blocked\n")
+
+
+def test_vault_refuses_hardlinked_document(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    source = vault / "source.md"
+    linked = vault / "linked.md"
+    source.write_text("# Source\n", encoding="utf-8")
+    try:
+        linked.hardlink_to(source)
+    except OSError:
+        pytest.skip("hardlink creation unavailable")
+    with pytest.raises(ObsidianVaultError, match="hardlink"):
+        import_vault_document(vault, "linked.md")
 
 
 def test_canvas_validation_checks_graph_integrity_without_rendering():
