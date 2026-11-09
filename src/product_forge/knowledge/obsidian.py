@@ -588,6 +588,86 @@ def import_vault_documents(vault: Path | str, raw_paths: list[str] | tuple[str, 
         return list(pool.map(_read, raw_paths))
 
 
+def scan_vault_documents(
+    vault: Path | str,
+    *,
+    prefix: str = "",
+    limit: int = 200,
+) -> dict[str, Any]:
+    """List safe Markdown paths without reading document bodies.
+
+    The scanner is metadata-only: callers choose a path here and then invoke
+    the bounded preview/import operation for the selected document. Traversal
+    never follows symlinks/reparse points and Forge-managed directories are
+    excluded by policy.
+    """
+    if not 1 <= limit <= 2_000:
+        raise ObsidianVaultError("OBSIDIAN-SCAN-LIMIT", "scan limit must be between 1 and 2000")
+    root = validate_vault_authorization(vault)
+    if not root.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
+    normalized = prefix.replace("\\", "/").strip("/")
+    invalid_prefix = any(part in {"", ".", ".."} for part in normalized.split("/"))
+    if normalized and ("\x00" in normalized or invalid_prefix):
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "scan prefix must stay inside the vault")
+    start = root.joinpath(*normalized.split("/")) if normalized else root
+    if not _inside(start, root) or (_reparse(start) if start.exists() else False) or not start.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-PATH-REFUSED", "scan prefix is not a safe vault directory")
+
+    blocked_dirs = {".git", ".obsidian", ".forge", ".cache", "__pycache__"}
+    items: list[dict[str, Any]] = []
+    skipped = 0
+    stack = [start]
+    while stack and len(items) < limit:
+        directory = stack.pop()
+        try:
+            entries = sorted(os.scandir(directory), key=lambda item: item.name.casefold())
+        except OSError as exc:
+            raise ObsidianVaultError("OBSIDIAN-SCAN-FAILED", "vault directory could not be scanned") from exc
+        for entry in entries:
+            if entry.name.lower() in blocked_dirs and entry.is_dir(follow_symlinks=False):
+                continue
+            try:
+                info = entry.stat(follow_symlinks=False)
+            except OSError:
+                skipped += 1
+                continue
+            if _reparse_stat(info):
+                skipped += 1
+                continue
+            if entry.is_dir(follow_symlinks=False):
+                stack.append(Path(entry.path))
+                continue
+            if not entry.is_file(follow_symlinks=False) or not entry.name.lower().endswith(".md"):
+                continue
+            if info.st_nlink > 1 or info.st_size > MAX_VAULT_BYTES:
+                skipped += 1
+                continue
+            relative = Path(entry.path).relative_to(root).as_posix()
+            items.append(
+                {
+                    "path": relative,
+                    "title": Path(relative).stem.replace("-", " ").replace("_", " ").strip().title(),
+                    "size": info.st_size,
+                    "modified_at": (
+                        datetime.fromtimestamp(info.st_mtime, UTC).isoformat().replace("+00:00", "Z")
+                    ),
+                }
+            )
+            if len(items) >= limit:
+                break
+    items.sort(key=lambda item: str(item["path"]).casefold())
+    return {
+        "schema": "theforge/ObsidianVaultFileIndex/v1",
+        "version": "v1",
+        "prefix": normalized,
+        "items": items,
+        "count": len(items),
+        "truncated": bool(stack),
+        "warnings": [f"{skipped} unsafe or unreadable entries were omitted"] if skipped else [],
+    }
+
+
 def _internal_dir(root: Path, name: str) -> Path:
     """Return a safe adapter-owned directory below the vault's .forge area."""
     forge_dir = root / ".forge"

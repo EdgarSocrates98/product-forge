@@ -58,6 +58,7 @@ from ..knowledge.obsidian import (
     obsidian_projection_metadata,
     plan_vault_sync,
     rollback_vault_document,
+    scan_vault_documents,
     skip_vault_sync,
     validate_vault_authorization,
 )
@@ -361,6 +362,7 @@ def _obsidian_descriptor(
         "classification": "internal",
         "detected": detected,
         "capabilities": [
+            "scan_read_only",
             "preview",
             "import_read_only",
             "sync_plan",
@@ -710,6 +712,7 @@ def create_app(home: Path | None = None) -> FastAPI:
             "classification": "internal",
             "detected": detected,
             "capabilities": [
+                "scan_read_only",
                 "preview",
                 "import_read_only",
                 "sync_plan",
@@ -1847,6 +1850,19 @@ def create_app(home: Path | None = None) -> FastAPI:
     def obsidian_status(pid: str, req: Request) -> dict:
         product = ctx.store.get("products", pid)
         return envelope(_obsidian_descriptor(product, ctx, req))
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/files")
+    def list_obsidian_files(pid: str, req: Request, prefix: str = "", limit: int = 200) -> dict:
+        product = ctx.store.get("products", pid)
+        try:
+            index = scan_vault_documents(
+                _obsidian_vault_for(ctx, req, product),
+                prefix=prefix,
+                limit=limit,
+            )
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
+        return envelope(index)
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/history")
     def obsidian_history(pid: str, req: Request, limit: int = 50) -> dict:

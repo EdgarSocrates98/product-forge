@@ -225,6 +225,10 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
     assert status["detected"] is True
     assert "path_hash" in status["provenance"]
     assert str(db.parent) not in str(status)
+    files = call("GET", f"/api/v1/products/{pid}/documents/obsidian/files")
+    assert files["schema"] == "theforge/ObsidianVaultFileIndex/v1"
+    assert [item["path"] for item in files["items"]] == ["obsidian.md"]
+    assert "content" not in files["items"][0]
     preview = call(
         "GET", f"/api/v1/products/{pid}/documents/obsidian/preview", params={"path": "obsidian.md"}
     )

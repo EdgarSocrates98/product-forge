@@ -93,8 +93,11 @@ export flow when a human wants to materialize the projection in Obsidian.
 
 ### Obsidian interoperability
 
-The stdlib vault adapter imports and exports bounded Markdown without requiring
-the Obsidian application or CLI. `validate_canvas_document()` validates the
+The stdlib vault adapter scans, imports and exports bounded Markdown without requiring
+the Obsidian application or CLI. `GET /api/v1/products/{pid}/documents/obsidian/files`
+returns a bounded, body-free Markdown path index for destination/import selection;
+it skips hidden Forge/Obsidian internals, symlinks, hardlinks and oversized files.
+`validate_canvas_document()` validates the
 safe structural subset of JSON Canvas (unique node/edge IDs and existing edge
 endpoints). `validate_base_document()` validates a bounded Bases container and
 the shapes of its known sections (`properties`, `formulas`, `filters`, and

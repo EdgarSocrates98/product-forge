@@ -19,6 +19,7 @@ from product_forge.knowledge.obsidian import (
     parse_markdown_document,
     plan_vault_sync,
     rollback_vault_document,
+    scan_vault_documents,
     skip_vault_sync,
     validate_base_document,
     validate_canvas_document,
@@ -40,6 +41,33 @@ def test_import_and_export_are_pure_markdown_operations(tmp_path: Path):
     assert exported["state"] == "exported"
     assert exported["sync_state"] == "created"
     assert (vault / "notes" / "result.md").read_text(encoding="utf-8") == "# Result\n\nDone.\n"
+
+
+def test_scan_lists_safe_markdown_paths_without_bodies(tmp_path: Path):
+    vault = tmp_path / "vault"
+    (vault / "runbooks").mkdir(parents=True)
+    (vault / ".obsidian").mkdir()
+    (vault / ".forge").mkdir()
+    (vault / "runbooks" / "spark.md").write_text("# Spark\nSECRET=do-not-return\n", encoding="utf-8")
+    (vault / ".obsidian" / "app.md").write_text("internal", encoding="utf-8")
+    (vault / ".forge" / "receipt.md").write_text("internal", encoding="utf-8")
+
+    index = scan_vault_documents(vault)
+
+    assert index["schema"] == "theforge/ObsidianVaultFileIndex/v1"
+    assert [item["path"] for item in index["items"]] == ["runbooks/spark.md"]
+    assert all("content" not in item for item in index["items"])
+    assert "SECRET" not in json.dumps(index)
+
+
+def test_scan_refuses_traversal_and_unbounded_limits(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+
+    with pytest.raises(ObsidianVaultError, match="scan prefix"):
+        scan_vault_documents(vault, prefix="../outside")
+    with pytest.raises(ObsidianVaultError, match="scan limit"):
+        scan_vault_documents(vault, limit=2_001)
 
 
 def test_export_requires_baseline_for_existing_note_and_preserves_backup(tmp_path: Path):

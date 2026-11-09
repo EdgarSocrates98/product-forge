@@ -37,6 +37,7 @@ from ..knowledge.obsidian import (
     obsidian_projection_metadata,
     plan_vault_sync,
     rollback_vault_document,
+    scan_vault_documents,
     skip_vault_sync,
     validate_vault_authorization,
 )
@@ -222,6 +223,7 @@ class ProductForgePortal(PortalAdapter):
         )
         self.register(Operation("GET", "/products/{pid}/documents/obsidian/preview", self._obsidian_preview))
         self.register(Operation("GET", "/products/{pid}/documents/obsidian/status", self._obsidian_status))
+        self.register(Operation("GET", "/products/{pid}/documents/obsidian/files", self._obsidian_files))
         self.register(Operation("GET", "/products/{pid}/documents/obsidian/history", self._obsidian_history))
         self.register(
             Operation(
@@ -839,6 +841,7 @@ class ProductForgePortal(PortalAdapter):
             "classification": "internal",
             "detected": detected,
             "capabilities": [
+                "scan_read_only",
                 "preview",
                 "import_read_only",
                 "sync_plan",
@@ -853,6 +856,18 @@ class ProductForgePortal(PortalAdapter):
             "warnings": [] if detected else ["configured vault is not an accessible directory"],
             "unresolved": [] if detected else ["verify the configured vault directory"],
         }
+
+    def _obsidian_files(self, ctx: RequestContext) -> dict[str, Any]:
+        raw_prefix = _q1(ctx, "prefix") or ""
+        raw_limit = _q1(ctx, "limit") or "200"
+        try:
+            limit = int(raw_limit)
+        except ValueError as exc:
+            raise PortalError("OBSIDIAN-SCAN-LIMIT", "limit must be an integer", http=422) from exc
+        try:
+            return scan_vault_documents(_obsidian_vault(), prefix=raw_prefix, limit=limit)
+        except ObsidianVaultError as exc:
+            raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
 
     def _obsidian_history(self, ctx: RequestContext) -> dict[str, Any]:
         raw_limit = _q1(ctx, "limit") or "50"
