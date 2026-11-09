@@ -206,11 +206,24 @@ def build_base_dashboard_catalog() -> list[dict[str, Any]]:
     ]
 
 
+def build_base_dashboard_artifacts() -> dict[str, str]:
+    """Return the governed dashboard ids mapped to ready-to-write ``.base`` YAML."""
+    return {
+        dashboard_id: render_base_document(
+            dashboard_id=dashboard_id,
+            title=title,
+            filter_expression=filter_expression,
+        )
+        for dashboard_id, title, filter_expression in BASE_DASHBOARD_SPECS
+    }
+
+
 __all__ = [
     "TEMPLATE_IDS",
     "BASE_DASHBOARD_SPECS",
     "build_base_document",
     "build_base_dashboard_catalog",
+    "build_base_dashboard_artifacts",
     "build_canvas_document",
     "render_base_document",
     "render_obsidian_template",

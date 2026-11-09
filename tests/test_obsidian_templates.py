@@ -2,6 +2,7 @@ from product_forge.knowledge.obsidian import validate_base_document, validate_ca
 from product_forge.knowledge.obsidian_templates import (
     BASE_DASHBOARD_SPECS,
     TEMPLATE_IDS,
+    build_base_dashboard_artifacts,
     build_base_dashboard_catalog,
     build_base_document,
     build_canvas_document,
@@ -106,3 +107,6 @@ def test_base_dashboard_catalog_covers_the_governed_knowledge_views():
         )
         for dashboard_id, title, filter_expression in BASE_DASHBOARD_SPECS
     )
+    artifacts = build_base_dashboard_artifacts()
+    assert set(artifacts) == {item[0] for item in BASE_DASHBOARD_SPECS}
+    assert all(validate_base_document(text)["state"] == "validated" for text in artifacts.values())
