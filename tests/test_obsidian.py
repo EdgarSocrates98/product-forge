@@ -491,6 +491,22 @@ def test_atomic_write_faults_are_structured(tmp_path: Path, monkeypatch):
     assert not (vault / "note.md").exists()
 
 
+def test_permission_denied_write_fault_is_structured(tmp_path: Path, monkeypatch):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+
+    def permission_denied(*args, **kwargs):
+        raise PermissionError("simulated access denied")
+
+    monkeypatch.setattr(obsidian.tempfile, "mkstemp", permission_denied)
+    with pytest.raises(ObsidianVaultError) as error:
+        export_vault_document(vault, "note.md", "# Note\n")
+
+    assert error.value.code == "OBSIDIAN-WRITE-FAILED"
+    assert error.value.sync_state == "failed"
+    assert not (vault / "note.md").exists()
+
+
 def test_canvas_validation_checks_graph_integrity_without_rendering():
     result = validate_canvas_document(
         {
