@@ -529,6 +529,31 @@ def plan_vault_sync(
     }
 
 
+def list_obsidian_receipts(vault: Path | str, *, limit: int = 50) -> list[dict[str, Any]]:
+    """Return bounded, body-free export history from the vault's Forge ledger."""
+    if not 1 <= limit <= 100:
+        raise ObsidianVaultError("OBSIDIAN-HISTORY-LIMIT", "history limit must be between 1 and 100")
+    root = _resolved(Path(vault))
+    if not root.is_dir():
+        raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
+    receipt_dir = root / ".forge" / "obsidian-receipts"
+    if not receipt_dir.is_dir():
+        return []
+    entries: list[tuple[float, dict[str, Any]]] = []
+    for path in receipt_dir.glob("*.json"):
+        try:
+            if not path.is_file() or _reparse(path) or path.stat().st_size > MAX_INTEROP_BYTES:
+                continue
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(value, dict) or value.get("receipt_schema") != "theforge/ObsidianSyncReceipt/v1":
+            continue
+        entries.append((path.stat().st_mtime, {k: v for k, v in value.items() if k != "content"}))
+    entries.sort(key=lambda item: (-item[0], str(item[1].get("path", ""))))
+    return [value for _, value in entries[:limit]]
+
+
 def _atomic_write(path: Path, content: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     original_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else None

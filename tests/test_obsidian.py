@@ -7,6 +7,7 @@ from product_forge.knowledge.obsidian import (
     ObsidianVaultError,
     export_vault_document,
     import_vault_document,
+    list_obsidian_receipts,
     parse_markdown_document,
     plan_vault_sync,
     validate_base_document,
@@ -49,6 +50,10 @@ def test_export_requires_baseline_for_existing_note_and_preserves_backup(tmp_pat
     assert exported["sync_state"] == "updated"
     assert (vault / exported["backup_path"]).read_text(encoding="utf-8") == "# Original\n"
     assert (vault / exported["receipt_path"]).is_file()
+    history = list_obsidian_receipts(vault)
+    assert len(history) == 1
+    assert history[0]["receipt_schema"] == "theforge/ObsidianSyncReceipt/v1"
+    assert "content" not in history[0]
 
 
 def test_export_refuses_manual_change_after_plan(tmp_path: Path):

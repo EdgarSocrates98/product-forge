@@ -51,6 +51,7 @@ from ..knowledge.obsidian import (
     ObsidianVaultError,
     export_vault_document,
     import_vault_document,
+    list_obsidian_receipts,
     plan_vault_sync,
 )
 from ..knowledge.url import UrlCaptureError, fetch_url_document
@@ -1433,6 +1434,21 @@ def create_app(home: Path | None = None) -> FastAPI:
             raise ForgeError(str(exc), details={"code": exc.code}) from exc
         return envelope(
             {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
+        )
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/history")
+    def obsidian_history(pid: str, limit: int = 50) -> dict:
+        ctx.store.get("products", pid)
+        try:
+            items = list_obsidian_receipts(_obsidian_vault(), limit=limit)
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+        return envelope(
+            {
+                "schema": "theforge/ObsidianSyncHistory/v1",
+                "items": items,
+                "count": len(items),
+            }
         )
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-obsidian", status_code=201)

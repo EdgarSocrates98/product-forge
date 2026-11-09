@@ -32,6 +32,7 @@ from ..knowledge.obsidian import (
     ObsidianVaultError,
     export_vault_document,
     import_vault_document,
+    list_obsidian_receipts,
     plan_vault_sync,
 )
 from ..knowledge.search import search_knowledge
@@ -212,6 +213,7 @@ class ProductForgePortal(PortalAdapter):
             )
         )
         self.register(Operation("GET", "/products/{pid}/documents/obsidian/preview", self._obsidian_preview))
+        self.register(Operation("GET", "/products/{pid}/documents/obsidian/history", self._obsidian_history))
         self.register(
             Operation(
                 "POST",
@@ -751,6 +753,18 @@ class ProductForgePortal(PortalAdapter):
         except ObsidianVaultError as exc:
             raise PortalError(exc.code, str(exc), http=422) from exc
         return {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
+
+    def _obsidian_history(self, ctx: RequestContext) -> dict[str, Any]:
+        raw_limit = _q1(ctx, "limit") or "50"
+        try:
+            limit = int(raw_limit)
+        except ValueError as exc:
+            raise PortalError("OBSIDIAN-HISTORY-LIMIT", "limit must be an integer", http=422) from exc
+        try:
+            items = list_obsidian_receipts(_obsidian_vault(), limit=limit)
+        except ObsidianVaultError as exc:
+            raise PortalError(exc.code, str(exc), http=422) from exc
+        return {"schema": "theforge/ObsidianSyncHistory/v1", "items": items, "count": len(items)}
 
     def _obsidian_import(self, ctx: RequestContext) -> dict[str, Any]:
         pid = ctx.params["pid"]
