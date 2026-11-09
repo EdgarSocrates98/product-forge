@@ -13,6 +13,7 @@ from product_forge.knowledge.obsidian import (
     plan_vault_sync,
     validate_base_document,
     validate_canvas_document,
+    validate_vault_authorization,
 )
 
 
@@ -125,6 +126,26 @@ def test_persisted_projection_is_structural_and_excludes_frontmatter_and_body():
     assert safe["wikilinks"] == ["Other"]
     assert "frontmatter" not in safe
     assert "content" not in safe
+
+
+def test_security_projection_warns_without_copying_secret_values():
+    projection = parse_markdown_document(
+        "---\npassword: top-secret\n---\n# Note\nToken=abc123\n"
+    )
+    safe = obsidian_projection_metadata(projection)
+    assert safe["security_warnings"] == ["possible-secret-like-text-detected"]
+    assert "top-secret" not in str(safe)
+    assert "abc123" not in str(safe)
+
+
+def test_vault_authorization_rejects_outside_operator_root(tmp_path: Path, monkeypatch):
+    allowed = tmp_path / "allowed"
+    outside = tmp_path / "outside"
+    allowed.mkdir()
+    outside.mkdir()
+    monkeypatch.setenv("FORGE_OBSIDIAN_ALLOWED_ROOT", str(allowed))
+    with pytest.raises(ObsidianVaultError, match="authorized"):
+        validate_vault_authorization(outside)
 
 
 @pytest.mark.parametrize("raw_path", ["../outside.md", "notes/data.json", "notes/missing.md"])

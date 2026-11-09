@@ -27,6 +27,9 @@ _CANVAS_NODE_TYPES = {"text", "file", "link", "group"}
 _CANVAS_SIDES = {"top", "right", "bottom", "left"}
 _CANVAS_ENDS = {"none", "arrow"}
 _CLASSIFICATIONS = {"public", "internal", "confidential", "restricted"}
+_SENSITIVE_TEXT = re.compile(
+    r"(?i)\b(?:secret|token|password|credential|access[_-]?key|session[_-]?key)\s*[:=]"
+)
 _PROJECTION_FIELDS = (
     "aliases",
     "wikilinks",
@@ -37,6 +40,7 @@ _PROJECTION_FIELDS = (
     "block_references",
     "relative_links",
     "attachments",
+    "security_warnings",
 )
 
 
@@ -412,6 +416,11 @@ def parse_markdown_document(content: str) -> dict[str, Any]:
             in attachment_extensions
         }
     )
+    security_warnings = (
+        ["possible-secret-like-text-detected"]
+        if _SENSITIVE_TEXT.search(frontmatter_raw) or _SENSITIVE_TEXT.search(body)
+        else []
+    )
     return {
         "schema": "productforge/ObsidianMarkdown/v1",
         "frontmatter": frontmatter,
@@ -425,6 +434,7 @@ def parse_markdown_document(content: str) -> dict[str, Any]:
         "block_references": block_references,
         "relative_links": relative_links,
         "attachments": attachments,
+        "security_warnings": security_warnings,
         "content": content,
         "unknown_syntax_preserved": True,
     }
@@ -435,8 +445,20 @@ def obsidian_projection_metadata(markdown: Mapping[str, Any]) -> dict[str, Any]:
     return {field: list(markdown.get(field) or []) for field in _PROJECTION_FIELDS}
 
 
-def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
+def validate_vault_authorization(vault: Path | str) -> Path:
+    """Apply an optional operator-managed allowed root to a configured vault."""
     root = _resolved(Path(vault))
+    allowed_raw = os.environ.get("FORGE_OBSIDIAN_ALLOWED_ROOT", "").strip()
+    if allowed_raw and not _inside(root, _resolved(Path(allowed_raw))):
+        raise ObsidianVaultError(
+            "OBSIDIAN-VAULT-OUTSIDE-AUTHORIZED-ROOT",
+            "configured vault is outside the authorized Obsidian root",
+        )
+    return root
+
+
+def import_vault_document(vault: Path | str, raw_path: str) -> dict[str, Any]:
+    root = validate_vault_authorization(vault)
     if not root.is_dir():
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
     path = _safe(root, raw_path)
@@ -486,7 +508,7 @@ def export_vault_document(
     hash as ``baseline_hash``; the old bytes are snapshotted before an atomic
     replace and the post-write hash is verified.
     """
-    root = _resolved(Path(vault))
+    root = validate_vault_authorization(vault)
     if not root.is_dir():
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
     if len(content.encode("utf-8")) > MAX_VAULT_BYTES:
@@ -559,7 +581,7 @@ def plan_vault_sync(
     source: str = "product-forge",
 ) -> dict[str, Any]:
     """Create a dry-run sync plan; it never mutates the vault."""
-    root = _resolved(Path(vault))
+    root = validate_vault_authorization(vault)
     if not root.is_dir():
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
     if len(content.encode("utf-8")) > MAX_VAULT_BYTES:
@@ -598,7 +620,7 @@ def list_obsidian_receipts(vault: Path | str, *, limit: int = 50) -> list[dict[s
     """Return bounded, body-free export history from the vault's Forge ledger."""
     if not 1 <= limit <= 100:
         raise ObsidianVaultError("OBSIDIAN-HISTORY-LIMIT", "history limit must be between 1 and 100")
-    root = _resolved(Path(vault))
+    root = validate_vault_authorization(vault)
     if not root.is_dir():
         raise ObsidianVaultError("OBSIDIAN-VAULT-MISSING", "configured Obsidian vault is not a directory")
     receipt_dir = root / ".forge" / "obsidian-receipts"

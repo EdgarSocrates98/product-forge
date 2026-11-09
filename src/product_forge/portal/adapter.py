@@ -36,6 +36,7 @@ from ..knowledge.obsidian import (
     list_obsidian_receipts,
     obsidian_projection_metadata,
     plan_vault_sync,
+    validate_vault_authorization,
 )
 from ..knowledge.search import search_knowledge
 from ..knowledge.url import UrlCaptureError, fetch_url_document
@@ -63,7 +64,10 @@ def _obsidian_vault() -> Path:
     raw = os.environ.get("FORGE_OBSIDIAN_VAULT", "").strip()
     if not raw:
         raise PortalError("OBSIDIAN-NOT-CONFIGURED", "Obsidian vault is not configured", http=422)
-    return Path(raw)
+    try:
+        return validate_vault_authorization(Path(raw))
+    except ObsidianVaultError as exc:
+        raise PortalError(exc.code, str(exc), http=422) from exc
 
 
 def _require(st: Store, collection: str, key: str) -> dict[str, Any]:
@@ -755,7 +759,12 @@ class ProductForgePortal(PortalAdapter):
             imported = import_vault_document(_obsidian_vault(), raw_path)
         except ObsidianVaultError as exc:
             raise PortalError(exc.code, str(exc), http=422) from exc
-        return {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
+        return {
+            k: v for k, v in imported.items() if k not in {"content", "markdown"}
+        } | {
+            "markdown": obsidian_projection_metadata(imported["markdown"]),
+            "preview": imported["content"],
+        }
 
     def _obsidian_status(self, ctx: RequestContext) -> dict[str, Any]:
         st = _store()
@@ -781,9 +790,25 @@ class ProductForgePortal(PortalAdapter):
                 "unresolved": ["configure FORGE_OBSIDIAN_VAULT on the Product Forge service"],
             }
         root = Path(raw).expanduser()
-        resolved = root.resolve(strict=False)
+        try:
+            resolved = validate_vault_authorization(root)
+        except ObsidianVaultError as exc:
+            return {
+                "schema": "theforge/ObsidianVaultDescriptor/v1",
+                "version": "v1",
+                "workspace": workspace,
+                "vault_id": "unauthorized",
+                "path": ".",
+                "source": "product-forge",
+                "classification": "internal",
+                "detected": False,
+                "capabilities": [],
+                "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT"},
+                "warnings": [str(exc)],
+                "unresolved": [exc.code],
+            }
         path_hash = hashlib.sha256(str(resolved).encode("utf-8")).hexdigest()
-        detected = root.is_dir()
+        detected = resolved.is_dir()
         return {
             "schema": "theforge/ObsidianVaultDescriptor/v1",
             "version": "v1",

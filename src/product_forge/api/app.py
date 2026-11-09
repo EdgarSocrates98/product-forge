@@ -55,6 +55,7 @@ from ..knowledge.obsidian import (
     list_obsidian_receipts,
     obsidian_projection_metadata,
     plan_vault_sync,
+    validate_vault_authorization,
 )
 from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..knowledge.versions import explorer_versions, prepare_version
@@ -283,8 +284,25 @@ def _obsidian_descriptor(product: dict[str, Any]) -> dict[str, Any]:
             "unresolved": ["configure FORGE_OBSIDIAN_VAULT on the Product Forge service"],
         }
     root = Path(raw).expanduser()
-    path_hash = hashlib.sha256(str(root.resolve(strict=False)).encode("utf-8")).hexdigest()
-    detected = root.is_dir()
+    try:
+        authorized_root = validate_vault_authorization(root)
+    except ObsidianVaultError as exc:
+        return {
+            "schema": "theforge/ObsidianVaultDescriptor/v1",
+            "version": "v1",
+            "workspace": workspace,
+            "vault_id": "unauthorized",
+            "path": ".",
+            "source": "product-forge",
+            "classification": "internal",
+            "detected": False,
+            "capabilities": [],
+            "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT"},
+            "warnings": [str(exc)],
+            "unresolved": [exc.code],
+        }
+    path_hash = hashlib.sha256(str(authorized_root).encode("utf-8")).hexdigest()
+    detected = authorized_root.is_dir()
     return {
         "schema": "theforge/ObsidianVaultDescriptor/v1",
         "version": "v1",
@@ -1475,7 +1493,13 @@ def create_app(home: Path | None = None) -> FastAPI:
         except ObsidianVaultError as exc:
             raise ForgeError(str(exc), details={"code": exc.code}) from exc
         return envelope(
-            {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
+            {
+                k: v for k, v in imported.items() if k not in {"content", "markdown"}
+            }
+            | {
+                "markdown": obsidian_projection_metadata(imported["markdown"]),
+                "preview": imported["content"],
+            }
         )
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/status")
