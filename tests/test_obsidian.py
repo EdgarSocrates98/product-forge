@@ -138,6 +138,42 @@ print(json.dumps({"sync_state": result["sync_state"]}))
     assert {result["sync_state"] for result in outputs} == {"created", "unchanged"}
 
 
+def test_process_exit_during_atomic_write_is_recoverable(tmp_path: Path):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    script = """
+import os
+import sys
+import tempfile
+import product_forge.knowledge.obsidian as obsidian
+
+def interrupted_write(path, content):
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    with os.fdopen(descriptor, "wb") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os._exit(23)
+
+obsidian._atomic_write = interrupted_write
+obsidian.export_vault_document(sys.argv[1], "note.md", "# Interrupted\\n")
+"""
+    result = subprocess.run(  # noqa: S603 - test invokes the current interpreter with a fixed script
+        [sys.executable, "-c", script, str(vault)],
+        cwd=Path(__file__).parents[1],
+        env=os.environ.copy(),
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+
+    assert result.returncode == 23
+    assert not (vault / "note.md").exists()
+    recovered = export_vault_document(vault, "note.md", "# Recovered\n")
+    assert recovered["sync_state"] == "created"
+    assert (vault / "note.md").read_text(encoding="utf-8") == "# Recovered\n"
+
+
 def test_skip_records_a_receipt_without_mutating_the_vault(tmp_path: Path):
     vault = tmp_path / "vault"
     vault.mkdir()
