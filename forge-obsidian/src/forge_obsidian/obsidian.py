@@ -821,6 +821,7 @@ def _vault_write_lock(vault: Path | str, raw_path: str) -> Iterator[None]:
     except OSError as exc:
         raise ObsidianVaultError("OBSIDIAN-LOCK-FAILED", "vault document lock could not be opened") from exc
     lock_file = os.fdopen(descriptor, "a+b")
+    acquired = False
     try:
         if lock_file.seek(0, os.SEEK_END) == 0:
             lock_file.write(b"0")
@@ -840,22 +841,31 @@ def _vault_write_lock(vault: Path | str, raw_path: str) -> Iterator[None]:
             import fcntl
 
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        acquired = True
         yield
     except OSError as exc:
         raise ObsidianVaultError("OBSIDIAN-LOCK-FAILED", "vault document lock could not be acquired") from exc
     finally:
+        if acquired:
+            try:
+                lock_file.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                # A full or revoked filesystem must not mask the operation's
+                # structured result while releasing the advisory lock.
+                pass
         try:
-            lock_file.seek(0)
-            if os.name == "nt":
-                import msvcrt
-
-                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                import fcntl
-
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-        finally:
             lock_file.close()
+        except OSError:
+            # close() may flush a buffered byte after an ENOSPC during setup.
+            pass
 
 
 def _persist_sync_receipt(root: Path, receipt: dict[str, Any]) -> dict[str, Any]:

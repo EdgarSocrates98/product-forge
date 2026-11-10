@@ -491,6 +491,34 @@ def test_atomic_write_faults_are_structured(tmp_path: Path, monkeypatch):
     assert not (vault / "note.md").exists()
 
 
+def test_lock_write_disk_full_is_structured_and_does_not_escape(tmp_path: Path, monkeypatch):
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    real_fdopen = obsidian.os.fdopen
+
+    class FailingFlushFile:
+        def __init__(self, file):
+            self._file = file
+
+        def flush(self):
+            raise OSError(28, "No space left on device")
+
+        def __getattr__(self, name):
+            return getattr(self._file, name)
+
+    def failing_fdopen(fd, mode):
+        return FailingFlushFile(real_fdopen(fd, mode))
+
+    monkeypatch.setattr(obsidian.os, "fdopen", failing_fdopen)
+    with pytest.raises(ObsidianVaultError) as error:
+        export_vault_document(vault, "note.md", "# Note\n")
+
+    assert error.value.code == "OBSIDIAN-LOCK-FAILED"
+    assert error.value.sync_state == "failed"
+    assert not (vault / "note.md").exists()
+    assert list(vault.glob(".*.tmp")) == []
+
+
 def test_permission_denied_write_fault_is_structured(tmp_path: Path, monkeypatch):
     vault = tmp_path / "vault"
     vault.mkdir()
