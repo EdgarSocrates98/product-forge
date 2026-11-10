@@ -58,7 +58,8 @@ def test_release_workflow_builds_checksums_and_publishes_the_same_artifact() -> 
     assert "python -m build" in build_text
     assert "python -m twine check dist/*" in build_text
     assert "sha256sum -- *" in build_text
-    assert "cd forge-obsidian && sha256sum --check dist-checksums.txt" in publish_text
+    assert "test -f dist-checksums.txt" in publish_text
+    assert "cd dist && sha256sum --check ../dist-checksums.txt" in publish_text
     assert "pypa/gh-action-pypi-publish@" in "\n".join(
         str(step.get("uses", "")) for step in _steps(publish)
     )
