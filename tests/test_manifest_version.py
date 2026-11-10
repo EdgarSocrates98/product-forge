@@ -82,7 +82,7 @@ def test_embedded_bridge_manifest_and_version_are_packaged_contracts() -> None:
         (REPO / "src" / "forge_agent_bridge" / "forge.agentic.json").read_text(encoding="utf-8")
     )
     assert manifest["forge_id"] == "forge-agent-bridge"
-    assert manifest["version"] == version == agentic["version"] == "0.2.1"
+    assert manifest["version"] == version == agentic["version"] == "0.2.2"
 
 
 def test_embedded_bridge_python_sources_match_standalone_checkout() -> None:
