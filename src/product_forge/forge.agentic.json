@@ -1,7 +1,7 @@
 {
   "schema": "forge/SpecialistAgenticManifest/v1",
   "provider": "product-forge",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "cli": "productforge",
   "cli_entry": "product_forge.cli:app",
   "workflows": [

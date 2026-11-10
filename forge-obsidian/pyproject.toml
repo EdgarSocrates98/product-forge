@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "forge-obsidian"
-version = "0.1.0"
+version = "0.1.1"
 description = "Neutral, safe Obsidian interoperability primitives for Forge adapters"
 readme = "README.md"
 requires-python = ">=3.10"
