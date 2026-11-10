@@ -218,5 +218,52 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
         _obsidian_vault()
     monkeypatch.setenv("FORGE_OBSIDIAN_VAULT", str(db.parent))
     assert _obsidian_vault() == db.parent
+    note = db.parent / "obsidian.md"
+    note.write_text("# Existing note\n\n[[surface]]\n", encoding="utf-8")
+    status = call("GET", f"/api/v1/products/{pid}/documents/obsidian/status")
+    assert status["schema"] == "theforge/ObsidianVaultDescriptor/v1"
+    assert status["detected"] is True
+    assert "path_hash" in status["provenance"]
+    assert str(db.parent) not in str(status)
+    files = call("GET", f"/api/v1/products/{pid}/documents/obsidian/files")
+    assert files["schema"] == "theforge/ObsidianVaultFileIndex/v1"
+    assert [item["path"] for item in files["items"]] == ["obsidian.md"]
+    assert "content" not in files["items"][0]
+    preview = call(
+        "GET", f"/api/v1/products/{pid}/documents/obsidian/preview", params={"path": "obsidian.md"}
+    )
+    assert preview["preview"].startswith("# Existing")
+    imported = call(
+        "POST", f"/api/v1/products/{pid}/documents/from-obsidian",
+        json={"confirm": "import", "path": "obsidian.md", "title": "Imported note"},
+    )
+    assert imported["source_path"] == "obsidian.md"
+    plan = call(
+        "POST", f"/api/v1/products/{pid}/documents/obsidian/sync-plan",
+        json={"path": "obsidian.md", "content": "# Updated note\n"},
+    )
+    assert plan["outcome"] == "conflict"
+    exported = call(
+        "POST", f"/api/v1/products/{pid}/documents/to-obsidian",
+        json={
+            "confirm": "export",
+            "path": "obsidian.md",
+            "content": "# Updated note\n",
+            "baseline_hash": plan["previous_hash"],
+        },
+    )
+    assert exported["sync_state"] == "updated"
+    skipped = call(
+        "POST", f"/api/v1/products/{pid}/documents/obsidian/sync-skip",
+        json={"confirm": "skip", "path": "deferred.md", "content": "# Deferred\n", "reason": "review"},
+    )
+    assert skipped["outcome"] == "skipped"
+    rolled_back = call(
+        "POST", f"/api/v1/products/{pid}/documents/obsidian/rollback",
+        json={"confirm": "rollback", "path": "obsidian.md", "receipt_path": exported["receipt_path"]},
+    )
+    assert rolled_back["outcome"] == "rolled_back"
+    history = call("GET", f"/api/v1/products/{pid}/documents/obsidian/history")
+    assert {item["outcome"] for item in history["items"]} >= {"updated", "skipped", "rolled_back"}
 
     assert metric["name"] == "event count"

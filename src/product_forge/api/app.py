@@ -6,6 +6,7 @@ Mutations require the local bearer token (productforge api token --show).
 
 from __future__ import annotations
 
+import hashlib
 import os
 import threading
 import time
@@ -43,11 +44,24 @@ from ..errors import (
     ConflictError,
     ForgeError,
     NotFoundError,
+    PermissionDeniedError,
     ReviewRequiredError,
     UrlCaptureForgeError,
     ValidationError,
 )
-from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
+from ..knowledge.investigation import InvestigationImportError, project_report
+from ..knowledge.obsidian import (
+    ObsidianVaultError,
+    export_vault_document,
+    import_vault_document,
+    list_obsidian_receipts,
+    obsidian_projection_metadata,
+    plan_vault_sync,
+    rollback_vault_document,
+    scan_vault_documents,
+    skip_vault_sync,
+    validate_vault_authorization,
+)
 from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..knowledge.versions import explorer_versions, prepare_version
 from ..security import TokenStore, redact, verify_oidc_token
@@ -153,6 +167,13 @@ class ContextAuthorizeIn(BaseModel):
     ttl_s: int = Field(default=3600, ge=60, le=86400)
 
 
+class ObsidianVaultConnectIn(BaseModel):
+    workspace_id: str = Field(min_length=1)
+    path: str = Field(min_length=1)
+    label: str = ""
+    confirm: str = ""
+
+
 def _surface_to_paths(surface: dict[str, Any]) -> dict[str, Any]:
     """Rebuild an OpenAPI paths dict from a stored parsed surface."""
     paths: dict[str, Any] = {}
@@ -255,6 +276,122 @@ def _obsidian_vault() -> Path:
     return Path(raw)
 
 
+def _multi_principal_mode(cfg: dict[str, Any]) -> bool:
+    return bool(cfg.get("principals")) or bool((cfg.get("oidc") or {}).get("enabled"))
+
+
+def _obsidian_record_for(ctx: Ctx, req: Request, product: dict[str, Any]) -> dict[str, Any] | None:
+    workspace_id = str(product.get("workspace_id") or "")
+    principal_id = str(getattr(req.state, "principal_id", "local"))
+    records = ctx.store.list("obsidian_vaults", workspace_id=workspace_id, limit=500)
+    return next(
+        (
+            record
+            for record in records
+            if record.get("status") == "active" and record.get("principal_id") == principal_id
+        ),
+        None,
+    )
+
+
+def _obsidian_vault_for(ctx: Ctx, req: Request, product: dict[str, Any]) -> Path:
+    record = _obsidian_record_for(ctx, req, product)
+    if record:
+        return Path(str(record["path"]))
+    if _multi_principal_mode(ctx.cfg):
+        raise ForgeError(
+            "No Obsidian vault is assigned to this principal and workspace",
+            details={"code": "OBSIDIAN-NOT-ASSIGNED"},
+        )
+    return _obsidian_vault()
+
+
+def _obsidian_descriptor(
+    product: dict[str, Any], ctx: Ctx | None = None, req: Request | None = None
+) -> dict[str, Any]:
+    """Expose vault capability metadata without returning the host path."""
+    workspace = str(product.get("workspace_id") or "local")
+    record = _obsidian_record_for(ctx, req, product) if ctx is not None and req is not None else None
+    try:
+        root = (
+            _obsidian_vault_for(ctx, req, product)
+            if ctx is not None and req is not None
+            else _obsidian_vault()
+        )
+    except ForgeError as exc:
+        return {
+            "schema": "theforge/ObsidianVaultDescriptor/v1",
+            "version": "v1",
+            "workspace": workspace,
+            "vault_id": "unconfigured",
+            "path": ".",
+            "source": "product-forge",
+            "classification": "internal",
+            "detected": False,
+            "capabilities": [],
+            "provenance": {"configuration": "product-forge/obsidian_vaults"},
+            "warnings": [str(exc)],
+            "unresolved": [str(exc.details.get("code") or "OBSIDIAN-NOT-CONFIGURED")],
+        }
+    try:
+        authorized_root = validate_vault_authorization(root)
+    except ObsidianVaultError as exc:
+        return {
+            "schema": "theforge/ObsidianVaultDescriptor/v1",
+            "version": "v1",
+            "workspace": workspace,
+            "vault_id": "unauthorized",
+            "path": ".",
+            "source": "product-forge",
+            "classification": "internal",
+            "detected": False,
+            "capabilities": [],
+            "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT"},
+            "warnings": [str(exc)],
+            "unresolved": [exc.code],
+        }
+    path_hash = hashlib.sha256(str(authorized_root).encode("utf-8")).hexdigest()
+    detected = authorized_root.is_dir()
+    descriptor = {
+        "schema": "theforge/ObsidianVaultDescriptor/v1",
+        "version": "v1",
+        "workspace": workspace,
+        "vault_id": f"vault-{path_hash[:16]}",
+        "path": ".",
+        "source": "product-forge",
+        "classification": "internal",
+        "detected": detected,
+        "capabilities": [
+            "scan_read_only",
+            "preview",
+            "import_read_only",
+            "sync_plan",
+            "reviewed_sync",
+                "sync_skip",
+            "rollback",
+            "history",
+        ]
+        if detected
+        else [],
+        "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT", "path_hash": path_hash},
+        "warnings": [] if detected else ["configured vault is not an accessible directory"],
+        "unresolved": [] if detected else ["verify the configured vault directory"],
+    }
+    if record:
+        descriptor.update(
+            {
+                "vault_record_id": record["id"],
+                "label": record.get("label", ""),
+                "status": record.get("status", "active"),
+            }
+        )
+        descriptor["provenance"] = {
+            "configuration": "product-forge/obsidian_vaults",
+            "path_hash": record["path_hash"],
+        }
+    return descriptor
+
+
 def _oidc_workspaces(claims: dict[str, Any] | None) -> set[str]:
     """Return the explicit workspace boundary from a verified OIDC claim.
 
@@ -277,6 +414,21 @@ def _principal_role(cfg: dict[str, Any], token: str) -> str:
         if principal.get("token") == token:
             return str(principal.get("role") or "viewer")
     return "admin" if not cfg.get("principals") else "viewer"
+
+
+def _principal_identity(cfg: dict[str, Any], token: str, claims: dict[str, Any] | None) -> str:
+    """Return a stable non-secret owner id for scoped local/OIDC operations."""
+    if claims:
+        return str(claims.get("sub") or claims.get("preferred_username") or "oidc")
+    for principal in cfg.get("principals") or []:
+        if principal.get("token") == token:
+            return str(
+                principal.get("id")
+                or principal.get("principal")
+                or principal.get("name")
+                or f"token-{hashlib.sha256(token.encode('utf-8')).hexdigest()[:16]}"
+            )
+    return "local"
 
 
 def _oidc_role(claims: dict[str, Any] | None) -> str:
@@ -366,7 +518,15 @@ def create_app(home: Path | None = None) -> FastAPI:
                 except Exception:
                     oidc_claims = None
             oidc_enabled = bool((ctx.cfg.get("oidc") or {}).get("enabled"))
-            valid_token = bool(oidc_claims) if oidc_enabled else ctx.tokens.check(token)
+            configured_principal_token = any(
+                isinstance(principal, dict) and principal.get("token") == token
+                for principal in (ctx.cfg.get("principals") or [])
+            )
+            valid_token = (
+                bool(oidc_claims)
+                if oidc_enabled
+                else ctx.tokens.check(token) or configured_principal_token
+            )
             if not valid_token:
                 err = {
                     "code": "PF-UNAUTHORIZED",
@@ -381,6 +541,7 @@ def create_app(home: Path | None = None) -> FastAPI:
             wid = _path_workspace(req.url.path)
             req.state.oidc_claims = oidc_claims
             req.state.workspace_scope = _oidc_workspaces(oidc_claims) if oidc_enabled else None
+            req.state.principal_id = _principal_identity(ctx.cfg, token, oidc_claims)
             if pid:
                 try:
                     ws = ctx.store.get("products", pid)["workspace_id"]
@@ -523,6 +684,158 @@ def create_app(home: Path | None = None) -> FastAPI:
             {"id": "llm", "state": "unverified"},
         ]
         return envelope({"forge_id": FORGE_ID, "capabilities": caps})
+
+    # -- scoped Obsidian vaults --------------------------------------------
+
+    def _assert_vault_workspace(req: Request, workspace_id: str) -> None:
+        scope = getattr(req.state, "workspace_scope", None)
+        if scope is not None and workspace_id not in scope:
+            raise PermissionDeniedError("workspace not in principal scope")
+        if (ctx.cfg.get("principals") or []) and not _principal_allows(
+            ctx.cfg,
+            req.headers.get("authorization", "").removeprefix("Bearer ").strip(),
+            workspace_id,
+        ):
+            raise PermissionDeniedError("workspace not in principal scope")
+
+    def _vault_public(record: dict[str, Any]) -> dict[str, Any]:
+        root = Path(str(record.get("path", "")))
+        detected = root.is_dir() and not root.is_symlink()
+        return {
+            "schema": "theforge/ObsidianVaultDescriptor/v1",
+            "version": "v1",
+            "vault_record_id": record["id"],
+            "workspace": record["workspace_id"],
+            "vault_id": record.get("vault_id", record["id"]),
+            "path": ".",
+            "source": "product-forge",
+            "classification": "internal",
+            "detected": detected,
+            "capabilities": [
+                "scan_read_only",
+                "preview",
+                "import_read_only",
+                "sync_plan",
+                "reviewed_sync",
+                "sync_skip",
+                "rollback",
+                "history",
+            ]
+            if detected
+            else [],
+            "provenance": {
+                "configuration": "product-forge/obsidian_vaults",
+                "path_hash": record["path_hash"],
+            },
+            "warnings": [] if detected else ["assigned vault is not an accessible directory"],
+            "unresolved": [] if detected else ["verify the assigned vault directory"],
+            "label": record.get("label", ""),
+            "status": record.get("status", "active"),
+        }
+
+    @app.get(f"{API_PREFIX}/obsidian/vaults")
+    def list_obsidian_vaults(req: Request, workspace_id: str | None = None) -> dict:
+        if workspace_id:
+            _assert_vault_workspace(req, workspace_id)
+        scope = getattr(req.state, "workspace_scope", None)
+        principal_id = str(getattr(req.state, "principal_id", "local"))
+        items = [
+            record
+            for record in ctx.store.list("obsidian_vaults", workspace_id=workspace_id, limit=500)
+            if record.get("status") == "active"
+            and record.get("principal_id") == principal_id
+            and (scope is None or record.get("workspace_id") in scope)
+        ]
+        return envelope(
+            {
+                "schema": "theforge/ObsidianVaultList/v1",
+                "items": [_vault_public(item) for item in items],
+            }
+        )
+
+    @app.post(f"{API_PREFIX}/obsidian/vaults", status_code=201)
+    def connect_obsidian_vault(body: ObsidianVaultConnectIn, req: Request) -> dict:
+        if body.confirm != "connect":
+            raise ValidationError("confirm=connect is required")
+        _assert_vault_workspace(req, body.workspace_id)
+        ctx.store.get("workspaces", body.workspace_id)
+        if not os.environ.get("FORGE_OBSIDIAN_ALLOWED_ROOT", "").strip():
+            raise ValidationError(
+                "FORGE_OBSIDIAN_ALLOWED_ROOT must be configured before connecting a vault",
+                details={"code": "OBSIDIAN-AUTHORIZED-ROOT-REQUIRED"},
+            )
+        raw_path = Path(body.path).expanduser()
+        if raw_path.is_symlink():
+            raise ValidationError(
+                "vault root symlinks are not allowed",
+                details={"code": "OBSIDIAN-SYMLINK-REFUSED"},
+            )
+        try:
+            root = validate_vault_authorization(raw_path)
+        except ObsidianVaultError as exc:
+            raise ValidationError(str(exc), details={"code": exc.code}) from exc
+        if not root.is_dir():
+            raise ValidationError(
+                "configured vault must be an accessible directory",
+                details={"code": "OBSIDIAN-VAULT-MISSING"},
+            )
+        path_hash = hashlib.sha256(str(root).encode("utf-8")).hexdigest()
+        principal_id = str(getattr(req.state, "principal_id", "local"))
+        existing = next(
+            (
+                record
+                for record in ctx.store.list("obsidian_vaults", workspace_id=body.workspace_id, limit=500)
+                if record.get("status") == "active"
+                and record.get("principal_id") == principal_id
+                and record.get("path_hash") == path_hash
+            ),
+            None,
+        )
+        if existing:
+            return envelope(_vault_public(existing))
+        record = {
+            "id": new_id("vault"),
+            "workspace_id": body.workspace_id,
+            "principal_id": principal_id,
+            "path": str(root),
+            "path_hash": path_hash,
+            "vault_id": f"vault-{path_hash[:16]}",
+            "label": body.label.strip()[:160],
+            "status": "active",
+            "created_at": utcnow(),
+        }
+        ctx.store.put_doc("obsidian_vaults", record, status="active", name=record["vault_id"])
+        ctx.audit(
+            req,
+            "obsidian.vault.connect",
+            "obsidian_vault",
+            record["id"],
+            workspace_id=body.workspace_id,
+        )
+        return envelope(_vault_public(record))
+
+    @app.delete(f"{API_PREFIX}/obsidian/vaults/{{vault_id}}")
+    def revoke_obsidian_vault(vault_id: str, req: Request) -> dict:
+        record = ctx.store.get("obsidian_vaults", vault_id)
+        workspace_id = str(record.get("workspace_id") or "")
+        _assert_vault_workspace(req, workspace_id)
+        principal_id = str(getattr(req.state, "principal_id", "local"))
+        role = (
+            _oidc_role(getattr(req.state, "oidc_claims", None))
+            if (ctx.cfg.get("oidc") or {}).get("enabled")
+            else _principal_role(
+                ctx.cfg,
+                req.headers.get("authorization", "").removeprefix("Bearer ").strip(),
+            )
+        )
+        if record.get("principal_id") != principal_id and role != "admin":
+            raise PermissionDeniedError("vault is not assigned to this principal")
+        record["status"] = "revoked"
+        record["revoked_at"] = utcnow()
+        record["revoked_by"] = principal_id
+        ctx.store.put_doc("obsidian_vaults", record, status="revoked", name=record.get("vault_id"))
+        ctx.audit(req, "obsidian.vault.revoke", "obsidian_vault", vault_id, workspace_id=workspace_id)
+        return envelope({"revoked": True, "vault_record_id": vault_id, "workspace_id": workspace_id})
 
     @app.post(f"{API_PREFIX}/auth/rotate")
     def rotate(req: Request) -> dict:
@@ -1191,6 +1504,7 @@ def create_app(home: Path | None = None) -> FastAPI:
             title=str(body.model_dump().get("title", "untitled")),
             content_hash=sha256_text(text),
             status=DocumentStatus.IMPORTED,
+            metadata={"knowledge_state": "captured"},
         )
         ctx.store.put("documents", doc)
         doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(text))
@@ -1199,10 +1513,142 @@ def create_app(home: Path | None = None) -> FastAPI:
         ctx.audit(req, "document.import", "documents", doc.id, product_id=pid)
         return envelope(doc.model_dump(mode="json", by_alias=True))
 
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-investigation", status_code=201)
+    def import_investigation_doc(pid: str, body: ScopedIn, req: Request) -> dict:
+        """Index one explicit, redacted The Forge investigation receipt.
+
+        The endpoint is intentionally separate from the generic document
+        importer: it validates the producer schema, preserves correlation and
+        provenance, starts the document in ``draft``/``captured`` state and is
+        idempotent for the same report hash.  It never writes an Obsidian vault;
+        reviewed export remains the existing plan/sync flow.
+        """
+        from ..domain.models import Document, DocumentStatus
+        from ..errors import ValidationError
+        from ..knowledge.ingest import chunk_text
+
+        product = ctx.store.get("products", pid)
+        payload = body.model_dump()
+        if str(payload.get("confirm", "")) != "import":
+            raise ValidationError("confirm=import is required")
+        classification = str(payload.get("classification") or "internal")
+        try:
+            projection = project_report(payload.get("report"), classification=classification)
+        except InvestigationImportError as exc:
+            raise ValidationError(str(exc), details={"code": "PF-INVESTIGATION-REFUSED"}) from exc
+
+        existing = next(
+            (
+                doc
+                for doc in ctx.store.list("documents", product_id=pid, limit=5000)
+                if (doc.get("metadata") or {}).get("source") == "the-forge"
+                and (doc.get("metadata") or {}).get("investigation_correlation_id")
+                == projection["correlation_id"]
+                and doc.get("content_hash") == projection["content_hash"]
+            ),
+            None,
+        )
+        if existing:
+            return envelope(
+                {
+                    **existing,
+                    "state": "already_imported",
+                    "source_kind": "the-forge-investigation",
+                    "suggested_obsidian_path": projection["path"],
+                }
+            )
+
+        metadata, _ = prepare_version(
+            ctx.store,
+            pid,
+            {
+                "source": "the-forge",
+                "source_kind": "investigation",
+                "source_id": projection["source_id"],
+                "investigation_correlation_id": projection["correlation_id"],
+                "investigation_schema": projection["provenance"]["report_schema"],
+                "classification": classification,
+                "trust_state": projection["trust_state"],
+                "freshness": projection["freshness"],
+                "knowledge_state": "draft",
+                "provenance": projection["provenance"],
+                "suggested_obsidian_path": projection["path"],
+            },
+        )
+        doc = Document(
+            id=new_id("doc"),
+            product_id=pid,
+            title=str(payload.get("title") or projection["title"]),
+            content_hash=projection["content_hash"],
+            status=DocumentStatus.IMPORTED,
+            metadata=metadata,
+        )
+        ctx.store.put("documents", doc)
+        doc.chunk_count = ctx.store.put_chunks(doc.id, pid, chunk_text(projection["content"]))
+        doc.status = DocumentStatus.INDEXED
+        ctx.store.put("documents", doc)
+        ctx.audit(
+            req,
+            "investigation.document.import",
+            "documents",
+            doc.id,
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
+        return envelope(
+            {
+                **doc.model_dump(mode="json", by_alias=True),
+                "state": "imported",
+                "source_kind": "the-forge-investigation",
+                "suggested_obsidian_path": projection["path"],
+                "projection": {
+                    "schema": projection["schema"],
+                    "content_hash": projection["content_hash"],
+                    "classification": projection["classification"],
+                    "trust_state": projection["trust_state"],
+                    "freshness": projection["freshness"],
+                },
+            }
+        )
+
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents")
     def list_docs(pid: str) -> dict:
         ctx.store.get("products", pid)
         return envelope({"items": ctx.store.list("documents", product_id=pid)})
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/{{did}}/knowledge-state")
+    def transition_knowledge_state(pid: str, did: str, body: ScopedIn, req: Request) -> dict:
+        """Move knowledge through an explicit, evidence-gated lifecycle."""
+        from ..errors import ValidationError
+        from ..knowledge.lifecycle import KnowledgeLifecycleError, transition
+
+        if str(body.model_dump().get("confirm", "")) != "transition":
+            raise ValidationError("confirm=transition is required")
+        try:
+            doc = ctx.store.get("documents", did)
+        except KeyError as exc:
+            from ..errors import NotFoundError
+
+            raise NotFoundError("document not found") from exc
+        if doc.get("product_id") != pid:
+            from ..errors import NotFoundError
+
+            raise NotFoundError("document not in product")
+        payload = body.model_dump()
+        try:
+            metadata, receipt = transition(
+                doc.get("metadata") or {},
+                str(payload.get("state") or ""),
+                evidence_refs=payload.get("evidence_refs") or [],
+                reason=str(payload.get("reason") or ""),
+                actor=str(getattr(req.state, "principal_id", "local")),
+            )
+        except KnowledgeLifecycleError as exc:
+            raise ValidationError(str(exc), details={"code": "PF-KNOWLEDGE-TRANSITION-REFUSED"}) from exc
+        doc["metadata"] = metadata
+        ctx.store.put_doc("documents", doc)
+        ctx.audit(req, "knowledge.state.transition", "documents", did, product_id=pid)
+        return envelope({"document": doc, "transition": receipt})
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/search")
     def search_docs(pid: str, q: str = "", limit: int = 20) -> dict:
@@ -1420,14 +1866,53 @@ def create_app(home: Path | None = None) -> FastAPI:
         )
 
     @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/preview")
-    def preview_obsidian_doc(pid: str, path: str) -> dict:
-        ctx.store.get("products", pid)
+    def preview_obsidian_doc(pid: str, path: str, req: Request) -> dict:
+        product = ctx.store.get("products", pid)
         try:
-            imported = import_vault_document(_obsidian_vault(), path)
+            imported = import_vault_document(_obsidian_vault_for(ctx, req, product), path)
         except ObsidianVaultError as exc:
-            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         return envelope(
-            {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
+            {
+                k: v for k, v in imported.items() if k not in {"content", "markdown"}
+            }
+            | {
+                "markdown": obsidian_projection_metadata(imported["markdown"]),
+                "preview": imported["content"],
+            }
+        )
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/status")
+    def obsidian_status(pid: str, req: Request) -> dict:
+        product = ctx.store.get("products", pid)
+        return envelope(_obsidian_descriptor(product, ctx, req))
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/files")
+    def list_obsidian_files(pid: str, req: Request, prefix: str = "", limit: int = 200) -> dict:
+        product = ctx.store.get("products", pid)
+        try:
+            index = scan_vault_documents(
+                _obsidian_vault_for(ctx, req, product),
+                prefix=prefix,
+                limit=limit,
+            )
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
+        return envelope(index)
+
+    @app.get(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/history")
+    def obsidian_history(pid: str, req: Request, limit: int = 50) -> dict:
+        product = ctx.store.get("products", pid)
+        try:
+            items = list_obsidian_receipts(_obsidian_vault_for(ctx, req, product), limit=limit)
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
+        return envelope(
+            {
+                "schema": "theforge/ObsidianSyncHistory/v1",
+                "items": items,
+                "count": len(items),
+            }
         )
 
     @app.post(f"{API_PREFIX}/products/{{pid}}/documents/from-obsidian", status_code=201)
@@ -1444,9 +1929,9 @@ def create_app(home: Path | None = None) -> FastAPI:
         if not raw_path:
             raise ValidationError("path is required")
         try:
-            imported = import_vault_document(_obsidian_vault(), raw_path)
+            imported = import_vault_document(_obsidian_vault_for(ctx, req, product), raw_path)
         except ObsidianVaultError as exc:
-            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         existing = [
             doc
             for doc in ctx.store.list("documents", product_id=pid)
@@ -1469,6 +1954,7 @@ def create_app(home: Path | None = None) -> FastAPI:
                 "source": "obsidian",
                 "obsidian_path": imported["path"],
                 "size": imported["size"],
+                    "obsidian_projection": obsidian_projection_metadata(imported["markdown"]),
                 "provenance": imported["provenance"],
             },
         )
@@ -1514,9 +2000,16 @@ def create_app(home: Path | None = None) -> FastAPI:
         if not raw_path or not content:
             raise ValidationError("path and content are required")
         try:
-            exported = export_vault_document(_obsidian_vault(), raw_path, content)
+            exported = export_vault_document(
+                _obsidian_vault_for(ctx, req, product),
+                raw_path,
+                content,
+                baseline_hash=payload.get("baseline_hash"),
+                classification=str(payload.get("classification") or "internal"),
+                source=str(payload.get("source") or "product-forge"),
+            )
         except ObsidianVaultError as exc:
-            raise ForgeError(str(exc), details={"code": exc.code}) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         ctx.audit(
             req,
             "obsidian.document.export",
@@ -1526,6 +2019,91 @@ def create_app(home: Path | None = None) -> FastAPI:
             workspace_id=product.get("workspace_id", ""),
         )
         return envelope(exported)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/sync-plan")
+    def plan_obsidian_sync(pid: str, body: ScopedIn, req: Request) -> dict:
+        product = ctx.store.get("products", pid)
+        if product is None:
+            raise NotFoundError(f"product {pid} not found")
+        payload = body.model_dump()
+        raw_path = str(payload.get("path", "")).strip()
+        content = str(payload.get("content", ""))
+        if not raw_path or not content:
+            raise ValidationError("path and content are required")
+        try:
+            plan = plan_vault_sync(
+                _obsidian_vault_for(ctx, req, product),
+                raw_path,
+                content,
+                baseline_hash=payload.get("baseline_hash"),
+                classification=str(payload.get("classification") or "internal"),
+                source=str(payload.get("source") or "product-forge"),
+            )
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
+        return envelope(plan)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/rollback")
+    def rollback_obsidian_sync(pid: str, body: ScopedIn, req: Request) -> dict:
+        product = ctx.store.get("products", pid)
+        payload = body.model_dump()
+        if str(payload.get("confirm", "")) != "rollback":
+            raise ValidationError("confirm=rollback is required")
+        raw_path = str(payload.get("path", "")).strip()
+        receipt_path = str(payload.get("receipt_path", "")).strip()
+        if not raw_path or not receipt_path:
+            raise ValidationError("path and receipt_path are required")
+        try:
+            rolled_back = rollback_vault_document(
+                _obsidian_vault_for(ctx, req, product),
+                raw_path,
+                receipt_path=receipt_path,
+                source=str(payload.get("source") or "product-forge"),
+            )
+        except ObsidianVaultError as exc:
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
+        ctx.audit(
+            req,
+            "obsidian.document.rollback",
+            "obsidian",
+            rolled_back["path"],
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
+        return envelope(rolled_back)
+
+    @app.post(f"{API_PREFIX}/products/{{pid}}/documents/obsidian/sync-skip")
+    def skip_obsidian_sync(pid: str, body: ScopedIn, req: Request) -> dict:
+        product = ctx.store.get("products", pid)
+        payload = body.model_dump()
+        if str(payload.get("confirm", "")) != "skip":
+            raise ValidationError("confirm=skip is required")
+        raw_path = str(payload.get("path", "")).strip()
+        content = str(payload.get("content", ""))
+        if not raw_path or not content:
+            raise ValidationError("path and content are required")
+        try:
+            skipped = skip_vault_sync(
+                _obsidian_vault_for(ctx, req, product),
+                raw_path,
+                content,
+                reason=str(payload.get("reason") or "operation skipped by policy"),
+                classification=str(payload.get("classification") or "internal"),
+                source=str(payload.get("source") or "product-forge"),
+            )
+        except ObsidianVaultError as exc:
+            raise ForgeError(
+                str(exc), details={"code": exc.code, "sync_state": exc.sync_state}
+            ) from exc
+        ctx.audit(
+            req,
+            "obsidian.document.sync_skipped",
+            "obsidian",
+            skipped["path"],
+            product_id=pid,
+            workspace_id=product.get("workspace_id", ""),
+        )
+        return envelope(skipped)
 
     # -- agents runtime (Cycle 4) ---------------------------------------------
 

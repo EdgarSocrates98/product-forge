@@ -66,6 +66,7 @@ All product-scoped collections below live under `/api/v1/products/{pid}/…`.
 | Method | Path | Purpose |
 |---|---|---|
 | GET·POST | `/documents` | document list / import (content is redacted before persist) |
+| POST | `/products/{pid}/documents/from-investigation` | confirmed The Forge `OrchestrationReport/v1` import; idempotent by correlation + content hash, starts as `draft`/`captured` |
 | GET | `/documents/search` | backward-compatible indexed document search |
 | GET | `/knowledge/search` | bounded body-free search across documents, sources, entities and relations |
 | GET | `/products/{pid}/documents/url/preview?url=…&extractor=stdlib|defuddle` | safe URL preview; `defuddle` is optional |
@@ -83,16 +84,27 @@ passes that already-validated HTML to the optional Defuddle CLI over stdin;
 set `FORGE_DEFUDDLE_BIN` when the executable is not on `PATH`. It never passes
 the remote URL to the optional process and never executes page scripts.
 
+The investigation import is a trust-boundary adapter, not a second
+orchestrator: it accepts only a completed, already-redacted
+`theforge/OrchestrationReport/v1`, preserves correlation/provenance fields,
+indexes a deterministic Markdown projection and refuses secret-shaped payloads.
+It does not write the vault. Use the existing Obsidian sync-plan → reviewed
+export flow when a human wants to materialize the projection in Obsidian.
+
 ### Obsidian interoperability
 
-The stdlib vault adapter imports and exports bounded Markdown without requiring
-the Obsidian application or CLI. `validate_canvas_document()` validates the
+The stdlib vault adapter scans, imports and exports bounded Markdown without requiring
+the Obsidian application or CLI. `GET /api/v1/products/{pid}/documents/obsidian/files`
+returns a bounded, body-free Markdown path index for destination/import selection;
+it skips hidden Forge/Obsidian internals, symlinks, hardlinks and oversized files.
+`validate_canvas_document()` validates the
 safe structural subset of JSON Canvas (unique node/edge IDs and existing edge
-endpoints). `validate_base_document()` validates a bounded Bases container and
-the shapes of its known sections (`properties`, `formulas`, `filters`, and
-`views`). Both validators parse content without rendering or executing it and
-return versioned validation envelopes. Full Bases query/view semantics and a
-Canvas editor are intentionally not claimed yet.
+endpoints). `validate_base_document()` validates the official YAML container
+and core sections (`properties`, `formulas`, `filters`, `summaries`, and
+`views`), while `serialize_base_document()` emits deterministic `.base` YAML.
+Both operations parse/serialize without rendering or executing filters or
+formulas; Obsidian remains the execution engine. Product Forge does not claim
+to implement a Canvas editor or a Bases formula evaluator.
 
 ### Agents (Agent Factory)
 

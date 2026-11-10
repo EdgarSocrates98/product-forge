@@ -1,6 +1,6 @@
 # Product Forge — MCP tools
 
-`productforge mcp serve` exposes 14 tools over stdio (JSON-RPC). Hosts
+`productforge mcp serve` exposes 17 tools over stdio (JSON-RPC). Hosts
 register it via `.mcp.json` (the `mcp` install component writes the entry):
 
 ```json
@@ -17,6 +17,9 @@ HTTP transport is also available: `productforge mcp serve --transport http`.
 | `product_list` | — (`workspace_id`?) | products, optionally filtered |
 | `product_context` | `product_id` | Product Context Package — entities, sources, agents, contracts |
 | `knowledge_query` | `product_id`, `question` | FTS chunks **with citations** |
+| `knowledge_evidence` | `product_id` | body-free evidence metadata and provenance |
+| `obsidian_preview` | `path` | authorized note metadata/projection; never the note body |
+| `obsidian_files` | — (`prefix`/`limit`?) | bounded authorized Markdown path index; never document bodies |
 | `knowledge_health` | `product_id` | coverage/citation health |
 | `product_graph` | `product_id` | entity/relation graph projection |
 | `agent_list` | `product_id` | agent definitions |
@@ -36,5 +39,8 @@ HTTP transport is also available: `productforge mcp serve --transport http`.
   eval-gated (`agent_eval` ≥ 0.5 + `tools_allowed`).
 - **Read-only analytics** — `query_validate` proves read-only before any
   execution path; mutating SQL is rejected, never run.
+- **Obsidian boundary** — preview/evidence are read-only MCP tools. Import,
+  sync-plan and sync-apply are published as manifest workflows; apply requires
+  an explicit CLI/API confirmation and emits the native sync receipt.
 - **Honest absence** — missing capability is a named state
   (`unverified`/`unavailable:*`), not a fabricated result.

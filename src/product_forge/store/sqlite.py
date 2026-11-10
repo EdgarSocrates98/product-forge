@@ -52,6 +52,7 @@ COLLECTIONS = (
     "meetings",
     "notebooks",
     "session_contexts",
+    "obsidian_vaults",
     "audit_events",
 )
 

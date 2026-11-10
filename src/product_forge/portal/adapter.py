@@ -7,6 +7,7 @@ every op to real Store calls — nothing fabricates state.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import urllib.error
@@ -28,7 +29,18 @@ from .._forge_portal import (
 )
 from ..config import db_path, home_dir, load_config
 from ..domain.models import Board, Initiative, Product, Task, Workspace, new_id, utcnow
-from ..knowledge.obsidian import ObsidianVaultError, export_vault_document, import_vault_document
+from ..knowledge.obsidian import (
+    ObsidianVaultError,
+    export_vault_document,
+    import_vault_document,
+    list_obsidian_receipts,
+    obsidian_projection_metadata,
+    plan_vault_sync,
+    rollback_vault_document,
+    scan_vault_documents,
+    skip_vault_sync,
+    validate_vault_authorization,
+)
 from ..knowledge.search import search_knowledge
 from ..knowledge.url import UrlCaptureError, fetch_url_document
 from ..knowledge.versions import explorer_versions, prepare_version
@@ -55,7 +67,10 @@ def _obsidian_vault() -> Path:
     raw = os.environ.get("FORGE_OBSIDIAN_VAULT", "").strip()
     if not raw:
         raise PortalError("OBSIDIAN-NOT-CONFIGURED", "Obsidian vault is not configured", http=422)
-    return Path(raw)
+    try:
+        return validate_vault_authorization(Path(raw))
+    except ObsidianVaultError as exc:
+        raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
 
 
 def _require(st: Store, collection: str, key: str) -> dict[str, Any]:
@@ -185,6 +200,15 @@ class ProductForgePortal(PortalAdapter):
         self.register(Operation("GET", "/products/{pid}/documents/search", self._document_search))
         self.register(Operation("GET", "/products/{pid}/knowledge/search", self._knowledge_search))
         self.register(Operation("GET", "/products/{pid}/documents/{did}", self._document_detail))
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/{did}/knowledge-state",
+                self._knowledge_state_transition,
+                mutating=True,
+                confirm="transition",
+            )
+        )
         self.register(Operation("GET", "/workspace/discovery", self._workspace_discovery))
         self.register(Operation("GET", "/workspace/discovery/preview", self._workspace_preview))
         self.register(
@@ -207,6 +231,9 @@ class ProductForgePortal(PortalAdapter):
             )
         )
         self.register(Operation("GET", "/products/{pid}/documents/obsidian/preview", self._obsidian_preview))
+        self.register(Operation("GET", "/products/{pid}/documents/obsidian/status", self._obsidian_status))
+        self.register(Operation("GET", "/products/{pid}/documents/obsidian/files", self._obsidian_files))
+        self.register(Operation("GET", "/products/{pid}/documents/obsidian/history", self._obsidian_history))
         self.register(
             Operation(
                 "POST",
@@ -223,6 +250,31 @@ class ProductForgePortal(PortalAdapter):
                 self._obsidian_export,
                 mutating=True,
                 confirm="export",
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/obsidian/sync-plan",
+                self._obsidian_sync_plan,
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/obsidian/rollback",
+                self._obsidian_rollback,
+                mutating=True,
+                confirm="rollback",
+            )
+        )
+        self.register(
+            Operation(
+                "POST",
+                "/products/{pid}/documents/obsidian/sync-skip",
+                self._obsidian_sync_skip,
+                mutating=True,
+                confirm="skip",
             )
         )
         self.register(Operation("GET", "/products/{pid}/agents", self._agents))
@@ -523,9 +575,40 @@ class ProductForgePortal(PortalAdapter):
                         "snippet": hit["snip"],
                         "source": metadata.get("source"),
                         "version": metadata.get("version", 1),
+                        "knowledge_state": metadata.get("knowledge_state", "captured"),
                     }
                 )
             return {"schema": "productforge/DocumentSearch/v1", "items": items}
+        finally:
+            st.close()
+
+    def _knowledge_state_transition(self, ctx: RequestContext) -> dict[str, Any]:
+        from ..knowledge.lifecycle import KnowledgeLifecycleError, transition
+
+        body = ctx.body or {}
+        if str(body.get("confirm") or "") != "transition":
+            raise PortalError("KNOWLEDGE-CONFIRM-REQUIRED", "confirm=transition is required", http=422)
+        st = _store()
+        try:
+            pid, did = ctx.params["pid"], ctx.params["did"]
+            doc = _require(st, "documents", did)
+            if doc.get("product_id") != pid:
+                raise PortalError("PORTAL-NOT-FOUND", "document not in product", http=404)
+            try:
+                metadata, receipt = transition(
+                    doc.get("metadata") or {},
+                    str(body.get("state") or ""),
+                    evidence_refs=body.get("evidence_refs") or [],
+                    reason=str(body.get("reason") or ""),
+                    actor="portal",
+                )
+            except KnowledgeLifecycleError as exc:
+                raise PortalError(
+                    "KNOWLEDGE-TRANSITION-REFUSED", str(exc), http=422
+                ) from exc
+            doc["metadata"] = metadata
+            st.put_doc("documents", doc)
+            return {"document": doc, "transition": receipt}
         finally:
             st.close()
 
@@ -737,8 +820,106 @@ class ProductForgePortal(PortalAdapter):
         try:
             imported = import_vault_document(_obsidian_vault(), raw_path)
         except ObsidianVaultError as exc:
-            raise PortalError(exc.code, str(exc), http=422) from exc
-        return {k: v for k, v in imported.items() if k != "content"} | {"preview": imported["content"]}
+            raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
+        return {
+            k: v for k, v in imported.items() if k not in {"content", "markdown"}
+        } | {
+            "markdown": obsidian_projection_metadata(imported["markdown"]),
+            "preview": imported["content"],
+        }
+
+    def _obsidian_status(self, ctx: RequestContext) -> dict[str, Any]:
+        st = _store()
+        try:
+            product = _require(st, "products", ctx.params["pid"])
+            workspace = str(product.get("workspace_id") or "local")
+        finally:
+            st.close()
+        raw = os.environ.get("FORGE_OBSIDIAN_VAULT", "").strip()
+        if not raw:
+            return {
+                "schema": "theforge/ObsidianVaultDescriptor/v1",
+                "version": "v1",
+                "workspace": workspace,
+                "vault_id": "unconfigured",
+                "path": ".",
+                "source": "product-forge",
+                "classification": "internal",
+                "detected": False,
+                "capabilities": [],
+                "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT"},
+                "warnings": ["an authorized vault is not configured"],
+                "unresolved": ["configure FORGE_OBSIDIAN_VAULT on the Product Forge service"],
+            }
+        root = Path(raw).expanduser()
+        try:
+            resolved = validate_vault_authorization(root)
+        except ObsidianVaultError as exc:
+            return {
+                "schema": "theforge/ObsidianVaultDescriptor/v1",
+                "version": "v1",
+                "workspace": workspace,
+                "vault_id": "unauthorized",
+                "path": ".",
+                "source": "product-forge",
+                "classification": "internal",
+                "detected": False,
+                "capabilities": [],
+                "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT"},
+                "warnings": [str(exc)],
+                "unresolved": [exc.code],
+            }
+        path_hash = hashlib.sha256(str(resolved).encode("utf-8")).hexdigest()
+        detected = resolved.is_dir()
+        return {
+            "schema": "theforge/ObsidianVaultDescriptor/v1",
+            "version": "v1",
+            "workspace": workspace,
+            "vault_id": f"vault-{path_hash[:16]}",
+            "path": ".",
+            "source": "product-forge",
+            "classification": "internal",
+            "detected": detected,
+            "capabilities": [
+                "scan_read_only",
+                "preview",
+                "import_read_only",
+                "sync_plan",
+                "reviewed_sync",
+                "sync_skip",
+                "rollback",
+                "history",
+            ]
+            if detected
+            else [],
+            "provenance": {"configuration": "FORGE_OBSIDIAN_VAULT", "path_hash": path_hash},
+            "warnings": [] if detected else ["configured vault is not an accessible directory"],
+            "unresolved": [] if detected else ["verify the configured vault directory"],
+        }
+
+    def _obsidian_files(self, ctx: RequestContext) -> dict[str, Any]:
+        raw_prefix = _q1(ctx, "prefix") or ""
+        raw_limit = _q1(ctx, "limit") or "200"
+        try:
+            limit = int(raw_limit)
+        except ValueError as exc:
+            raise PortalError("OBSIDIAN-SCAN-LIMIT", "limit must be an integer", http=422) from exc
+        try:
+            return scan_vault_documents(_obsidian_vault(), prefix=raw_prefix, limit=limit)
+        except ObsidianVaultError as exc:
+            raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
+
+    def _obsidian_history(self, ctx: RequestContext) -> dict[str, Any]:
+        raw_limit = _q1(ctx, "limit") or "50"
+        try:
+            limit = int(raw_limit)
+        except ValueError as exc:
+            raise PortalError("OBSIDIAN-HISTORY-LIMIT", "limit must be an integer", http=422) from exc
+        try:
+            items = list_obsidian_receipts(_obsidian_vault(), limit=limit)
+        except ObsidianVaultError as exc:
+            raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
+        return {"schema": "theforge/ObsidianSyncHistory/v1", "items": items, "count": len(items)}
 
     def _obsidian_import(self, ctx: RequestContext) -> dict[str, Any]:
         pid = ctx.params["pid"]
@@ -752,7 +933,12 @@ class ProductForgePortal(PortalAdapter):
             try:
                 imported = import_vault_document(_obsidian_vault(), raw_path)
             except ObsidianVaultError as exc:
-                raise PortalError(exc.code, str(exc), http=422) from exc
+                raise PortalError(
+                    exc.code,
+                    str(exc),
+                    http=422,
+                    details={"sync_state": exc.sync_state},
+                ) from exc
             existing = [
                 doc
                 for doc in st.list("documents", product_id=pid)
@@ -776,6 +962,7 @@ class ProductForgePortal(PortalAdapter):
                     "source": "obsidian",
                     "obsidian_path": imported["path"],
                     "size": imported["size"],
+                    "obsidian_projection": obsidian_projection_metadata(imported["markdown"]),
                     "provenance": imported["provenance"],
                 },
             )
@@ -821,9 +1008,21 @@ class ProductForgePortal(PortalAdapter):
         try:
             product = _require(st, "products", pid)
             try:
-                exported = export_vault_document(_obsidian_vault(), raw_path, content)
+                exported = export_vault_document(
+                    _obsidian_vault(),
+                    raw_path,
+                    content,
+                    baseline_hash=body.get("baseline_hash"),
+                    classification=str(body.get("classification") or "internal"),
+                    source=str(body.get("source") or "product-forge"),
+                )
             except ObsidianVaultError as exc:
-                raise PortalError(exc.code, str(exc), http=422) from exc
+                raise PortalError(
+                    exc.code,
+                    str(exc),
+                    http=422,
+                    details={"sync_state": exc.sync_state},
+                ) from exc
             _record_audit(
                 st,
                 ctx,
@@ -835,6 +1034,106 @@ class ProductForgePortal(PortalAdapter):
             )
             ctx.emit("obsidian.document.exported", resource_id=exported["path"], product_id=pid)
             return exported
+        finally:
+            st.close()
+
+    def _obsidian_sync_plan(self, ctx: RequestContext) -> dict[str, Any]:
+        body = ctx.body or {}
+        raw_path = str(body.get("path") or "").strip()
+        content = str(body.get("content") or "")
+        if not raw_path or not content:
+            raise PortalError("OBSIDIAN-PLAN-REQUIRED", "path and content are required", http=422)
+        try:
+            return plan_vault_sync(
+                _obsidian_vault(),
+                raw_path,
+                content,
+                baseline_hash=body.get("baseline_hash"),
+                classification=str(body.get("classification") or "internal"),
+                source=str(body.get("source") or "product-forge"),
+            )
+        except ObsidianVaultError as exc:
+            raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
+
+    def _obsidian_rollback(self, ctx: RequestContext) -> dict[str, Any]:
+        pid = ctx.params["pid"]
+        body = ctx.body or {}
+        raw_path = str(body.get("path") or "").strip()
+        receipt_path = str(body.get("receipt_path") or "").strip()
+        if not raw_path or not receipt_path:
+            raise PortalError(
+                "OBSIDIAN-ROLLBACK-REQUIRED",
+                "path and receipt_path are required",
+                http=422,
+            )
+        st = _store()
+        try:
+            product = _require(st, "products", pid)
+            try:
+                rolled_back = rollback_vault_document(
+                    _obsidian_vault(),
+                    raw_path,
+                    receipt_path=receipt_path,
+                    source=str(body.get("source") or "product-forge"),
+                )
+            except ObsidianVaultError as exc:
+                raise PortalError(
+                    exc.code,
+                    str(exc),
+                    http=422,
+                    details={"sync_state": exc.sync_state},
+                ) from exc
+            _record_audit(
+                st,
+                ctx,
+                "obsidian.document.rollback",
+                "obsidian",
+                rolled_back["path"],
+                product_id=pid,
+                workspace_id=product.get("workspace_id"),
+            )
+            ctx.emit("obsidian.document.rolled_back", resource_id=rolled_back["path"], product_id=pid)
+            return rolled_back
+        finally:
+            st.close()
+
+    def _obsidian_sync_skip(self, ctx: RequestContext) -> dict[str, Any]:
+        pid = ctx.params["pid"]
+        body = ctx.body or {}
+        raw_path = str(body.get("path") or "").strip()
+        content = str(body.get("content") or "")
+        if not raw_path or not content:
+            raise PortalError("OBSIDIAN-SKIP-REQUIRED", "path and content are required", http=422)
+        st = _store()
+        try:
+            product = _require(st, "products", pid)
+            try:
+                skipped = skip_vault_sync(
+                    _obsidian_vault(),
+                    raw_path,
+                    content,
+                    reason=str(body.get("reason") or "operation skipped by policy"),
+                    classification=str(body.get("classification") or "internal"),
+                    source=str(body.get("source") or "product-forge"),
+                )
+            except ObsidianVaultError as exc:
+                raise PortalError(
+                    exc.code,
+                    str(exc),
+                    http=422,
+                    details={"sync_state": exc.sync_state},
+                ) from exc
+            _record_audit(
+                st,
+                ctx,
+                "obsidian.document.sync_skipped",
+                "obsidian",
+                skipped["path"],
+                product_id=pid,
+                workspace_id=product.get("workspace_id"),
+            )
+            ctx.emit("obsidian.document.sync_skipped", resource_id=skipped["path"], product_id=pid)
+            return skipped
         finally:
             st.close()
 

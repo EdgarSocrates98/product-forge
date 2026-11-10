@@ -35,6 +35,24 @@ def test_agentic_manifest_version_matches_package() -> None:
     )
 
 
+def test_agentic_manifest_publishes_implemented_knowledge_capabilities() -> None:
+    manifest = json.loads((REPO / "forge.agentic.json").read_text(encoding="utf-8"))
+    workflows = {item["id"]: item for item in manifest["workflows"]}
+    expected = {
+        "obsidian.preview",
+        "obsidian.import",
+        "obsidian.export",
+        "obsidian.sync.plan",
+        "obsidian.sync.apply",
+        "knowledge.context.project",
+        "knowledge.evidence.list",
+    }
+    assert expected <= workflows.keys()
+    assert workflows["obsidian.preview"]["read_only"] is True
+    assert workflows["obsidian.sync.apply"]["read_only"] is False
+    assert workflows["knowledge.evidence.list"]["read_only"] is True
+
+
 def test_packaged_manifests_match_root_manifests() -> None:
     for name in ("forge.json", "forge.agentic.json"):
         root = json.loads((REPO / name).read_text(encoding="utf-8"))

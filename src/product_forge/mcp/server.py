@@ -8,6 +8,8 @@ audit and approvals live.
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
 from typing import Any
 
 from .. import __version__
@@ -18,6 +20,13 @@ from ..store.sqlite import Store
 def _store() -> Store:
     home = home_dir()
     return Store(db_path(home, load_config(home)))
+
+
+def _obsidian_vault() -> Path:
+    raw = os.environ.get("FORGE_OBSIDIAN_VAULT", "").strip()
+    if not raw:
+        raise ValueError("FORGE_OBSIDIAN_VAULT is not configured")
+    return Path(raw)
 
 
 def tool_specs() -> list[dict[str, Any]]:
@@ -31,6 +40,18 @@ def tool_specs() -> list[dict[str, Any]]:
         {"name": "knowledge_query", "description": "FTS retrieval over product knowledge, with citations",
          "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}, "question": {"type": "string"}},  # noqa: E501
                          "required": ["product_id", "question"]}},
+        {"name": "knowledge_evidence", "description": "List body-free knowledge evidence and provenance",
+         "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}},  # noqa: E501
+                         "required": ["product_id"]}},
+        {"name": "obsidian_preview",
+         "description": "Preview authorized Obsidian note metadata without its body",
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}},  # noqa: E501
+                         "required": ["path"]}},
+        {"name": "obsidian_files",
+         "description": "List bounded authorized Obsidian Markdown paths without document bodies",
+         "inputSchema": {"type": "object", "properties": {
+             "prefix": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 10000}
+         }}},
         {"name": "agent_list", "description": "List agent definitions for a product",
          "inputSchema": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}},  # noqa: E501
         {"name": "product_graph", "description": "Entity/relation graph projection for a product",
@@ -74,6 +95,45 @@ def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             hits = st.search_fts(args["product_id"], args["question"], limit=int(args.get("limit", 5)))
             return {"hits": hits, "citations": [
                 {"chunk_id": h["id"], "document_id": h["document_id"], "snippet": h["snip"]} for h in hits]}
+        if name == "knowledge_evidence":
+            product_id = args["product_id"]
+            st.get("products", product_id)
+            return {
+                "schema": "theforge/KnowledgeEvidenceList/v1",
+                "product_id": product_id,
+                "items": [
+                    {
+                        "id": doc.get("id"),
+                        "title": doc.get("title"),
+                        "content_hash": doc.get("content_hash"),
+                        "status": doc.get("status"),
+                        "chunk_count": doc.get("chunk_count"),
+                        "metadata": doc.get("metadata") or {},
+                    }
+                    for doc in st.list("documents", product_id=product_id)
+                ],
+            }
+        if name == "obsidian_preview":
+            from ..knowledge.obsidian import import_vault_document, obsidian_projection_metadata
+
+            imported = import_vault_document(_obsidian_vault(), args["path"])
+            return {
+                "schema": "theforge/ObsidianPreview/v1",
+                "path": imported["path"],
+                "title": imported["title"],
+                "content_hash": imported["content_hash"],
+                "size": imported["size"],
+                "projection": obsidian_projection_metadata(imported["markdown"]),
+                "provenance": imported["provenance"],
+            }
+        if name == "obsidian_files":
+            from ..knowledge.obsidian import scan_vault_documents
+
+            return scan_vault_documents(
+                _obsidian_vault(),
+                prefix=str(args.get("prefix") or ""),
+                limit=int(args.get("limit", 200)),
+            )
         if name == "agent_list":
             return {"items": st.list("agents", product_id=args["product_id"])}
         if name == "product_graph":

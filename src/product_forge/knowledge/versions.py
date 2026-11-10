@@ -20,6 +20,8 @@ def source_document_key(metadata: dict[str, Any]) -> str | None:
         if source == "workspace"
         else metadata.get("obsidian_path")
         if source == "obsidian"
+        else metadata.get("investigation_correlation_id")
+        if source == "the-forge"
         else None
     )
     if not source or not locator:
@@ -37,6 +39,10 @@ def prepare_version(
     walk, while all family members remain queryable in the durable store.
     """
     enriched = dict(metadata)
+    # Indexing is not validation.  All source-backed imports enter the
+    # governed lifecycle as captured unless the producer explicitly marks an
+    # agent projection as draft.
+    enriched.setdefault("knowledge_state", "captured")
     key = source_document_key(enriched)
     if not key:
         return enriched, None
