@@ -16,6 +16,9 @@ def test_observability_receipt_measures_local_budget_and_gateway_fixture_usage_h
     assert receipt["schema"] == "product-forge/knowledge-observability-benchmark/v1"
     row = receipt["results"][0]
     assert row["scan"]["count"] == 3
+    for operation in ("scan", "import", "wikilink_resolution", "export", "reindex_search"):
+        assert row[operation]["peak_rss_bytes"] is not None
+        assert row[operation]["peak_rss_bytes"] > 0
     assert row["import"]["count"] == 3
     assert row["wikilink_resolution"]["resolved"] == 3
     assert row["reindex_search"]["search_hits"] == 3

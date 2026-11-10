@@ -2,7 +2,8 @@
 
 The receipt covers the operations that exist in the current product: safe vault
 scan, bounded import, wikilink resolution, one atomic export and SQLite/FTS
-reindex/search.  Peak Python allocation is captured with ``tracemalloc``.
+reindex/search. Peak Python allocation is captured with ``tracemalloc`` and
+resident memory is sampled through standard-library platform APIs.
 Provider token usage is measured through a controlled subprocess fixture that
 uses the same gateway and budget ledger as a real provider. Real provider usage
 remains explicitly ``NOT_RUN``. Retrieval-context budget and citation quality
@@ -12,10 +13,13 @@ are measured against a deterministic fixture corpus.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
+import os
 import statistics
 import sys
 import tempfile
+import threading
 import time
 import tracemalloc
 from collections.abc import Callable
@@ -49,15 +53,82 @@ stable reference for the local knowledge pipeline.
 """
 
 
-def _measure(fn: Callable[[], T]) -> tuple[T, float, int]:
+def _current_rss_bytes() -> int | None:
+    """Return current resident memory using only stdlib/platform APIs."""
+    if sys.platform == "win32":
+        from ctypes import wintypes
+
+        class _Counters(ctypes.Structure):
+            _fields_ = [
+                ("cb", wintypes.DWORD),
+                ("page_fault_count", wintypes.DWORD),
+                ("peak_working_set_size", ctypes.c_size_t),
+                ("working_set_size", ctypes.c_size_t),
+                ("quota_peak_paged_pool_usage", ctypes.c_size_t),
+                ("quota_paged_pool_usage", ctypes.c_size_t),
+                ("quota_peak_non_paged_pool_usage", ctypes.c_size_t),
+                ("quota_non_paged_pool_usage", ctypes.c_size_t),
+                ("pagefile_usage", ctypes.c_size_t),
+                ("peak_pagefile_usage", ctypes.c_size_t),
+            ]
+
+        counters = _Counters()
+        counters.cb = ctypes.sizeof(counters)
+        try:
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            psapi = ctypes.WinDLL("psapi", use_last_error=True)
+            kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+            psapi.GetProcessMemoryInfo.argtypes = [
+                wintypes.HANDLE,
+                ctypes.POINTER(_Counters),
+                wintypes.DWORD,
+            ]
+            psapi.GetProcessMemoryInfo.restype = wintypes.BOOL
+            process = kernel32.GetCurrentProcess()
+            ok = psapi.GetProcessMemoryInfo(
+                process,
+                ctypes.byref(counters),
+                counters.cb,
+            )
+        except (AttributeError, OSError):
+            return None
+        return int(counters.working_set_size) if ok else None
+
+    try:
+        page_size = int(os.sysconf("SC_PAGE_SIZE"))
+        with open("/proc/self/statm", encoding="ascii") as statm:
+            resident_pages = int(statm.read().split()[1])
+        return resident_pages * page_size
+    except (FileNotFoundError, IndexError, OSError, ValueError):
+        return None
+
+
+def _measure(fn: Callable[[], T]) -> tuple[T, float, int, int | None]:
     tracemalloc.start()
+    peak_rss = _current_rss_bytes()
+    stop = threading.Event()
+
+    def sample_rss() -> None:
+        nonlocal peak_rss
+        while not stop.wait(0.005):
+            current = _current_rss_bytes()
+            if current is not None:
+                peak_rss = max(peak_rss or current, current)
+
+    sampler = threading.Thread(target=sample_rss, name="rss-sampler", daemon=True)
+    sampler.start()
     started = time.perf_counter()
     try:
         value = fn()
         elapsed_ms = (time.perf_counter() - started) * 1000
         _current, peak_bytes = tracemalloc.get_traced_memory()
-        return value, round(elapsed_ms, 3), peak_bytes
+        current = _current_rss_bytes()
+        if current is not None:
+            peak_rss = max(peak_rss or current, current)
+        return value, round(elapsed_ms, 3), peak_bytes, peak_rss
     finally:
+        stop.set()
+        sampler.join(timeout=1)
         tracemalloc.stop()
 
 
@@ -289,19 +360,23 @@ def _provider_usage() -> dict[str, Any]:
 def _row(size: int) -> dict[str, Any]:
     temporary, vault, paths = _vault(size)
     try:
-        scanned, scan_ms, scan_peak = _measure(
+        scanned, scan_ms, scan_peak, scan_rss = _measure(
             lambda: scan_vault_documents(vault, prefix="notes", limit=size)
         )
-        imported, import_ms, import_peak = _measure(lambda: import_vault_documents(vault, paths))
-        resolved, resolve_ms, resolve_peak = _measure(lambda: _resolve_wikilinks(imported))
-        _exported, export_ms, export_peak = _measure(
+        imported, import_ms, import_peak, import_rss = _measure(
+            lambda: import_vault_documents(vault, paths)
+        )
+        resolved, resolve_ms, resolve_peak, resolve_rss = _measure(
+            lambda: _resolve_wikilinks(imported)
+        )
+        _exported, export_ms, export_peak, export_rss = _measure(
             lambda: export_vault_document(
                 vault,
                 f"exports/benchmark-{size}.md",
                 "# Export benchmark\n\nReviewed candidate.\n",
             )
         )
-        store_receipt, store_ms, store_peak = _measure(
+        store_receipt, store_ms, store_peak, store_rss = _measure(
             lambda: run_store_benchmark((size,), 1)["results"][0]
         )
         token_budget, citation_quality = _retrieval_quality()
@@ -313,30 +388,35 @@ def _row(size: int) -> dict[str, Any]:
                 "count": len(scanned["items"]),
                 "elapsed_ms": scan_ms,
                 "peak_python_bytes": scan_peak,
+                "peak_rss_bytes": scan_rss,
             },
             "import": {
                 "status": "PASS",
                 "count": len(imported),
                 "elapsed_ms": import_ms,
                 "peak_python_bytes": import_peak,
+                "peak_rss_bytes": import_rss,
             },
             "wikilink_resolution": {
                 "status": "PASS",
                 **resolved,
                 "elapsed_ms": resolve_ms,
                 "peak_python_bytes": resolve_peak,
+                "peak_rss_bytes": resolve_rss,
             },
             "export": {
                 "status": "PASS",
                 "scope": "one atomic document export",
                 "elapsed_ms": export_ms,
                 "peak_python_bytes": export_peak,
+                "peak_rss_bytes": export_rss,
             },
             "reindex_search": {
                 "status": "PASS",
                 "scope": "SQLite FTS local benchmark",
                 "elapsed_ms": store_ms,
                 "peak_python_bytes": store_peak,
+                "peak_rss_bytes": store_rss,
                 **store_receipt,
             },
             "token_budget": token_budget,
@@ -369,7 +449,7 @@ def run(sizes: tuple[int, ...], iterations: int = 1) -> dict[str, Any]:
         "sizes": list(sizes),
         "iterations": iterations,
         "limitations": [
-            "tracemalloc measures Python allocations, not resident process memory",
+            "RSS is sampled with stdlib platform APIs; short-lived sub-5ms spikes can be under-sampled",
             "export measures one document per size, not a bulk export API",
             (
                 "token usage is proven only through a controlled provider fixture; "
