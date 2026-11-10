@@ -1,0 +1,10 @@
+{
+  "cycle": "2.7",
+  "repository": "product-forge",
+  "version": "0.2.2",
+  "tag": "v0.2.2",
+  "source_commit": "c63c751804cef8cedeec9abbb5c1d927ea10b84d",
+  "version_source": "pyproject.toml and product_forge.__version__",
+  "standalone_package": "forge-obsidian 0.1.0",
+  "verified_at": "2026-11-10"
+}
