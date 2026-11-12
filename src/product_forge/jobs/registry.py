@@ -112,8 +112,9 @@ class JobRegistry:
             sets.append(f"{k}=?")
             params.append(json.dumps(v) if isinstance(v, (dict, list)) else v)
         params.append(jid)
-        self.store._conn.execute(  # noqa: SLF001, S608 — set names internal
-            f"UPDATE jobs SET {', '.join(sets)} WHERE id=?", tuple(params)
+        self.store._conn.execute(  # noqa: SLF001
+            f"UPDATE jobs SET {', '.join(sets)} WHERE id=?",  # noqa: S608 — set names internal
+            tuple(params),
         )
         self.store._conn.commit()  # noqa: SLF001
         return self.get(jid)
