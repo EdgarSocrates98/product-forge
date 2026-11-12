@@ -1,0 +1,9 @@
+{
+  "cycle": "2.7-patch",
+  "repository": "product-forge",
+  "version": "0.2.4",
+  "tag": "v0.2.4",
+  "source_commit": "96da6c75444a885e69775e29315301c17f57b66c",
+  "version_source": "src/product_forge/__init__.py",
+  "verified_at": "2026-11-12"
+}
