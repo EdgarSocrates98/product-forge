@@ -1,7 +1,7 @@
 {
   "schema": "forge/SpecialistAgenticManifest/v1",
   "provider": "forge-agent-bridge",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "cli": "forge-bridge",
   "cli_entry": "forge_agent_bridge.cli:main",
   "workflows": [
@@ -42,7 +42,7 @@
   ],
   "agent_roster_paths": ["src/forge_agent_bridge/installation/assets/agents"],
   "coordinators": [],
-  "mcp_command": ["{cli}", "serve"],
+  "mcp_command": ["{cli}", "mcp", "serve"],
   "host_adapters": ["claude", "codex", "devin", "copilot"],
   "read_only_default": true,
   "requires_credentials": false,
