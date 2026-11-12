@@ -20,10 +20,10 @@ _PATTERNS: list[tuple[EntityKind, re.Pattern[str]]] = [
     (
         EntityKind.METRIC,
         re.compile(
-            r"\b(?:metric|métrica|kpi|sla|sl[oai]|conversion rate|churn|mrr|arr|dau|mau|error rate|latency|p95|p99)\b[:\s]*([a-z_][\w ]{0,30})?",
+            r"\b(?:metric|métrica|kpi|sla|sl[oai]|conversion rate|churn|mrr|arr|dau|mau|error rate|latency|p95|p99)\b[:\s]*([a-z_][\w ]{0,30})?",  # noqa: E501
             re.I,
         ),
-    ),  # noqa: E501
+    ),
     (EntityKind.FEATURE, re.compile(r"^#{1,3}\s+([A-Z][\w .-]{2,60})\s*$", re.M)),
     (EntityKind.EVENT, re.compile(r"\bevent[o]?\b[:\s]+[`'\"]?([a-z_][\w.]+)[`'\"]?", re.I)),
 ]

@@ -66,10 +66,10 @@ def deliver_alert(
                 if not secret:
                     raise ValidationError("webhook secret environment variable is missing")
                 body = json.dumps({"schema": "productforge/Alert/v1", "alert": alert}).encode()
-                req = urllib.request.Request(
+                req = urllib.request.Request(  # noqa: S310 — url from webhook config
                     str(cfg["url"]),
                     data=body,
-                    method="POST",  # noqa: S310
+                    method="POST",
                     headers={"Content-Type": "application/json", "X-Forge-Webhook-Secret": secret},
                 )
                 with urllib.request.urlopen(req, timeout=10) as response:  # noqa: S310 - HTTPS checked
