@@ -30,11 +30,22 @@ def test_watch_breach_opens_alert(env):
     from product_forge.operations.watches import create_watch, evaluate_watch, run_due
 
     st = _store(h)
-    st.put("data_sources", DataSource(id="s1", product_id="p", name="m",
-                                    connector=ConnectorType.SQLITE, locator=str(db)))
-    w = create_watch(st, "p", {"name": "error-rate", "source_id": "s1",
-                               "statement": "SELECT max(v) FROM err_rate",
-                               "op": ">", "value": 0.10, "interval_s": 0})
+    st.put(
+        "data_sources",
+        DataSource(id="s1", product_id="p", name="m", connector=ConnectorType.SQLITE, locator=str(db)),
+    )
+    w = create_watch(
+        st,
+        "p",
+        {
+            "name": "error-rate",
+            "source_id": "s1",
+            "statement": "SELECT max(v) FROM err_rate",
+            "op": ">",
+            "value": 0.10,
+            "interval_s": 0,
+        },
+    )
     res = evaluate_watch(st, w)
     assert res["breached"] and res["value"] == 0.15
     alerts = st.list("alerts", product_id="p")
@@ -89,18 +100,28 @@ def test_workflow_multi_agent(env):
     from product_forge.knowledge.ingest import sha256_text
 
     st = _store(h)
-    doc = Document(id="d1", product_id="p", title="t", content_hash=sha256_text("x"),
-                   status=DocumentStatus.INDEXED)
+    doc = Document(
+        id="d1", product_id="p", title="t", content_hash=sha256_text("x"), status=DocumentStatus.INDEXED
+    )
     st.put("documents", doc)
     st.put_chunks("d1", "p", ["retry policy is exponential backoff"])
-    st.put("agents", AgentDefinition(id="a1", product_id="p", name="A",
-                                   template="product-analyst",
-                                   tools_allowed=["knowledge_query"]))
-    st.put("data_sources", DataSource(id="s1", product_id="p", name="m",
-                                    connector=ConnectorType.SQLITE, locator=str(db)))
-    spec = {"name": "investigate", "steps": [
-        {"id": "ask", "kind": "agent", "agent_id": "a1", "input": "retry policy?"},
-        {"id": "verify", "kind": "tool", "tool": "knowledge_health"}]}
+    st.put(
+        "agents",
+        AgentDefinition(
+            id="a1", product_id="p", name="A", template="product-analyst", tools_allowed=["knowledge_query"]
+        ),
+    )
+    st.put(
+        "data_sources",
+        DataSource(id="s1", product_id="p", name="m", connector=ConnectorType.SQLITE, locator=str(db)),
+    )
+    spec = {
+        "name": "investigate",
+        "steps": [
+            {"id": "ask", "kind": "agent", "agent_id": "a1", "input": "retry policy?"},
+            {"id": "verify", "kind": "tool", "tool": "knowledge_health"},
+        ],
+    }
     rec = run_workflow(st, "p", spec)
     assert rec["status"] == "completed" and len(rec["steps"]) == 2
     st.close()
@@ -113,8 +134,7 @@ def test_workflow_halts_on_cross_product(env):
 
     st = _store(h)
     st.put("agents", AgentDefinition(id="aX", product_id="OTHER", name="X"))
-    rec = run_workflow(st, "p", {"steps": [{"id": "s", "kind": "agent",
-                                            "agent_id": "aX", "input": "hi"}]})
+    rec = run_workflow(st, "p", {"steps": [{"id": "s", "kind": "agent", "agent_id": "aX", "input": "hi"}]})
     assert rec["status"] == "halted" and rec["steps"][0]["status"] == "denied"
     st.close()
 

@@ -23,10 +23,14 @@ def delegates(cfg: dict[str, Any]) -> list[dict[str, Any]]:
     """Declared delegates normalized — operator allowlist, no discovery."""
     out: list[dict[str, Any]] = []
     for d in cfg.get("delegates") or []:
-        out.append({"id": str(d.get("id", "")),
-                    "cli": str(d.get("cli", "")),
-                    "workflows": [str(w) for w in d.get("workflows") or []],
-                    "description": str(d.get("description", ""))})
+        out.append(
+            {
+                "id": str(d.get("id", "")),
+                "cli": str(d.get("cli", "")),
+                "workflows": [str(w) for w in d.get("workflows") or []],
+                "description": str(d.get("description", "")),
+            }
+        )
     return out
 
 
@@ -35,9 +39,9 @@ def catalog(cfg: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     for d in delegates(cfg):
         resolved = shutil.which(d["cli"]) if d["cli"] else None
-        rows.append({**d,
-                     "status": "available" if resolved else "unavailable:cli-not-found",
-                     "resolved": resolved})
+        rows.append(
+            {**d, "status": "available" if resolved else "unavailable:cli-not-found", "resolved": resolved}
+        )
     return rows
 
 

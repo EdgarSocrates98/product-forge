@@ -33,6 +33,7 @@ def _assets_dir() -> Path:
     Angular bundle and never silently select the legacy UI when a valid Angular
     bundle is present.
     """
+
     def valid(candidate: Path) -> bool:
         index = candidate / "index.html"
         if not candidate.is_dir() or not index.is_file():
@@ -52,7 +53,8 @@ def _assets_dir() -> Path:
             except (OSError, json.JSONDecodeError, UnicodeDecodeError):
                 return False
             resources = [
-                resource for resource in re.findall(r'(?:src|href)="([^"?#]+)', html)
+                resource
+                for resource in re.findall(r'(?:src|href)="([^"?#]+)', html)
                 if resource not in {"/", ""}
             ]
             return all((candidate / resource.lstrip("/")).is_file() for resource in resources)
@@ -154,6 +156,8 @@ def _child_death_signal() -> None:
         ctypes.CDLL(None).prctl(1, signal.SIGTERM)
     except (AttributeError, OSError):
         pass
+
+
 def _read_manifest(path: Path) -> dict[str, Any] | None:
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
@@ -284,8 +288,7 @@ class _BridgeSupervisor:
     MAX_RESTARTS = 3
     RETRY_DELAY_S = 2.0
 
-    def __init__(self, *, port: int, home: Path, env: dict[str, str],
-                 quiet: bool, token_file: Path) -> None:
+    def __init__(self, *, port: int, home: Path, env: dict[str, str], quiet: bool, token_file: Path) -> None:
         self._port = port
         self._home = home
         self._env = env
@@ -325,8 +328,7 @@ class _BridgeSupervisor:
             return self.status()
         self.last_exit = self.proc.returncode
         self.proc = None
-        _log_event(self._home, "bridge.exited", exit_code=self.last_exit,
-                   restarts=self.restarts)
+        _log_event(self._home, "bridge.exited", exit_code=self.last_exit, restarts=self.restarts)
         if self.restarts >= self.MAX_RESTARTS:
             self.state = "degraded"
             _log_event(self._home, "bridge.restart_cap", max=self.MAX_RESTARTS)
@@ -342,12 +344,10 @@ class _BridgeSupervisor:
         except Exception as exc:  # noqa: BLE001 - retry on the next check
             self.proc = None
             self._not_before = time.monotonic() + self.RETRY_DELAY_S
-            _log_event(self._home, "bridge.restart_failed", error=str(exc),
-                       restarts=self.restarts)
+            _log_event(self._home, "bridge.restart_failed", error=str(exc), restarts=self.restarts)
             return self.status()
         self.state = "running"
-        _log_event(self._home, "bridge.restarted", pid=self.proc.pid,
-                   restarts=self.restarts)
+        _log_event(self._home, "bridge.restarted", pid=self.proc.pid, restarts=self.restarts)
         self._repair_gateway(adapter)
         return self.status()
 
@@ -357,8 +357,10 @@ class _BridgeSupervisor:
         try:
             bootstrap = adapter._bridge_bootstrap(ctx=None)
             self.gateway = (
-                "paired" if bootstrap.get("connected")
-                else f"unpaired:{bootstrap.get('bridge', {}).get('reason', '?')}")
+                "paired"
+                if bootstrap.get("connected")
+                else f"unpaired:{bootstrap.get('bridge', {}).get('reason', '?')}"
+            )
         except Exception as exc:  # noqa: BLE001 - pairing stays retryable
             self.gateway = f"unpaired:{type(exc).__name__}"
             _log_event(self._home, "bridge.repair_failed", error=str(exc))
@@ -396,8 +398,7 @@ class _BridgeSupervisor:
         self.state = "stopped"
 
 
-def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
-        quiet: bool = True) -> None:
+def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True, quiet: bool = True) -> None:
     """Start the Product Forge portal composition until interrupted."""
     assets = _assets_dir()
     home = home_dir()
@@ -429,6 +430,7 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         except OSError:
             bridge_port = _free_loopback_port()
     from ..install.managed_runtime import ensure_postgres
+
     runtime_state = ensure_postgres(home, profile=str(cfg.get("install_profile", "recommended")))
     supervisor: _BridgeSupervisor | None = None
     server = None
@@ -451,11 +453,12 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         # single-command entry even when `productforge install` was skipped.
         try:
             from forge_agent_bridge.install import lifecycle as _bridge_lc
+
             manifest["bridge"]["provision"] = _bridge_lc.install(
-                scope="user", profile="recommended", yes=True)
+                scope="user", profile="recommended", yes=True
+            )
         except Exception as exc:  # noqa: BLE001 - serve creates the minimum anyway
-            manifest["bridge"]["provision"] = {
-                "state": "unverified", "error": str(exc)}
+            manifest["bridge"]["provision"] = {"state": "unverified", "error": str(exc)}
 
         # The adapter and the child bridge must agree on the dynamically
         # selected port.  This is what makes `productforge portal --port ...`
@@ -464,11 +467,12 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         os.environ["FORGE_BRIDGE_URL"] = bridge_url
         bridge_env = _bridge_environment(os.environ.copy())
         bridge_env["FORGE_BRIDGE_URL"] = bridge_url
-        token_file = Path(os.environ.get(
-            "FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token")).expanduser()
+        token_file = Path(
+            os.environ.get("FORGE_BRIDGE_TOKEN_FILE", "~/.forge-bridge/pair.token")
+        ).expanduser()
         supervisor = _BridgeSupervisor(
-            port=bridge_port, home=home, env=bridge_env, quiet=quiet,
-            token_file=token_file)
+            port=bridge_port, home=home, env=bridge_env, quiet=quiet, token_file=token_file
+        )
         supervisor.start()
         adapter = ProductForgePortal()
         adapter.assets_dir = assets
@@ -483,8 +487,10 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         try:
             bootstrap = adapter._bridge_bootstrap(ctx=None)
             supervisor.gateway = (
-                "paired" if bootstrap.get("connected")
-                else f"unpaired:{bootstrap.get('bridge', {}).get('reason', '?')}")
+                "paired"
+                if bootstrap.get("connected")
+                else f"unpaired:{bootstrap.get('bridge', {}).get('reason', '?')}"
+            )
         except Exception as exc:  # noqa: BLE001 - bootstrap stays retryable client-side
             supervisor.gateway = f"unpaired:{type(exc).__name__}"
         server = PortalServer(adapter, port=port, quiet=quiet)
@@ -493,8 +499,7 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         manifest["bridge"].update(supervisor.status())
         manifest["state"] = "running"
         _write_manifest(manifest_path, manifest)
-        _log_event(home, "portal.running", url=server.url,
-                   bridge_url=bridge_url, gateway=supervisor.gateway)
+        _log_event(home, "portal.running", url=server.url, bridge_url=bridge_url, gateway=supervisor.gateway)
         print(f"Product Forge portal: {server.url}")
         print(f"Agent Bridge: {bridge_url} ({supervisor.gateway})")
         if open_browser:
@@ -507,8 +512,7 @@ def run(*, port: int = 0, bridge_port: int = 8471, open_browser: bool = True,
         last_sig: tuple[Any, ...] | None = None
         while thread.is_alive():
             status = supervisor.check(adapter=adapter)
-            sig = (status["state"], status["pid"], status["restarts"],
-                   status["gateway"])
+            sig = (status["state"], status["pid"], status["restarts"], status["gateway"])
             if sig != last_sig:
                 manifest["bridge"].update(status)
                 _write_manifest(manifest_path, manifest)

@@ -33,14 +33,22 @@ def _interpolate(text: str, ctx: dict[str, Any]) -> str:
     return _VAR.sub(rep, text)
 
 
-def run_workflow(store: Store, product_id: str, spec: dict[str, Any],
-                 *, actor: str = "api") -> dict[str, Any]:
+def run_workflow(
+    store: Store, product_id: str, spec: dict[str, Any], *, actor: str = "api"
+) -> dict[str, Any]:
     """spec: {name, steps:[{id, kind:agent|tool, agent_id|tool, input?}]}"""
     wf_id = new_id("wfr")
-    record = {"id": wf_id, "schema": "productforge/WorkflowRun/v1",
-              "product_id": product_id, "name": spec.get("name", "workflow"),
-              "status": "running", "steps": [], "context": {},
-              "created_at": utcnow(), "updated_at": utcnow()}
+    record = {
+        "id": wf_id,
+        "schema": "productforge/WorkflowRun/v1",
+        "product_id": product_id,
+        "name": spec.get("name", "workflow"),
+        "status": "running",
+        "steps": [],
+        "context": {},
+        "created_at": utcnow(),
+        "updated_at": utcnow(),
+    }
     context: dict[str, Any] = {}
     halted = False
 
@@ -56,8 +64,7 @@ def run_workflow(store: Store, product_id: str, spec: dict[str, Any],
                     raise UnsafeOperationError("cross-product agent delegation denied")
                 agent = AgentDefinition.model_validate(doc)
                 run = run_agent(store, agent, inp, actor=f"workflow:{wf_id}")
-                entry.update({"run_id": run["id"], "status": run["status"],
-                              "violations": run["violations"]})
+                entry.update({"run_id": run["id"], "status": run["status"], "violations": run["violations"]})
                 context[sid] = run["output"]
             elif kind == "tool":
                 tool_name = step["tool"]

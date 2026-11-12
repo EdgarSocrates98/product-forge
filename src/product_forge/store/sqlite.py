@@ -95,7 +95,9 @@ END;
 # transaction each; schema_migrations records every applied step — a migration
 # must never destroy data silently (ADR-001).
 MIGRATIONS: list[tuple[int, str]] = [
-    (2, """
+    (
+        2,
+        """
 CREATE TABLE IF NOT EXISTS schema_migrations (
     version INTEGER PRIMARY KEY,
     applied_at TEXT NOT NULL,
@@ -116,10 +118,14 @@ CREATE TABLE IF NOT EXISTS jobs (
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status, updated_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_idem ON jobs(idempotency_key);
-"""),
-    (3, """
+""",
+    ),
+    (
+        3,
+        """
     ALTER TABLE jobs ADD COLUMN expires_at TEXT;
-    """),
+    """,
+    ),
 ]
 SCHEMA_VERSION = max(v for v, _ in MIGRATIONS)
 
@@ -145,6 +151,7 @@ class Store:
                 backend = backend or "auto"
         if backend == "postgres" or (backend == "auto" and dsn):
             from .postgres import PostgresStore
+
             return PostgresStore(dsn)
         return super().__new__(cls)
 
@@ -163,6 +170,7 @@ class Store:
     def migrate(self) -> list[int]:
         """Apply pending migrations transactionally; returns applied versions."""
         import hashlib
+
         current = int(self._meta("schema_version") or "1")
         applied: list[int] = []
         for version, ddl in MIGRATIONS:
@@ -172,11 +180,12 @@ class Store:
             with self._lock, self._conn:  # single transaction per migration
                 self._conn.executescript(ddl)
                 self._conn.execute(
-                    "INSERT INTO schema_migrations(version, applied_at, checksum)"
-                    " VALUES(?,?,?)", (version, utcnow(), chk))
+                    "INSERT INTO schema_migrations(version, applied_at, checksum) VALUES(?,?,?)",
+                    (version, utcnow(), chk),
+                )
                 self._conn.execute(
-                    "INSERT OR REPLACE INTO meta(key, value)"
-                    " VALUES('schema_version', ?)", (str(version),))
+                    "INSERT OR REPLACE INTO meta(key, value) VALUES('schema_version', ?)", (str(version),)
+                )
             applied.append(version)
         return applied
 
@@ -242,8 +251,9 @@ class Store:
                 self._conn.commit()
         return entity
 
-    def put_doc(self, collection: str, doc: dict[str, Any], *,
-                status: str | None = None, name: str | None = None) -> dict[str, Any]:
+    def put_doc(
+        self, collection: str, doc: dict[str, Any], *, status: str | None = None, name: str | None = None
+    ) -> dict[str, Any]:
         """Persist a raw dict document (non-pydantic, e.g. run records)."""
         if collection not in COLLECTIONS:
             raise ValueError(f"unknown collection: {collection}")
@@ -254,9 +264,16 @@ class Store:
                 "INSERT OR REPLACE INTO entities"
                 "(collection,id,product_id,workspace_id,status,name,doc,updated_at)"
                 " VALUES(?,?,?,?,?,?,?,?)",
-                (collection, doc["id"], doc.get("product_id"), doc.get("workspace_id"),
-                 status or doc.get("status"), name or doc.get("name"),
-                 blob, doc["updated_at"]),
+                (
+                    collection,
+                    doc["id"],
+                    doc.get("product_id"),
+                    doc.get("workspace_id"),
+                    status or doc.get("status"),
+                    name or doc.get("name"),
+                    blob,
+                    doc["updated_at"],
+                ),
             )
             if self._tx_depth == 0:
                 self._conn.commit()

@@ -66,8 +66,7 @@ def _scope_choices(ctx: UIContext) -> list[str]:
             _c(
                 ctx,
                 "33",
-                "  No repository detected; choose Entire workspace to use this directory "
-                "or My user account.",
+                "  No repository detected; choose Entire workspace to use this directory or My user account.",
             )
         )
         scopes.remove("project")
@@ -276,7 +275,6 @@ def run_wizard(
         print(f"  {i18n.t('health', ctx.language)}: {_c(ctx, color, str(hstatus))}")
 
     if status == "completed":
-        print("  next: productforge status · productforge doctor · "
-              "productforge mcp verify")
+        print("  next: productforge status · productforge doctor · productforge mcp verify")
 
     return 0 if status == "completed" else 1

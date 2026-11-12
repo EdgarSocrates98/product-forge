@@ -14,6 +14,7 @@ def test_bridge_command_is_loopback_service_command() -> None:
     command = _bridge_command(8471)
     assert command[-3:] == ["serve", "--port", "8471"]
     import sys
+
     assert command[:2] == [sys.executable, "-m"]
 
 
@@ -45,15 +46,17 @@ class _FakeProc:
 
 def _supervisor(tmp_path):
     from product_forge.portal import runtime as rt
+
     return rt._BridgeSupervisor(
-        port=18471, home=tmp_path, env={}, quiet=True,
-        token_file=tmp_path / "pair.token")
+        port=18471, home=tmp_path, env={}, quiet=True, token_file=tmp_path / "pair.token"
+    )
 
 
 def test_lifecycle_log_appends_jsonl(tmp_path) -> None:
     import json
 
     from product_forge.portal import runtime as rt
+
     rt._log_event(tmp_path, "portal.running", url="http://127.0.0.1:9")
     rt._log_event(tmp_path, "bridge.exited", exit_code=1)
     lines = rt._lifecycle_log(tmp_path).read_text(encoding="utf-8").splitlines()
@@ -70,6 +73,7 @@ def test_supervisor_status_is_honest_without_proc(tmp_path) -> None:
 
 def test_supervisor_restarts_dead_bridge_and_repairs(monkeypatch, tmp_path) -> None:
     from product_forge.portal import runtime as rt
+
     sup = _supervisor(tmp_path)
     dead = _FakeProc(1111)
     dead.returncode = 1

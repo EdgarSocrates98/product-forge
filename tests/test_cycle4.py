@@ -17,13 +17,22 @@ def _agent(home, tools=None, template="product-analyst"):
 
     st = Store(db_path(home, load_config(home)))
     text = "Payments retry policy: exponential backoff, 5 attempts. Metric: error rate."
-    doc = Document(id="doc_a", product_id="prd_a", title="p.md",
-                   content_hash=sha256_text(text), status=DocumentStatus.INDEXED)
+    doc = Document(
+        id="doc_a",
+        product_id="prd_a",
+        title="p.md",
+        content_hash=sha256_text(text),
+        status=DocumentStatus.INDEXED,
+    )
     st.put("documents", doc)
     st.put_chunks("doc_a", "prd_a", chunk_text(text))
-    a = AgentDefinition(id="agt_a", product_id="prd_a", name="Analyst",
-                        template=template,
-                        tools_allowed=tools or ["knowledge_query", "entities"])
+    a = AgentDefinition(
+        id="agt_a",
+        product_id="prd_a",
+        name="Analyst",
+        template=template,
+        tools_allowed=tools or ["knowledge_query", "entities"],
+    )
     st.put("agents", a)
     return st, a
 
@@ -97,18 +106,24 @@ def test_api_agent_flow(home):
     c = TestClient(create_app(home))
     h = {"Authorization": f"Bearer {tok}"}
     wid = c.post("/api/v1/workspaces", json={"name": "W"}, headers=h).json()["data"]["id"]
-    pid = c.post("/api/v1/products", json={"workspace_id": wid, "name": "P"},
-                 headers=h).json()["data"]["id"]
-    c.post(f"/api/v1/products/{pid}/documents",
-           json={"title": "d", "content": "retry policy: backoff"}, headers=h)
-    aid = c.post(f"/api/v1/products/{pid}/agents",
-                 json={"name": "A", "template": "product-analyst"}, headers=h).json()["data"]["id"]
+    pid = c.post("/api/v1/products", json={"workspace_id": wid, "name": "P"}, headers=h).json()["data"]["id"]
+    c.post(
+        f"/api/v1/products/{pid}/documents",
+        json={"title": "d", "content": "retry policy: backoff"},
+        headers=h,
+    )
+    aid = c.post(
+        f"/api/v1/products/{pid}/agents", json={"name": "A", "template": "product-analyst"}, headers=h
+    ).json()["data"]["id"]
     # run before tools allowed → steps denied
     r = c.post(f"/api/v1/products/{pid}/agents/{aid}/run", json={"input": "policy?"}, headers=h)
     assert r.status_code == 200
     # configure permissions
-    c.patch(f"/api/v1/products/{pid}/agents/{aid}",
-            json={"tools_allowed": ["knowledge_query", "entities"]}, headers=h)
+    c.patch(
+        f"/api/v1/products/{pid}/agents/{aid}",
+        json={"tools_allowed": ["knowledge_query", "entities"]},
+        headers=h,
+    )
     r = c.post(f"/api/v1/products/{pid}/agents/{aid}/run", json={"input": "policy?"}, headers=h)
     assert r.json()["data"]["status"] == "completed"
     # eval then publish
@@ -122,13 +137,13 @@ def test_risk_tiered_publish_gates() -> None:
     from product_forge.agents.policy import publish_gate, risk_tier
     from product_forge.domain.models import AgentDefinition
 
-    low = AgentDefinition(id="a1", product_id="p", name="l", mission="m",
-                          tools_allowed=["knowledge_query"])
+    low = AgentDefinition(id="a1", product_id="p", name="l", mission="m", tools_allowed=["knowledge_query"])
     assert risk_tier(low) == "low"
     assert publish_gate(low)["eval_gate"] == 0.50
 
-    unknown = AgentDefinition(id="a2", product_id="p", name="u", mission="m",
-                              tools_allowed=["nonexistent_tool"])
-    assert risk_tier(unknown) == "high"          # conservative
+    unknown = AgentDefinition(
+        id="a2", product_id="p", name="u", mission="m", tools_allowed=["nonexistent_tool"]
+    )
+    assert risk_tier(unknown) == "high"  # conservative
     assert publish_gate(unknown)["eval_gate"] == 0.80
     assert publish_gate(unknown)["approval_required"] is True

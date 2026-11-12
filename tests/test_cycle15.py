@@ -23,9 +23,16 @@ def _env(tmp_path, monkeypatch, provider_text):
 
 def _agent():
     from product_forge.domain.models import AgentDefinition
-    return AgentDefinition(id="a1", product_id="p1", name="Analyst",
-                           template="product-analyst", mission="ground answers",
-                           tools_allowed=["knowledge_query"], status="published")
+
+    return AgentDefinition(
+        id="a1",
+        product_id="p1",
+        name="Analyst",
+        template="product-analyst",
+        mission="ground answers",
+        tools_allowed=["knowledge_query"],
+        status="published",
+    )
 
 
 def test_llm_run_tool_call_then_answer(tmp_path, monkeypatch):
@@ -38,7 +45,8 @@ def test_llm_run_tool_call_then_answer(tmp_path, monkeypatch):
         "  'tokens_in':10,'tokens_out':5}))\n"
         "else:\n"
         " print(json.dumps({'text':'E42 means insufficient funds [cited]',"
-        "  'tokens_in':40,'tokens_out':20}))\n")
+        "  'tokens_in':40,'tokens_out':20}))\n"
+    )
     st, cfg = _env(tmp_path, monkeypatch, provider)
     agent = _agent()
     st.put("agents", agent)
@@ -58,7 +66,8 @@ def test_llm_tool_denied_by_policy(tmp_path, monkeypatch):
         "import json,sys\n"
         "req=json.loads(sys.stdin.read())\n"
         "print(json.dumps({'tool_calls':[{'tool':'delegate_exec','arguments':{}}],"
-        "'tokens_in':5,'tokens_out':2}))\n")
+        "'tokens_in':5,'tokens_out':2}))\n"
+    )
     st, cfg = _env(tmp_path, monkeypatch, provider)
     agent = _agent()  # tools_allowed only knowledge_query
     st.put("agents", agent)
@@ -87,7 +96,8 @@ def test_llm_max_turns_honest_stop(tmp_path, monkeypatch):
         "import json,sys\n"
         "json.loads(sys.stdin.read())\n"
         "print(json.dumps({'tool_calls':[{'tool':'knowledge_query','arguments':{}}],"
-        "'tokens_in':1,'tokens_out':1}))\n")
+        "'tokens_in':1,'tokens_out':1}))\n"
+    )
     st, cfg = _env(tmp_path, monkeypatch, provider)
     agent = _agent()
     st.put("agents", agent)

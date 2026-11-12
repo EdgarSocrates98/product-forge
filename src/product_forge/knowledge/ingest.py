@@ -123,15 +123,17 @@ def chunk_markdown(text: str, target: int = TARGET, max_len: int = MAX_CHUNK) ->
             if relative < 0:
                 relative = cursor
             piece_end = relative + len(piece)
-            result.append(MarkdownChunk(
-                text=piece,
-                heading_path=headings,
-                start_offset=relative,
-                end_offset=piece_end,
-                sequence=sequence,
-                token_estimate=max(1, len(piece.split())),
-                content_hash=sha256_text(piece),
-            ))
+            result.append(
+                MarkdownChunk(
+                    text=piece,
+                    heading_path=headings,
+                    start_offset=relative,
+                    end_offset=piece_end,
+                    sequence=sequence,
+                    token_estimate=max(1, len(piece.split())),
+                    content_hash=sha256_text(piece),
+                )
+            )
             sequence += 1
             cursor = piece_end
     return result

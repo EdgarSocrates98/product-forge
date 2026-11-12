@@ -64,9 +64,7 @@ def vault_status(forge_id: str) -> dict[str, Any]:
         "env": {
             "shared": "FORGE_OBSIDIAN_VAULT",
             "specific": f"{_env_prefix(forge_id)}_OBSIDIAN_VAULT",
-            "specific_set": bool(
-                os.environ.get(f"{_env_prefix(forge_id)}_OBSIDIAN_VAULT", "").strip()
-            ),
+            "specific_set": bool(os.environ.get(f"{_env_prefix(forge_id)}_OBSIDIAN_VAULT", "").strip()),
         },
         "warnings": [],
         "unresolved": [],
@@ -387,9 +385,7 @@ def obsidian_argparse(
         p = sub.add_parser(
             verb,
             help=(
-                "Dry-run a sync of FILE into PATH."
-                if verb == "sync-plan"
-                else "Apply a reviewed sync plan."
+                "Dry-run a sync of FILE into PATH." if verb == "sync-plan" else "Apply a reviewed sync plan."
             ),
         )
         p.add_argument("path")
@@ -477,8 +473,15 @@ def obsidian_app(
         no_moc: bool = typer.Option(False, "--no-moc", help="Do not refresh forges/index.md"),
     ) -> None:
         """Apply a reviewed sync plan and emit the real vault receipt."""
-        _run("export", path=path, file=file, baseline_hash=baseline_hash,
-             classification=classification, yes=yes, moc=not no_moc)
+        _run(
+            "export",
+            path=path,
+            file=file,
+            baseline_hash=baseline_hash,
+            classification=classification,
+            yes=yes,
+            moc=not no_moc,
+        )
 
     @app.command("export-note")
     def export_note(
@@ -490,8 +493,15 @@ def obsidian_app(
         no_moc: bool = typer.Option(False, "--no-moc"),
     ) -> None:
         """Export FILE as ``forges/<forge-id>/<name>.md`` — canonical layout."""
-        _run("export-note", name=name, file=file, baseline_hash=baseline_hash,
-             classification=classification, yes=yes, moc=not no_moc)
+        _run(
+            "export-note",
+            name=name,
+            file=file,
+            baseline_hash=baseline_hash,
+            classification=classification,
+            yes=yes,
+            moc=not no_moc,
+        )
 
     @app.command("history")
     def history(limit: int = typer.Option(50, "--limit", min=1, max=100)) -> None:

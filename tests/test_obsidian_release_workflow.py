@@ -60,9 +60,7 @@ def test_release_workflow_builds_checksums_and_publishes_the_same_artifact() -> 
     assert "sha256sum -- *" in build_text
     assert "test -f dist-checksums.txt" in publish_text
     assert "cd dist && sha256sum --check ../dist-checksums.txt" in publish_text
-    assert "pypa/gh-action-pypi-publish@" in "\n".join(
-        str(step.get("uses", "")) for step in _steps(publish)
-    )
+    assert "pypa/gh-action-pypi-publish@" in "\n".join(str(step.get("uses", "")) for step in _steps(publish))
 
     artifact_steps = [
         step for step in _steps(build) if str(step.get("uses", "")).startswith("actions/upload-artifact@")
@@ -90,4 +88,3 @@ def test_release_workflow_pins_every_action_to_a_commit_sha() -> None:
             if uses:
                 ref = str(uses).partition("@")[2]
                 assert re.fullmatch(r"[0-9a-f]{40}", ref), f"{job_name}: {uses}"
-

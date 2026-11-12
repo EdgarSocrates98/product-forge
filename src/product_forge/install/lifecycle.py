@@ -11,6 +11,7 @@ Consumer docs (AGENTS.md/CLAUDE.md/AGENT_PROTOCOL.md) and the shared
 forge_context engine (`product_forge._forgecontext`) — this module wires
 manifest + registration into install/uninstall/repair.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -104,8 +105,11 @@ def _render_assets(ctx: kit.InstallContext) -> dict[str, bytes]:
     skills_root = _skills_root()
     skill_files = _bundle_files(skills_root, "pf-*/") if skills_root else {}
     agents_root = _agents_root()
-    agent_files = {f.relative_to(agents_root).as_posix(): f.read_bytes()
-                   for f in agents_root.rglob("*.md")} if agents_root else {}
+    agent_files = (
+        {f.relative_to(agents_root).as_posix(): f.read_bytes() for f in agents_root.rglob("*.md")}
+        if agents_root
+        else {}
+    )
     for host in ctx.hosts:
         for host_dir in kit._host_dirs(host, ctx.scope):
             rel_dir = host_dir.lstrip("~/") if ctx.scope == "user" else host_dir
@@ -126,18 +130,22 @@ def _render_assets(ctx: kit.InstallContext) -> dict[str, bytes]:
         if not root:
             continue
         for f in root.rglob("*"):
-            if not f.is_file() or f.suffix in (".pyc", ".pyo") \
-                    or "__pycache__" in f.parts:
+            if not f.is_file() or f.suffix in (".pyc", ".pyo") or "__pycache__" in f.parts:
                 continue
             rel = f.relative_to(root).as_posix()
             assets[f"{bundle_rel}/bundle/{name}/{rel}"] = f.read_bytes()
     return assets
 
 
-def _ctx(scope: str, profile: str, hosts: tuple[str, ...],
-         root: Path | None, dry_run: bool,
-         components: tuple[str, ...] | list[str] | None = None,
-         cwd: Path | None = None) -> kit.InstallContext:
+def _ctx(
+    scope: str,
+    profile: str,
+    hosts: tuple[str, ...],
+    root: Path | None,
+    dry_run: bool,
+    components: tuple[str, ...] | list[str] | None = None,
+    cwd: Path | None = None,
+) -> kit.InstallContext:
     if profile not in PROFILES:
         raise kit.InstallError(kit.E_PROFILE, f"profile {profile!r}; {PROFILES}")
     unknown = [h for h in hosts if h not in HOSTS]
@@ -146,10 +154,15 @@ def _ctx(scope: str, profile: str, hosts: tuple[str, ...],
     spec = _spec()
     target = kit.resolve_scope(spec, scope, cwd or Path.cwd(), root)
     return kit.InstallContext(
-        spec=spec, scope=scope, root=target,
+        spec=spec,
+        scope=scope,
+        root=target,
         state_dir=kit.state_dir_for(spec, scope, target),
-        profile=profile, hosts=hosts, dry_run=dry_run,
-        options=kit.component_options(profile, components))
+        profile=profile,
+        hosts=hosts,
+        dry_run=dry_run,
+        options=kit.component_options(profile, components),
+    )
 
 
 def _bridge_install(*, dry_run: bool, yes: bool) -> dict[str, Any]:
@@ -161,11 +174,10 @@ def _bridge_install(*, dry_run: bool, yes: bool) -> dict[str, Any]:
     forge install."""
     try:
         from forge_agent_bridge.install import lifecycle as bridge
-        return bridge.install(scope="user", profile="recommended",
-                              dry_run=dry_run, yes=yes)
+
+        return bridge.install(scope="user", profile="recommended", dry_run=dry_run, yes=yes)
     except Exception as exc:  # noqa: BLE001 - degraded, never fatal
-        return {"forge": "forge-agent-bridge", "status": "unverified",
-                "error": str(exc)}
+        return {"forge": "forge-agent-bridge", "status": "unverified", "error": str(exc)}
 
 
 def _source() -> dict[str, Any]:
@@ -180,22 +192,28 @@ def _source() -> dict[str, Any]:
 
 def _register(spec: kit.ForgeSpec, root: Path) -> None:
     try:
-        kit.register_installation(kit.manifest_for(
-            spec, install_root=root, venv=None, version=__version__,
-            source=_source(), shim=None))
+        kit.register_installation(
+            kit.manifest_for(
+                spec, install_root=root, venv=None, version=__version__, source=_source(), shim=None
+            )
+        )
     except kit.InstallError:
         pass
 
 
-def install(*, scope: str = "user", profile: str = "recommended",
-            hosts: tuple[str, ...] = ("all",), root: Path | None = None,
-            components: tuple[str, ...] | None = None,
-            gateway_profile: str | None = None,
-            dry_run: bool = False, yes: bool = False) -> dict[str, Any]:
+def install(
+    *,
+    scope: str = "user",
+    profile: str = "recommended",
+    hosts: tuple[str, ...] = ("all",),
+    root: Path | None = None,
+    components: tuple[str, ...] | None = None,
+    gateway_profile: str | None = None,
+    dry_run: bool = False,
+    yes: bool = False,
+) -> dict[str, Any]:
     if gateway_profile is not None and gateway_profile not in GATEWAY_PROFILES:
-        raise kit.InstallError(
-            kit.E_PROFILE,
-            f"gateway_profile {gateway_profile!r}; {GATEWAY_PROFILES}")
+        raise kit.InstallError(kit.E_PROFILE, f"gateway_profile {gateway_profile!r}; {GATEWAY_PROFILES}")
     selected = tuple(HOSTS) if hosts == ("all",) else hosts
     ctx = _ctx(scope, profile, selected, root, dry_run, components)
     if ctx.dry_run:
@@ -205,9 +223,9 @@ def install(*, scope: str = "user", profile: str = "recommended",
         planned = doc.get("planned_files")
         if isinstance(planned, list):
             planned.extend(
-                {"path": f"bridge:{s['component']} → {s['target']}",
-                 "kind": "bridge", "action": s["action"]}
-                for s in bridge_doc.get("plan", []))
+                {"path": f"bridge:{s['component']} → {s['target']}", "kind": "bridge", "action": s["action"]}
+                for s in bridge_doc.get("plan", [])
+            )
         return doc
     with kit.acquire_lock(ctx.state_dir):
         result = kit.apply_install(ctx, approved=yes)
@@ -221,8 +239,7 @@ def install(*, scope: str = "user", profile: str = "recommended",
     return result
 
 
-def _persist_components(ctx: kit.InstallContext,
-                        gateway_profile: str | None) -> None:
+def _persist_components(ctx: kit.InstallContext, gateway_profile: str | None) -> None:
     """Wizard/CLI component + execution-profile selection — the runtime
     reads ``components.json`` under the state dir (same contract as
     spark-forge-aws)."""
@@ -233,8 +250,7 @@ def _persist_components(ctx: kit.InstallContext,
         doc["gateway_profile"] = gateway_profile
     doc["profile"] = ctx.profile
     ctx.state_dir.mkdir(parents=True, exist_ok=True)
-    (ctx.state_dir / "components.json").write_text(
-        json.dumps(doc, indent=2), encoding="utf-8")
+    (ctx.state_dir / "components.json").write_text(json.dumps(doc, indent=2), encoding="utf-8")
 
 
 def status(*, scope: str = "project", root: Path | None = None) -> dict[str, Any]:
@@ -244,12 +260,12 @@ def status(*, scope: str = "project", root: Path | None = None) -> dict[str, Any
     return kit.status(ctx)
 
 
-def doctor(*, scope: str = "project", root: Path | None = None,
-           verify_mcp: bool = False) -> dict[str, Any]:
+def doctor(*, scope: str = "project", root: Path | None = None, verify_mcp: bool = False) -> dict[str, Any]:
     ctx = _ctx(scope, "recommended", tuple(HOSTS), root, False)
     doc = kit.doctor(ctx)
     try:
         from forge_agent_bridge.install import lifecycle as _bridge_lc
+
         doc["bridge"] = _bridge_lc.doctor(scope="user")
     except Exception as exc:  # noqa: BLE001 - honest degraded state
         doc["bridge"] = {"status": "unverified", "error": str(exc)}
@@ -269,6 +285,7 @@ def _portal_composition() -> dict[str, Any]:
     try:
         from ..config import home_dir
         from ..portal import runtime as _rt
+
         manifest = _rt._read_manifest(_rt._manifest_path(home_dir()))
     except Exception as exc:  # noqa: BLE001 - honest degraded state
         return {"state": "unverified", "error": str(exc)}
@@ -290,8 +307,7 @@ def _portal_composition() -> dict[str, Any]:
     }
 
 
-def repair(*, scope: str = "project", root: Path | None = None,
-           dry_run: bool = False) -> dict[str, Any]:
+def repair(*, scope: str = "project", root: Path | None = None, dry_run: bool = False) -> dict[str, Any]:
     ctx = _ctx(scope, "recommended", tuple(HOSTS), root, dry_run)
     with kit.acquire_lock(ctx.state_dir):
         receipt = kit.repair(ctx)
@@ -347,14 +363,18 @@ def repair(*, scope: str = "project", root: Path | None = None,
         return receipt
 
 
-def update(*, scope: str = "project", profile: str = "recommended",
-           hosts: tuple[str, ...] = ("all",), root: Path | None = None,
-           gateway_profile: str | None = None,
-           yes: bool = False, dry_run: bool = False) -> dict[str, Any]:
+def update(
+    *,
+    scope: str = "project",
+    profile: str = "recommended",
+    hosts: tuple[str, ...] = ("all",),
+    root: Path | None = None,
+    gateway_profile: str | None = None,
+    yes: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
     if gateway_profile is not None and gateway_profile not in GATEWAY_PROFILES:
-        raise kit.InstallError(
-            kit.E_PROFILE,
-            f"gateway_profile {gateway_profile!r}; {GATEWAY_PROFILES}")
+        raise kit.InstallError(kit.E_PROFILE, f"gateway_profile {gateway_profile!r}; {GATEWAY_PROFILES}")
     selected = tuple(HOSTS) if hosts == ("all",) else hosts
     ctx = _ctx(scope, profile, selected, root, dry_run)
     if ctx.dry_run:
@@ -371,8 +391,9 @@ def update(*, scope: str = "project", profile: str = "recommended",
     return result
 
 
-def uninstall(*, scope: str = "project", root: Path | None = None,
-              purge_state: bool = False) -> dict[str, Any]:
+def uninstall(
+    *, scope: str = "project", root: Path | None = None, purge_state: bool = False
+) -> dict[str, Any]:
     ctx = _ctx(scope, "recommended", (), root, False)
     with kit.acquire_lock(ctx.state_dir):
         doc = kit.uninstall(ctx, purge_state=purge_state)
@@ -385,6 +406,7 @@ def uninstall(*, scope: str = "project", root: Path | None = None,
                 doc["status"] = "failed"
     try:
         from forge_agent_bridge.install import lifecycle as _bridge_lc
+
         # Bridge uninstall is state-preserving by contract (pair.token,
         # events, backups kept) — `purge_state` here only purges PF state.
         doc["bridge"] = _bridge_lc.uninstall(scope="user")
@@ -472,11 +494,7 @@ def _context_manifest(ctx: kit.InstallContext) -> dict[str, Any]:
     agentic = _bundled_json("forge.agentic.json")
 
     skills_root = _skills_root()
-    skills = (
-        sorted(d.name for d in skills_root.glob("pf-*") if d.is_dir())
-        if skills_root
-        else []
-    )
+    skills = sorted(d.name for d in skills_root.glob("pf-*") if d.is_dir()) if skills_root else []
     agents_root = _agents_root()
     coordinators = _mds(agents_root) if agents_root else []
     executors = _mds(agents_root / "executors") if agents_root else []
@@ -630,9 +648,7 @@ def _register_context(ctx: kit.InstallContext, receipt: dict[str, Any]) -> None:
         return
     try:
         manifest = _context_manifest(ctx)
-        out = fctx.install_transaction(
-            ctx.root, manifest, owner=FORGE_ID, legacy_tags=_LEGACY_DOC_TAGS
-        )
+        out = fctx.install_transaction(ctx.root, manifest, owner=FORGE_ID, legacy_tags=_LEGACY_DOC_TAGS)
         receipt.setdefault("checks", []).append(
             {
                 "id": "context-registry",
@@ -645,8 +661,7 @@ def _register_context(ctx: kit.InstallContext, receipt: dict[str, Any]) -> None:
             {
                 "id": "consumer-docs",
                 "status": "PASS",
-                "detail": f"{docs['status']}: {len(docs['written'])} written, "
-                f"{len(docs['kept'])} kept",
+                "detail": f"{docs['status']}: {len(docs['written'])} written, {len(docs['kept'])} kept",
             }
         )
     except fctx.ContextError as exc:
@@ -661,9 +676,7 @@ def _unregister_context(root: Path) -> list[dict[str, Any]]:
     transacao (§9.2) — so artifacts proprios; docs compartilhados
     regeneram para os sobreviventes."""
     try:
-        out = fctx.uninstall_transaction(
-            root, FORGE_ID, owner=FORGE_ID, legacy_tags=_LEGACY_DOC_TAGS
-        )
+        out = fctx.uninstall_transaction(root, FORGE_ID, owner=FORGE_ID, legacy_tags=_LEGACY_DOC_TAGS)
         docs = out["docs"]
         return [
             {

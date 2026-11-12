@@ -100,7 +100,8 @@ def test_base_dashboard_catalog_covers_the_governed_knowledge_views():
     }
     assert all(validate_base_document(item)["state"] == "validated" for item in catalog)
     assert all(
-        "metadata:" not in render_base_document(
+        "metadata:"
+        not in render_base_document(
             dashboard_id=dashboard_id,
             title=title,
             filter_expression=filter_expression,

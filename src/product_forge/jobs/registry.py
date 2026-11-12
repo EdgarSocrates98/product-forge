@@ -26,21 +26,23 @@ class JobRegistry:
     def register(self, kind: str, handler: Callable[[dict[str, Any]], dict[str, Any]]) -> None:
         self._handlers[kind] = handler
 
-    def _rows(self, where: str = "", params: tuple = (),
-              limit: int | None = None) -> list[dict[str, Any]]:
+    def _rows(self, where: str = "", params: tuple = (), limit: int | None = None) -> list[dict[str, Any]]:
         sql = f"SELECT * FROM jobs {where} ORDER BY created_at"  # noqa: S608 — clauses are internal constants
         if limit:
             sql += f" LIMIT {int(limit)}"
         cur = self.store._conn.execute(sql, params)  # noqa: SLF001
         return [dict(r) for r in cur.fetchall()]
 
-    def enqueue(self, kind: str, payload: dict[str, Any] | None = None,
-                product_id: str | None = None,
-                idempotency_key: str | None = None,
-                expires_at: str | None = None) -> dict[str, Any]:
+    def enqueue(
+        self,
+        kind: str,
+        payload: dict[str, Any] | None = None,
+        product_id: str | None = None,
+        idempotency_key: str | None = None,
+        expires_at: str | None = None,
+    ) -> dict[str, Any]:
         if idempotency_key:
-            existing = self._rows("WHERE idempotency_key=? AND kind=?",
-                                  (idempotency_key, kind))
+            existing = self._rows("WHERE idempotency_key=? AND kind=?", (idempotency_key, kind))
             if existing:
                 return existing[0]
         jid = new_id("job")
@@ -48,8 +50,18 @@ class JobRegistry:
         self.store._conn.execute(  # noqa: SLF001
             "INSERT INTO jobs(id,kind,product_id,status,payload,idempotency_key,"
             "created_at,updated_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)",
-            (jid, kind, product_id, "queued", json.dumps(payload or {}),
-             idempotency_key, now, now, expires_at))
+            (
+                jid,
+                kind,
+                product_id,
+                "queued",
+                json.dumps(payload or {}),
+                idempotency_key,
+                now,
+                now,
+                expires_at,
+            ),
+        )
         self.store._conn.commit()  # noqa: SLF001
         return self.get(jid)
 
@@ -57,6 +69,7 @@ class JobRegistry:
         rows = self._rows("WHERE id=?", (jid,))
         if not rows:
             from ..errors import NotFoundError
+
             raise NotFoundError(f"jobs/{jid} not found")
         row = rows[0]
         if row.get("expires_at") and row["status"] in {"queued", "running"}:
@@ -69,13 +82,15 @@ class JobRegistry:
                 row["status"] = "expired"
         return row
 
-    def list(self, status: str | None = None,
-             product_id: str | None = None) -> list[dict[str, Any]]:
+    def list(self, status: str | None = None, product_id: str | None = None) -> list[dict[str, Any]]:
         rows = self._rows()
         refreshed = [self.get(row["id"]) for row in rows]
-        return [row for row in refreshed
-                if (status is None or row["status"] == status)
-                and (product_id is None or row.get("product_id") == product_id)]
+        return [
+            row
+            for row in refreshed
+            if (status is None or row["status"] == status)
+            and (product_id is None or row.get("product_id") == product_id)
+        ]
 
     def _transition(self, jid: str, status: str, **fields: Any) -> dict[str, Any]:
         current = self.get(jid)
@@ -98,7 +113,8 @@ class JobRegistry:
             params.append(json.dumps(v) if isinstance(v, (dict, list)) else v)
         params.append(jid)
         self.store._conn.execute(  # noqa: SLF001
-            f"UPDATE jobs SET {', '.join(sets)} WHERE id=?", tuple(params))  # noqa: S608 — set names internal
+            f"UPDATE jobs SET {', '.join(sets)} WHERE id=?", tuple(params)
+        )  # noqa: S608 — set names internal
         self.store._conn.commit()  # noqa: SLF001
         return self.get(jid)
 
@@ -111,8 +127,8 @@ class JobRegistry:
     def recover(self) -> int:
         """On boot: jobs left `running` by a crash go back to queued."""
         cur = self.store._conn.execute(  # noqa: SLF001
-            "UPDATE jobs SET status='queued', updated_at=? WHERE status='running'",
-            (utcnow(),))
+            "UPDATE jobs SET status='queued', updated_at=? WHERE status='running'", (utcnow(),)
+        )
         self.store._conn.commit()  # noqa: SLF001
         return cur.rowcount
 
@@ -127,8 +143,7 @@ class JobRegistry:
             return job
         handler = self._handlers.get(job["kind"])
         if handler is None:
-            return self._transition(job["id"], "dead_letter",
-                                    result={"error": f"no-handler:{job['kind']}"})
+            return self._transition(job["id"], "dead_letter", result={"error": f"no-handler:{job['kind']}"})
         attempt = int(job["attempt"]) + 1
         self._transition(job["id"], "running", attempt=attempt)
         try:
@@ -136,5 +151,4 @@ class JobRegistry:
             return self._transition(job["id"], "done", result=result)
         except Exception as e:  # noqa: BLE001 — failure recorded, job retried or dead-lettered
             status = "queued" if attempt < MAX_ATTEMPTS else "dead_letter"
-            return self._transition(job["id"], status,
-                                    result={"error": str(e)[:300], "attempt": attempt})
+            return self._transition(job["id"], status, result={"error": str(e)[:300], "attempt": attempt})

@@ -31,9 +31,9 @@ import re
 import shlex
 import shutil
 import subprocess
-import sys
 import tempfile
 import venv
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -117,9 +117,7 @@ def load_config(repo: Path) -> dict[str, Any]:
     """``forge.json`` at the repo root is the declarative driver."""
     cfg_path = repo / "forge.json"
     if not cfg_path.exists():
-        raise Refusal(
-            "FORGE-INSTALL-NO-CONFIG", f"{cfg_path} missing — run inside a Forge checkout"
-        )
+        raise Refusal("FORGE-INSTALL-NO-CONFIG", f"{cfg_path} missing — run inside a Forge checkout")
     try:
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
     except ValueError as exc:
@@ -168,7 +166,9 @@ def _satisfies(version: str, spec: str) -> bool:
     return True
 
 
-_VERSION_SNIPPET = "import sys;print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"
+_VERSION_SNIPPET = (
+    "import sys;print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"
+)
 
 
 def _python_version_argv(argv: list[str]) -> str | None:
@@ -430,9 +430,7 @@ def install_package(
     cmd.append(req)
     r = _run(cmd, timeout=900)
     if r.returncode != 0:
-        offline_hint = (
-            "" if allow_download else (" — retry with --allow-download if deps are missing")
-        )
+        offline_hint = "" if allow_download else (" — retry with --allow-download if deps are missing")
         raise Refusal(
             "FORGE-INSTALL-RUNTIME-FAILED",
             f"pip install failed{offline_hint}: {r.stderr.strip()[-400:]}",
@@ -451,9 +449,7 @@ def write_launcher(cli: str, venv: Path, no_launcher: bool, log) -> Path | None:
     bindir = _venv_bin(venv)
     real = _cli_executable(cli, venv)
     if not real.exists():
-        raise Refusal(
-            "FORGE-INSTALL-CLI-MISSING", f"{cli} not in {bindir} — package script entry missing?"
-        )
+        raise Refusal("FORGE-INSTALL-CLI-MISSING", f"{cli} not in {bindir} — package script entry missing?")
     d = shim_dir()
     d.mkdir(parents=True, exist_ok=True)
     if os.name == "nt":
@@ -584,9 +580,7 @@ def _shell_path(value: str) -> str:
     return value.replace("\\", "/")
 
 
-def _persist_windows(
-    values: dict[str, str], aliases: dict[str, str], shim: Path | None
-) -> str | None:
+def _persist_windows(values: dict[str, str], aliases: dict[str, str], shim: Path | None) -> str | None:
     import winreg
 
     all_values = {**values, **aliases}
@@ -600,9 +594,7 @@ def _persist_windows(
         for name, value in all_values.items():
             winreg.SetValueEx(key, name, 0, winreg.REG_SZ, value)
         if shim:
-            current = (
-                winreg.QueryValueEx(key, "Path")[0] if _registry_has_value(key, "Path") else ""
-            )
+            current = winreg.QueryValueEx(key, "Path")[0] if _registry_has_value(key, "Path") else ""
             parts = [p for p in current.split(os.pathsep) if p]
             if str(shim) not in parts:
                 parts.append(str(shim))
@@ -649,11 +641,7 @@ def _persist_posix(values: dict[str, str], shim: Path | None, shell_shim: str | 
     pattern = re.compile(rf"{re.escape(marker_start)}.*?{re.escape(marker_end)}\n?", re.DOTALL)
     # A Windows checkout path may contain backslashes; use callable
     # replacement so ``re`` never interprets them as replacement escapes.
-    rendered = (
-        pattern.sub(lambda _match: block, existing)
-        if pattern.search(existing)
-        else block + existing
-    )
+    rendered = pattern.sub(lambda _match: block, existing) if pattern.search(existing) else block + existing
     _atomic_write(env_file, rendered.encode("utf-8"))
     env_file.chmod(0o600)
 
@@ -870,11 +858,7 @@ def register(
         or (
             "pypi-wheel"
             if source.get("kind") == "pypi"
-            else (
-                "git-checkout"
-                if source.get("editable", source.get("kind") == "git-checkout")
-                else "wheel"
-            )
+            else ("git-checkout" if source.get("editable", source.get("kind") == "git-checkout") else "wheel")
         ),
         "installed_at": _now(),
         "updated_at": _now(),
@@ -899,9 +883,9 @@ def register(
 
 
 def _now() -> str:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def detect_hosts() -> dict[str, Any]:
@@ -963,9 +947,7 @@ def run(argv: list[str] | None = None) -> int:
     ap.add_argument("--repo", default=".", help="forge checkout root")
     ap.add_argument("--install-dir", default=None, help="override ~/.forge/installs/<forge_id>")
     ap.add_argument("--python", default=None)
-    ap.add_argument(
-        "--editable", action="store_true", help="pip install -e (dev mode; ties CLI to checkout)"
-    )
+    ap.add_argument("--editable", action="store_true", help="pip install -e (dev mode; ties CLI to checkout)")
     ap.add_argument(
         "--dist",
         default=None,
@@ -1004,11 +986,7 @@ def run(argv: list[str] | None = None) -> int:
     try:
         cfg = load_config(repo)
     except Refusal as exc:
-        print(
-            json.dumps(
-                {"status": "failed", "error": {"kind": exc.kind, "detail": exc.detail}}, indent=2
-            )
-        )
+        print(json.dumps({"status": "failed", "error": {"kind": exc.kind, "detail": exc.detail}}, indent=2))
         return 2
 
     extras = [e.strip() for e in args.extras.split(",") if e.strip()] or cfg.get("extras", [])
@@ -1160,9 +1138,7 @@ def run(argv: list[str] | None = None) -> int:
         python_prov: dict[str, Any] = {}
         python = stage(
             "resolve-python",
-            lambda: find_python(
-                cfg["python"], explicit_python, args.allow_download, log, python_prov
-            ),
+            lambda: find_python(cfg["python"], explicit_python, args.allow_download, log, python_prov),
         )
         if python_prov.get("source") == "uv":
             py_source = "uv"
@@ -1180,11 +1156,7 @@ def run(argv: list[str] | None = None) -> int:
             or (
                 "--python flag"
                 if args.python
-                else (
-                    "FORGE_PYTHON environment variable"
-                    if os.environ.get("FORGE_PYTHON")
-                    else "PATH scan"
-                )
+                else ("FORGE_PYTHON environment variable" if os.environ.get("FORGE_PYTHON") else "PATH scan")
             ),
         }
         venv_dir = stage("create-venv", lambda: create_venv(install_root, python, log))
@@ -1194,9 +1166,7 @@ def run(argv: list[str] | None = None) -> int:
                 repo, venv_dir, extras, args.editable, args.allow_download, log, dist=args.dist
             ),
         )
-        shim = stage(
-            "write-launcher", lambda: write_launcher(cfg["cli"], venv_dir, args.no_launcher, log)
-        )
+        shim = stage("write-launcher", lambda: write_launcher(cfg["cli"], venv_dir, args.no_launcher, log))
         planned_venv = venv_dir or (install_root / ".venv")
         planned_shim = shim or (shim_dir() / cfg["cli"])
         environment = environment_contract(

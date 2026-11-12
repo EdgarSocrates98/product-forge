@@ -17,8 +17,9 @@ from ..domain.models import utcnow
 from ..security import TokenStore
 from ..store.sqlite import Store
 
-app = typer.Typer(name="productforge", no_args_is_help=True,
-                  help="Product Forge — Product Intelligence & Agentic Workspace")
+app = typer.Typer(
+    name="productforge", no_args_is_help=True, help="Product Forge — Product Intelligence & Agentic Workspace"
+)
 ws_app = typer.Typer(help="Workspace management")
 prd_app = typer.Typer(help="Product management")
 kn_app = typer.Typer(help="Knowledge operations")
@@ -92,12 +93,19 @@ def migrate_store(
     cfg = load_config(home)
     from ..store.sqlite import COLLECTIONS
     from ..store.sqlite import Store as SQLiteStore
+
     source = SQLiteStore(db_path(home, cfg))
 
     counts = {collection: len(source.list(collection, limit=100_000)) for collection in COLLECTIONS}
     if dry_run:
-        _out({"dry_run": True, "target": "postgres", "counts": counts,
-              "rollback": "drop target pf_entities/pf_chunks tables; SQLite source is unchanged"})
+        _out(
+            {
+                "dry_run": True,
+                "target": "postgres",
+                "counts": counts,
+                "rollback": "drop target pf_entities/pf_chunks tables; SQLite source is unchanged",
+            }
+        )
         return
     if not yes:
         raise typer.BadParameter("migration writes the target; pass --yes after reviewing --dry-run")
@@ -111,8 +119,14 @@ def migrate_store(
         for collection in COLLECTIONS:
             for doc in source.list(collection, limit=100_000):
                 target.put_doc(collection, doc)
-        _out({"migrated": True, "target": "postgres", "counts": counts,
-              "rollback": "drop target pf_entities/pf_chunks tables; SQLite source is unchanged"})
+        _out(
+            {
+                "migrated": True,
+                "target": "postgres",
+                "counts": counts,
+                "rollback": "drop target pf_entities/pf_chunks tables; SQLite source is unchanged",
+            }
+        )
     finally:
         target.close()
         source.close()
@@ -125,19 +139,16 @@ def version() -> None:
 
 
 @app.command()
-def install(yes: bool = typer.Option(False, "--yes"),
-            scope: str = typer.Option("user", "--scope",
-                                      help="user | project | workspace"),
-            profile: str = typer.Option("recommended", "--profile",
-                                        help="minimal | recommended | full"),
-            host: str = typer.Option("all", "--host",
-                                     help="claude,devin,codex,copilot | all | none"),
-            root: str = typer.Option(None, "--root"),
-            components: str = typer.Option(None, "--components",
-                                           help="csv: skills,agents,mcp,tui,graph-studio"),
-            gateway_profile: str = typer.Option(None, "--gateway-profile",
-                                                help="economy | balanced | deep"),
-            dry_run: bool = typer.Option(False, "--dry-run")) -> None:
+def install(
+    yes: bool = typer.Option(False, "--yes"),
+    scope: str = typer.Option("user", "--scope", help="user | project | workspace"),
+    profile: str = typer.Option("recommended", "--profile", help="minimal | recommended | full"),
+    host: str = typer.Option("all", "--host", help="claude,devin,codex,copilot | all | none"),
+    root: str = typer.Option(None, "--root"),
+    components: str = typer.Option(None, "--components", help="csv: skills,agents,mcp,tui,graph-studio"),
+    gateway_profile: str = typer.Option(None, "--gateway-profile", help="economy | balanced | deep"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
     """Install Product Forge — governed by the forge installkit.
 
     Bare `productforge install` on a TTY opens the guided wizard (scope,
@@ -150,9 +161,15 @@ def install(yes: bool = typer.Option(False, "--yes"),
 
     try:
         doc = run_flag_install(
-            scope=scope, profile=profile, host=host, root=root,
-            components=components, gateway_profile=gateway_profile,
-            dry_run=dry_run, yes=yes)
+            scope=scope,
+            profile=profile,
+            host=host,
+            root=root,
+            components=components,
+            gateway_profile=gateway_profile,
+            dry_run=dry_run,
+            yes=yes,
+        )
     except Exception as e:
         code = getattr(e, "code", "PF-INSTALL")
         _out({"installed": False, "error": {"code": code, "message": str(e)}})
@@ -161,45 +178,56 @@ def install(yes: bool = typer.Option(False, "--yes"),
 
 
 @app.command()
-def repair(scope: str = typer.Option("project", "--scope"),
-           root: str = typer.Option(None, "--root"),
-           dry_run: bool = typer.Option(False, "--dry-run")) -> None:
+def repair(
+    scope: str = typer.Option("project", "--scope"),
+    root: str = typer.Option(None, "--root"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
     """Re-assert drifted managed files (missing/modified ledger entries)."""
     from ..install import lifecycle
 
-    _out(lifecycle.repair(scope=scope, root=Path(root) if root else None,
-                          dry_run=dry_run))
+    _out(lifecycle.repair(scope=scope, root=Path(root) if root else None, dry_run=dry_run))
 
 
 @app.command()
-def update(yes: bool = typer.Option(False, "--yes"),
-           scope: str = typer.Option("project", "--scope"),
-           profile: str = typer.Option("recommended", "--profile"),
-           host: str = typer.Option("all", "--host"),
-           root: str = typer.Option(None, "--root"),
-           dry_run: bool = typer.Option(False, "--dry-run")) -> None:
+def update(
+    yes: bool = typer.Option(False, "--yes"),
+    scope: str = typer.Option("project", "--scope"),
+    profile: str = typer.Option("recommended", "--profile"),
+    host: str = typer.Option("all", "--host"),
+    root: str = typer.Option(None, "--root"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
     """Re-apply the install (idempotent — unchanged assets untouched)."""
     from ..install import lifecycle
 
     hosts = ("all",) if host == "all" else tuple(h.strip() for h in host.split(","))
     try:
-        _out(lifecycle.update(scope=scope, profile=profile, hosts=hosts,
-                              root=Path(root) if root else None,
-                              yes=yes, dry_run=dry_run))
+        _out(
+            lifecycle.update(
+                scope=scope,
+                profile=profile,
+                hosts=hosts,
+                root=Path(root) if root else None,
+                yes=yes,
+                dry_run=dry_run,
+            )
+        )
     except Exception as e:
         _out({"updated": False, "error": str(e)})
         raise typer.Exit(1) from e
 
 
 @app.command()
-def uninstall(scope: str = typer.Option("project", "--scope"),
-              root: str = typer.Option(None, "--root"),
-              purge_state: bool = typer.Option(False, "--purge-state")) -> None:
+def uninstall(
+    scope: str = typer.Option("project", "--scope"),
+    root: str = typer.Option(None, "--root"),
+    purge_state: bool = typer.Option(False, "--purge-state"),
+) -> None:
     """Remove only ledger-owned files; user/adopted files survive."""
     from ..install import lifecycle
 
-    _out(lifecycle.uninstall(scope=scope, root=Path(root) if root else None,
-                             purge_state=purge_state))
+    _out(lifecycle.uninstall(scope=scope, root=Path(root) if root else None, purge_state=purge_state))
 
 
 @app.command()
@@ -209,18 +237,21 @@ def status() -> None:
     cfg = load_config(home)
     db = db_path(home, cfg)
     from ..install.managed_runtime import postgres_status
-    _out({
-        "forge_id": FORGE_ID,
-        "version": __version__,
-        "home": str(home),
-        "home_exists": home.exists(),
-        "db": str(db),
-        "db_exists": db.exists(),
-        "profile": cfg.get("install_profile"),
-        "gateway_profile": cfg.get("gateway_profile"),
-        "llm_provider": cfg.get("llm", {}).get("provider"),
-        "database_runtime": postgres_status(home),
-    })
+
+    _out(
+        {
+            "forge_id": FORGE_ID,
+            "version": __version__,
+            "home": str(home),
+            "home_exists": home.exists(),
+            "db": str(db),
+            "db_exists": db.exists(),
+            "profile": cfg.get("install_profile"),
+            "gateway_profile": cfg.get("gateway_profile"),
+            "llm_provider": cfg.get("llm", {}).get("provider"),
+            "database_runtime": postgres_status(home),
+        }
+    )
 
 
 @app.command()
@@ -243,37 +274,48 @@ def doctor() -> None:
         ("sqlglot", importlib.util.find_spec("sqlglot") is not None, "extra: analytics"),
         ("duckdb", importlib.util.find_spec("duckdb") is not None, "extra: analytics"),
         ("theforge", importlib.util.find_spec("theforge") is not None, "control plane"),
-        ("docker-compose", docker_compose_available() or
-         load_config(home).get("install_profile") in {"minimal", "offline"},
-         "required for recommended/full PostgreSQL runtime"),
+        (
+            "docker-compose",
+            docker_compose_available() or load_config(home).get("install_profile") in {"minimal", "offline"},
+            "required for recommended/full PostgreSQL runtime",
+        ),
     ]:
         checks.append({"check": name, "ok": ok, "detail": detail})
     try:
         from forge_agent_bridge.install import lifecycle as _bridge_lc
+
         _b = _bridge_lc.doctor(scope="user")
         # The composition uses the vendored package (`python -m
         # forge_agent_bridge.cli`), not the standalone console script —
         # so the meaningful gate is: module importable + state provisioned.
         _by = {c["check"]: c.get("state") for c in _b.get("checks", [])}
-        checks.append({
-            "check": "agent-bridge",
-            "ok": importlib.util.find_spec("forge_agent_bridge") is not None
-                  and _by.get("state-root") == "ok",
-            "detail": _b.get("overall", "unknown"),
-        })
+        checks.append(
+            {
+                "check": "agent-bridge",
+                "ok": importlib.util.find_spec("forge_agent_bridge") is not None
+                and _by.get("state-root") == "ok",
+                "detail": _b.get("overall", "unknown"),
+            }
+        )
     except Exception as exc:  # noqa: BLE001 - vendored bridge is expected but degrade honestly
-        checks.append({"check": "agent-bridge", "ok": False,
-                       "detail": f"unavailable:{type(exc).__name__}"})
-    _out({"forge_id": FORGE_ID, "version": __version__, "checks": checks,
-          "database_runtime": postgres_status(home),
-          "ok": all(c["ok"] for c in checks if c["check"] in {"python>=3.11", "pydantic", "typer"})})
+        checks.append({"check": "agent-bridge", "ok": False, "detail": f"unavailable:{type(exc).__name__}"})
+    _out(
+        {
+            "forge_id": FORGE_ID,
+            "version": __version__,
+            "checks": checks,
+            "database_runtime": postgres_status(home),
+            "ok": all(c["ok"] for c in checks if c["check"] in {"python>=3.11", "pydantic", "typer"}),
+        }
+    )
 
 
 @app.command()
 def portal(
     port: int = typer.Option(0, min=0, max=65535, help="Portal port; 0 chooses a free port."),
-    bridge_port: int = typer.Option(0, min=0, max=65535,
-                                    help="Agent Bridge loopback port; 0 chooses a free port."),
+    bridge_port: int = typer.Option(
+        0, min=0, max=65535, help="Agent Bridge loopback port; 0 chooses a free port."
+    ),
     no_open: bool = typer.Option(False, "--no-open", help="Do not open a browser."),
     quiet: bool = typer.Option(False, "--quiet", help="Suppress managed Bridge output."),
 ) -> None:
@@ -290,6 +332,7 @@ def portal(
 
 
 # -- api -----------------------------------------------------------------
+
 
 @api_app.command("serve")
 def api_serve(
@@ -323,6 +366,7 @@ def api_token(show: bool = typer.Option(False, "--show"), rotate: bool = False) 
 
 # -- workspace -------------------------------------------------------------
 
+
 @ws_app.command("create")
 def ws_create(name: str, description: str = "") -> None:
     from ..domain.models import Workspace, new_id
@@ -343,14 +387,21 @@ def ws_list() -> None:
 
 # -- product ---------------------------------------------------------------
 
+
 @prd_app.command("create")
 def prd_create(workspace_id: str, name: str, description: str = "", domain: str = "") -> None:
     from ..domain.models import Product, new_id
 
     st = _store()
     st.get("workspaces", workspace_id)
-    p = Product(id=new_id("prd"), workspace_id=workspace_id, name=name,
-                description=description, domain=domain, status="active")
+    p = Product(
+        id=new_id("prd"),
+        workspace_id=workspace_id,
+        name=name,
+        description=description,
+        domain=domain,
+        status="active",
+    )
     st.put("products", p)
     st.close()
     _out(p.model_dump(mode="json", by_alias=True))
@@ -367,15 +418,21 @@ def prd_list(workspace_id: str | None = None) -> None:
 def prd_context(product_id: str) -> None:
     st = _store()
     p = st.get("products", product_id)
-    _out({"schema": "productforge/ProductContextPackage/v1", "product": p,
-          "sources": st.list("knowledge_sources", product_id=product_id),
-          "entities": st.list("entities", product_id=product_id),
-          "agents": st.list("agents", product_id=product_id),
-          "data_sources": st.list("data_sources", product_id=product_id)})
+    _out(
+        {
+            "schema": "productforge/ProductContextPackage/v1",
+            "product": p,
+            "sources": st.list("knowledge_sources", product_id=product_id),
+            "entities": st.list("entities", product_id=product_id),
+            "agents": st.list("agents", product_id=product_id),
+            "data_sources": st.list("data_sources", product_id=product_id),
+        }
+    )
     st.close()
 
 
 # -- knowledge -------------------------------------------------------------
+
 
 @kn_app.command("import")
 def kn_import(product_id: str, file: Path) -> None:
@@ -389,53 +446,65 @@ def kn_import(product_id: str, file: Path) -> None:
     raw = file.read_text(encoding="utf-8", errors="replace")
     content_hash = sha256_text(raw)
     existing = next(
-        (item for item in st.list("documents", product_id=product_id)
-         if item.get("content_hash") == content_hash),
+        (
+            item
+            for item in st.list("documents", product_id=product_id)
+            if item.get("content_hash") == content_hash
+        ),
         None,
     )
     if existing:
         st.close()
-        _out({
-            "document_id": existing["id"],
-            "chunks": existing.get("chunk_count", 0),
-            "status": existing.get("status", "indexed"),
-            "receipt": {
-                "schema": "theforge/KnowledgeImportReceipt/v1",
-                "receipt_id": new_id("receipt"),
-                "operation": "import",
-                "source_id": "file:" + sha256_text(str(file.resolve()))[:16],
-                "duplicates": [existing["id"]],
-                "content_hashes": {existing["id"]: content_hash},
-                "duration_ms": round((time.perf_counter() - started) * 1000),
-                "audit_id": new_id("audit"),
-                "rollback_available": False,
-            },
-        })
+        _out(
+            {
+                "document_id": existing["id"],
+                "chunks": existing.get("chunk_count", 0),
+                "status": existing.get("status", "indexed"),
+                "receipt": {
+                    "schema": "theforge/KnowledgeImportReceipt/v1",
+                    "receipt_id": new_id("receipt"),
+                    "operation": "import",
+                    "source_id": "file:" + sha256_text(str(file.resolve()))[:16],
+                    "duplicates": [existing["id"]],
+                    "content_hashes": {existing["id"]: content_hash},
+                    "duration_ms": round((time.perf_counter() - started) * 1000),
+                    "audit_id": new_id("audit"),
+                    "rollback_available": False,
+                },
+            }
+        )
         return
-    doc = Document(id=new_id("doc"), product_id=product_id, title=file.name,
-                   content_hash=content_hash, status=DocumentStatus.IMPORTED)
+    doc = Document(
+        id=new_id("doc"),
+        product_id=product_id,
+        title=file.name,
+        content_hash=content_hash,
+        status=DocumentStatus.IMPORTED,
+    )
     st.put("documents", doc)
     chunks = chunk_text(raw)
     doc.chunk_count = st.put_chunks(doc.id, product_id, chunks)
     doc.status = DocumentStatus.INDEXED
     st.put("documents", doc)
     st.close()
-    _out({
-        "document_id": doc.id,
-        "chunks": doc.chunk_count,
-        "status": doc.status,
-        "receipt": {
-            "schema": "theforge/KnowledgeImportReceipt/v1",
-            "receipt_id": new_id("receipt"),
-            "operation": "import",
-            "source_id": "file:" + sha256_text(str(file.resolve()))[:16],
-            "created_ids": [doc.id],
-            "content_hashes": {doc.id: content_hash},
-            "duration_ms": round((time.perf_counter() - started) * 1000),
-            "audit_id": new_id("audit"),
-            "rollback_available": False,
-        },
-    })
+    _out(
+        {
+            "document_id": doc.id,
+            "chunks": doc.chunk_count,
+            "status": doc.status,
+            "receipt": {
+                "schema": "theforge/KnowledgeImportReceipt/v1",
+                "receipt_id": new_id("receipt"),
+                "operation": "import",
+                "source_id": "file:" + sha256_text(str(file.resolve()))[:16],
+                "created_ids": [doc.id],
+                "content_hashes": {doc.id: content_hash},
+                "duration_ms": round((time.perf_counter() - started) * 1000),
+                "audit_id": new_id("audit"),
+                "rollback_available": False,
+            },
+        }
+    )
 
 
 def _cli_obsidian_vault() -> Path:
@@ -455,15 +524,17 @@ def obsidian_preview(path: str) -> None:
     from ..knowledge.obsidian import import_vault_document, obsidian_projection_metadata
 
     imported = import_vault_document(_cli_obsidian_vault(), path)
-    _out({
-        "schema": "theforge/ObsidianPreview/v1",
-        "path": imported["path"],
-        "title": imported["title"],
-        "content_hash": imported["content_hash"],
-        "size": imported["size"],
-        "projection": obsidian_projection_metadata(imported["markdown"]),
-        "provenance": imported["provenance"],
-    })
+    _out(
+        {
+            "schema": "theforge/ObsidianPreview/v1",
+            "path": imported["path"],
+            "title": imported["title"],
+            "content_hash": imported["content_hash"],
+            "size": imported["size"],
+            "projection": obsidian_projection_metadata(imported["markdown"]),
+            "provenance": imported["provenance"],
+        }
+    )
 
 
 @obsidian_app.command("import")
@@ -508,19 +579,21 @@ def obsidian_import(product_id: str, path: str) -> None:
     doc.status = DocumentStatus.INDEXED
     st.put("documents", doc)
     st.close()
-    _out({
-        **doc.model_dump(mode="json", by_alias=True),
-        "state": "imported",
-        "source_path": imported["path"],
-        "source_kind": "obsidian",
-        "receipt": {
-            "schema": "theforge/ObsidianKnowledgeImportReceipt/v1",
-            "operation": "import",
-            "document_id": doc.id,
-            "content_hash": imported["content_hash"],
+    _out(
+        {
+            **doc.model_dump(mode="json", by_alias=True),
+            "state": "imported",
             "source_path": imported["path"],
-        },
-    })
+            "source_kind": "obsidian",
+            "receipt": {
+                "schema": "theforge/ObsidianKnowledgeImportReceipt/v1",
+                "operation": "import",
+                "document_id": doc.id,
+                "content_hash": imported["content_hash"],
+                "source_path": imported["path"],
+            },
+        }
+    )
 
 
 @obsidian_app.command("sync-plan")
@@ -534,14 +607,16 @@ def obsidian_sync_plan(
     from ..knowledge.obsidian import plan_vault_sync
 
     content = file.read_text(encoding="utf-8")
-    _out(plan_vault_sync(
-        _cli_obsidian_vault(),
-        path,
-        content,
-        baseline_hash=baseline_hash,
-        classification=classification,
-        source="product-forge-cli",
-    ))
+    _out(
+        plan_vault_sync(
+            _cli_obsidian_vault(),
+            path,
+            content,
+            baseline_hash=baseline_hash,
+            classification=classification,
+            source="product-forge-cli",
+        )
+    )
 
 
 @obsidian_app.command("export")
@@ -555,20 +630,21 @@ def obsidian_export(
     """Apply a reviewed sync plan and emit the real Obsidian receipt."""
     if not yes:
         raise typer.BadParameter(
-            "export mutates the vault; pass --yes after reviewing "
-            "knowledge obsidian sync-plan"
+            "export mutates the vault; pass --yes after reviewing knowledge obsidian sync-plan"
         )
     from ..knowledge.obsidian import export_vault_document
 
     content = file.read_text(encoding="utf-8")
-    _out(export_vault_document(
-        _cli_obsidian_vault(),
-        path,
-        content,
-        baseline_hash=baseline_hash,
-        classification=classification,
-        source="product-forge-cli",
-    ))
+    _out(
+        export_vault_document(
+            _cli_obsidian_vault(),
+            path,
+            content,
+            baseline_hash=baseline_hash,
+            classification=classification,
+            source="product-forge-cli",
+        )
+    )
 
 
 @kn_app.command("evidence")
@@ -578,14 +654,16 @@ def kn_evidence(product_id: str) -> None:
     st.get("products", product_id)
     items = []
     for doc in st.list("documents", product_id=product_id):
-        items.append({
-            "id": doc.get("id"),
-            "title": doc.get("title"),
-            "content_hash": doc.get("content_hash"),
-            "status": doc.get("status"),
-            "chunk_count": doc.get("chunk_count"),
-            "metadata": doc.get("metadata") or {},
-        })
+        items.append(
+            {
+                "id": doc.get("id"),
+                "title": doc.get("title"),
+                "content_hash": doc.get("content_hash"),
+                "status": doc.get("status"),
+                "chunk_count": doc.get("chunk_count"),
+                "metadata": doc.get("metadata") or {},
+            }
+        )
     st.close()
     _out({"schema": "theforge/KnowledgeEvidenceList/v1", "product_id": product_id, "items": items})
 
@@ -596,12 +674,23 @@ def kn_query(product_id: str, question: str, limit: int = 5) -> None:
     st = _store()
     st.get("products", product_id)
     hits = st.search_fts(product_id, question, limit=limit)
-    _out({"question": question, "hits": hits,
-          "answer": None,
-          "citations": [{"chunk_id": h["id"], "document_id": h["document_id"],
-                         "snippet": h["snip"], "title": st.doc_title(h["document_id"])}
-                        for h in hits],
-          "note": "retrieval-only; enable an LLM provider for synthesized answers"})
+    _out(
+        {
+            "question": question,
+            "hits": hits,
+            "answer": None,
+            "citations": [
+                {
+                    "chunk_id": h["id"],
+                    "document_id": h["document_id"],
+                    "snippet": h["snip"],
+                    "title": st.doc_title(h["document_id"]),
+                }
+                for h in hits
+            ],
+            "note": "retrieval-only; enable an LLM provider for synthesized answers",
+        }
+    )
     st.close()
 
 
@@ -624,9 +713,13 @@ def kn_extract(product_id: str) -> None:
     for r in rels:
         st.put("relations", r)
     st.close()
-    _out({"entities": len(ents), "relations": len(rels),
-          "kinds": {k: sum(1 for e in ents if e.kind.value == k)
-                    for k in {e.kind.value for e in ents}}})
+    _out(
+        {
+            "entities": len(ents),
+            "relations": len(rels),
+            "kinds": {k: sum(1 for e in ents if e.kind.value == k) for k in {e.kind.value for e in ents}},
+        }
+    )
 
 
 @kn_app.command("graph")
@@ -651,14 +744,16 @@ def kn_health(product_id: str) -> None:
 
 # -- agent -----------------------------------------------------------------
 
+
 @ag_app.command("create")
 def ag_create(product_id: str, name: str, mission: str = "", template: str = "custom") -> None:
     from ..domain.models import AgentDefinition, new_id
 
     st = _store()
     st.get("products", product_id)
-    a = AgentDefinition(id=new_id("agt"), product_id=product_id, name=name,
-                        mission=mission, template=template)
+    a = AgentDefinition(
+        id=new_id("agt"), product_id=product_id, name=name, mission=mission, template=template
+    )
     st.put("agents", a)
     st.close()
     _out(a.model_dump(mode="json", by_alias=True))
@@ -695,8 +790,12 @@ def ag_eval(agent_id: str) -> None:
     st = _store()
     agent = _load_agent(st, agent_id)
     rep = run_evals(st, agent)
-    agent.eval_summary = {"score": rep["score"], "passed": rep["passed"],
-                          "total": rep["total"], "at": utcnow()}
+    agent.eval_summary = {
+        "score": rep["score"],
+        "passed": rep["passed"],
+        "total": rep["total"],
+        "at": utcnow(),
+    }
     st.put("agents", agent)
     _out(rep)
     st.close()
@@ -790,15 +889,20 @@ def q_compile(spec: str) -> None:
 
 
 @src_app.command("register")
-def src_register(product_id: str, name: str, connector: str, locator: str = "",
-                 dialect: str = "sql") -> None:
+def src_register(product_id: str, name: str, connector: str, locator: str = "", dialect: str = "sql") -> None:
     from ..domain.models import ConnectorType, DataSource, new_id
 
     st = _store()
     st.get("products", product_id)
-    ds = DataSource(id=new_id("src"), product_id=product_id, name=name,
-                    connector=ConnectorType(connector), locator=locator,
-                    dialect=dialect, read_only=True)
+    ds = DataSource(
+        id=new_id("src"),
+        product_id=product_id,
+        name=name,
+        connector=ConnectorType(connector),
+        locator=locator,
+        dialect=dialect,
+        read_only=True,
+    )
     st.put("data_sources", ds)
     st.close()
     _out(ds.model_dump(mode="json", by_alias=True))
@@ -853,8 +957,7 @@ def dash_create(product_id: str, name: str, widgets: str = "[]") -> None:
 
     st = _store()
     st.get("products", product_id)
-    d = Dashboard(id=new_id("dsh"), product_id=product_id, name=name,
-                  widgets=json.loads(widgets))
+    d = Dashboard(id=new_id("dsh"), product_id=product_id, name=name, widgets=json.loads(widgets))
     st.put("dashboards", d)
     st.close()
     _out(d.model_dump(mode="json", by_alias=True))
@@ -905,11 +1008,13 @@ def plan_roadmap(product_id: str) -> None:
 
 # -- mcp ------------------------------------------------------------------
 
+
 @mcp_app.command("serve")
-def mcp_serve(transport: str = typer.Option("stdio", "--transport",
-                                          help="stdio | http"),
-              host: str = typer.Option("127.0.0.1", "--host"),
-              port: int = typer.Option(8471, "--port")) -> None:
+def mcp_serve(
+    transport: str = typer.Option("stdio", "--transport", help="stdio | http"),
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8471, "--port"),
+) -> None:
     """Start the MCP server — stdio (default) or streamable-HTTP at POST /mcp.
 
     HTTP mode requires the local bearer token (same as the API).
@@ -938,6 +1043,7 @@ def main() -> None:
     # `sparkforge-aws install`); flags/pipes keep the JSON flag path.
     if sys.argv[1:] == ["install"]:
         from .install.cli import guided_install_available, run_guided_install
+
         if guided_install_available():
             raise SystemExit(run_guided_install())
     app()

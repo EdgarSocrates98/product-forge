@@ -34,14 +34,27 @@ def register_channel(store: Store, *, kind: str, name: str, config: dict[str, An
                 raise ValidationError(f"email config requires {key}")
     else:
         raise ValidationError(f"unsupported notification channel: {kind}")
-    doc = {"id": new_id("chn"), "kind": kind, "name": name, "config": config,
-           "enabled": False, "created_at": utcnow(), "updated_at": utcnow()}
+    doc = {
+        "id": new_id("chn"),
+        "kind": kind,
+        "name": name,
+        "config": config,
+        "enabled": False,
+        "created_at": utcnow(),
+        "updated_at": utcnow(),
+    }
     store.put_doc("notifications", doc, status="channel")
     return doc
 
 
-def deliver_alert(store: Store, alert: dict[str, Any], channel: dict[str, Any], *, approved: bool = False,
-                  max_attempts: int = 3) -> dict[str, Any]:
+def deliver_alert(
+    store: Store,
+    alert: dict[str, Any],
+    channel: dict[str, Any],
+    *,
+    approved: bool = False,
+    max_attempts: int = 3,
+) -> dict[str, Any]:
     if not approved or not channel.get("enabled"):
         raise ValidationError("notification delivery requires an enabled, approved channel")
     cfg = channel["config"]
@@ -53,9 +66,12 @@ def deliver_alert(store: Store, alert: dict[str, Any], channel: dict[str, Any], 
                 if not secret:
                     raise ValidationError("webhook secret environment variable is missing")
                 body = json.dumps({"schema": "productforge/Alert/v1", "alert": alert}).encode()
-                req = urllib.request.Request(str(cfg["url"]), data=body, method="POST",  # noqa: S310
-                                             headers={"Content-Type": "application/json",
-                                                      "X-Forge-Webhook-Secret": secret})
+                req = urllib.request.Request(
+                    str(cfg["url"]),
+                    data=body,
+                    method="POST",  # noqa: S310
+                    headers={"Content-Type": "application/json", "X-Forge-Webhook-Secret": secret},
+                )
                 with urllib.request.urlopen(req, timeout=10) as response:  # noqa: S310 - HTTPS checked
                     if response.status < 200 or response.status >= 300:
                         raise OSError(f"webhook HTTP {response.status}")
@@ -71,16 +87,21 @@ def deliver_alert(store: Store, alert: dict[str, Any], channel: dict[str, Any], 
                     smtp.starttls()
                     smtp.login(str(cfg["username"]), password)
                     smtp.send_message(msg)
-            alert = {**alert, "delivery": {"state": "delivered", "channel_id": channel["id"],
-                                             "attempts": attempt, "delivered_at": utcnow()}}
+            alert = {
+                **alert,
+                "delivery": {
+                    "state": "delivered",
+                    "channel_id": channel["id"],
+                    "attempts": attempt,
+                    "delivered_at": utcnow(),
+                },
+            }
             store.put_doc("notifications", alert, status="delivered")
             return alert
         except Exception as exc:  # noqa: BLE001 - receipt records a redacted failure
-            attempts.append({"attempt": attempt, "state": "failed", "error": str(exc)[:240],
-                             "at": utcnow()})
+            attempts.append({"attempt": attempt, "state": "failed", "error": str(exc)[:240], "at": utcnow()})
             if attempt < max_attempts:
                 time.sleep(min(2 ** (attempt - 1), 4))
-    result = {**alert, "delivery": {"state": "failed", "channel_id": channel["id"],
-                                      "attempts": attempts}}
+    result = {**alert, "delivery": {"state": "failed", "channel_id": channel["id"], "attempts": attempts}}
     store.put_doc("notifications", result, status="delivery_failed")
     return result

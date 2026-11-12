@@ -108,8 +108,7 @@ def _apply_env(cfg: dict[str, Any]) -> None:
         cfg.setdefault("llm", {})["provider"] = v
     if v := os.environ.get(f"{ENV_PREFIX}OIDC_ENABLED"):
         cfg.setdefault("oidc", {})["enabled"] = v.lower() in {"1", "true", "yes", "on"}
-    for env, key in (("OIDC_ISSUER", "issuer"), ("OIDC_AUDIENCE", "audience"),
-                     ("OIDC_JWKS_URL", "jwks_url")):
+    for env, key in (("OIDC_ISSUER", "issuer"), ("OIDC_AUDIENCE", "audience"), ("OIDC_JWKS_URL", "jwks_url")):
         if v := os.environ.get(f"{ENV_PREFIX}{env}"):
             cfg.setdefault("oidc", {})[key] = v
 

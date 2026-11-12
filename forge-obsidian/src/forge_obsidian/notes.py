@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Iterable, Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import yaml
@@ -98,13 +98,14 @@ def build_note_ref(
         "source": forge_id,
         "classification": classification,
         "content_hash": hashlib.sha256(content.encode("utf-8")).hexdigest(),
-        "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "updated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "outcome": "projected",
         "provenance": {"adapter": forge_id, **redact_value(dict(provenance or {}))},
         "content": content,
         "warnings": [],
         "unresolved": [],
     }
+
 
 MAX_TITLE = 160
 _SLUG_RE = re.compile(r"[^a-z0-9/_-]+")

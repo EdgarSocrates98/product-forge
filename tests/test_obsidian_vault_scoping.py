@@ -20,7 +20,7 @@ def test_obisidian_vault_connection_isolated_and_revoke_is_non_destructive(
     bob_vault = allowed / "bob"
     alice_vault.mkdir(parents=True)
     bob_vault.mkdir(parents=True)
-    (alice_vault / "notes" ).mkdir()
+    (alice_vault / "notes").mkdir()
     (alice_vault / "notes" / "incident.md").write_text("# Alice incident\n", encoding="utf-8")
     monkeypatch.setenv("FORGE_OBSIDIAN_ALLOWED_ROOT", str(allowed))
 
@@ -30,9 +30,7 @@ def test_obisidian_vault_connection_isolated_and_revoke_is_non_destructive(
     master_token = TokenStore(home / str(cfg["api"]["token_file"])).token
     bootstrap = TestClient(create_app(home))
     master_headers = {"Authorization": f"Bearer {master_token}"}
-    workspace_response = bootstrap.post(
-        "/api/v1/workspaces", json={"name": "Shared"}, headers=master_headers
-    )
+    workspace_response = bootstrap.post("/api/v1/workspaces", json={"name": "Shared"}, headers=master_headers)
     assert workspace_response.status_code == 201, workspace_response.text
     workspace_id = workspace_response.json()["data"]["id"]
     product_response = bootstrap.post(
@@ -70,24 +68,23 @@ def test_obisidian_vault_connection_isolated_and_revoke_is_non_destructive(
         return data
 
     alice_vault_record = connect(alice, alice_vault, "Alice vault")
-    assert client.get(
-        "/api/v1/obsidian/vaults", params={"workspace_id": workspace_id}, headers=alice
-    ).json()["data"]["items"]
-    assert client.get(
-        "/api/v1/obsidian/vaults", params={"workspace_id": workspace_id}, headers=bob
-    ).json()["data"]["items"] == []
-
-    alice_status = client.get(
-        f"/api/v1/products/{product_id}/documents/obsidian/status", headers=alice
+    assert client.get("/api/v1/obsidian/vaults", params={"workspace_id": workspace_id}, headers=alice).json()[
+        "data"
+    ]["items"]
+    assert (
+        client.get("/api/v1/obsidian/vaults", params={"workspace_id": workspace_id}, headers=bob).json()[
+            "data"
+        ]["items"]
+        == []
     )
+
+    alice_status = client.get(f"/api/v1/products/{product_id}/documents/obsidian/status", headers=alice)
     assert alice_status.status_code == 200, alice_status.text
     assert alice_status.json()["data"]["detected"] is True
     assert alice_status.json()["data"]["vault_record_id"] == alice_vault_record["vault_record_id"]
     assert alice_status.json()["data"]["path"] == "."
 
-    bob_status = client.get(
-        f"/api/v1/products/{product_id}/documents/obsidian/status", headers=bob
-    )
+    bob_status = client.get(f"/api/v1/products/{product_id}/documents/obsidian/status", headers=bob)
     assert bob_status.status_code == 200, bob_status.text
     assert bob_status.json()["data"]["detected"] is False
     assert "OBSIDIAN-NOT-ASSIGNED" in bob_status.text
@@ -105,17 +102,13 @@ def test_obisidian_vault_connection_isolated_and_revoke_is_non_destructive(
     )
     assert forbidden_revoke.status_code == 403, forbidden_revoke.text
 
-    revoked = client.delete(
-        f"/api/v1/obsidian/vaults/{alice_vault_record['vault_record_id']}", headers=alice
-    )
+    revoked = client.delete(f"/api/v1/obsidian/vaults/{alice_vault_record['vault_record_id']}", headers=alice)
     assert revoked.status_code == 200, revoked.text
     assert revoked.json()["data"]["revoked"] is True
     assert alice_vault.is_dir()
     assert (alice_vault / "notes" / "incident.md").is_file()
 
-    after_revoke = client.get(
-        f"/api/v1/products/{product_id}/documents/obsidian/status", headers=alice
-    )
+    after_revoke = client.get(f"/api/v1/products/{product_id}/documents/obsidian/status", headers=alice)
     assert after_revoke.status_code == 200, after_revoke.text
     assert after_revoke.json()["data"]["detected"] is False
     assert "vault_record_id" not in after_revoke.json()["data"]

@@ -44,16 +44,12 @@ class PostgresStore:
 
     def __init__(self, dsn: str) -> None:
         if not dsn:
-            raise RuntimeError(
-                "PostgreSQL backend requires PRODUCT_FORGE_DATABASE_URL"
-            )
+            raise RuntimeError("PostgreSQL backend requires PRODUCT_FORGE_DATABASE_URL")
         try:
             import psycopg
             from psycopg.rows import dict_row
         except ImportError as exc:
-            raise RuntimeError(
-                "Install productforge[postgres] to use the PostgreSQL backend"
-            ) from exc
+            raise RuntimeError("Install productforge[postgres] to use the PostgreSQL backend") from exc
         self._lock = threading.RLock()
         self._tx_depth = 0
         self._psycopg = psycopg
@@ -77,12 +73,10 @@ class PostgresStore:
             """
         )
         self._conn.execute(
-            "CREATE INDEX IF NOT EXISTS pf_entities_product "
-            "ON pf_entities(collection, product_id)"
+            "CREATE INDEX IF NOT EXISTS pf_entities_product ON pf_entities(collection, product_id)"
         )
         self._conn.execute(
-            "CREATE INDEX IF NOT EXISTS pf_entities_workspace "
-            "ON pf_entities(collection, workspace_id)"
+            "CREATE INDEX IF NOT EXISTS pf_entities_workspace ON pf_entities(collection, workspace_id)"
         )
         self._conn.execute(
             """
@@ -147,15 +141,19 @@ class PostgresStore:
 
     def put(self, collection: str, entity: Entity) -> Entity:
         entity.updated_at = utcnow()
-        return self.put_doc(
-            collection,
-            entity.model_dump(mode="json", by_alias=True),
-            status=getattr(entity, "status", None),
-            name=getattr(entity, "name", None) or getattr(entity, "title", None),
-        ) and entity
+        return (
+            self.put_doc(
+                collection,
+                entity.model_dump(mode="json", by_alias=True),
+                status=getattr(entity, "status", None),
+                name=getattr(entity, "name", None) or getattr(entity, "title", None),
+            )
+            and entity
+        )
 
-    def put_doc(self, collection: str, doc: dict[str, Any], *,
-                status: str | None = None, name: str | None = None) -> dict[str, Any]:
+    def put_doc(
+        self, collection: str, doc: dict[str, Any], *, status: str | None = None, name: str | None = None
+    ) -> dict[str, Any]:
         if collection not in COLLECTIONS:
             raise ValueError(f"unknown collection: {collection}")
         doc["updated_at"] = utcnow()
@@ -170,9 +168,16 @@ class PostgresStore:
                   status=EXCLUDED.status, name=EXCLUDED.name, doc=EXCLUDED.doc,
                   updated_at=EXCLUDED.updated_at
                 """,
-                (collection, doc["id"], doc.get("product_id"), doc.get("workspace_id"),
-                 status or doc.get("status"), name or doc.get("name"),
-                 json.dumps(blob), doc["updated_at"]),
+                (
+                    collection,
+                    doc["id"],
+                    doc.get("product_id"),
+                    doc.get("workspace_id"),
+                    status or doc.get("status"),
+                    name or doc.get("name"),
+                    json.dumps(blob),
+                    doc["updated_at"],
+                ),
             )
             if self._tx_depth == 0:
                 self._conn.commit()
@@ -199,9 +204,15 @@ class PostgresStore:
         if cur.rowcount == 0:
             raise NotFoundError(f"{collection}/{entity_id} not found")
 
-    def list(self, collection: str, *, product_id: str | None = None,
-             workspace_id: str | None = None, limit: int = 500,
-             offset: int = 0) -> list[dict[str, Any]]:
+    def list(
+        self,
+        collection: str,
+        *,
+        product_id: str | None = None,
+        workspace_id: str | None = None,
+        limit: int = 500,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
         clauses = ["collection=%s"]
         params: list[Any] = [collection]
         if product_id:
@@ -214,7 +225,8 @@ class PostgresStore:
         with self._lock:
             rows = self._conn.execute(
                 f"SELECT doc FROM pf_entities WHERE {' AND '.join(clauses)} "  # noqa: S608
-                "ORDER BY updated_at DESC LIMIT %s OFFSET %s", params,
+                "ORDER BY updated_at DESC LIMIT %s OFFSET %s",
+                params,
             ).fetchall()
         return [r["doc"] if isinstance(r["doc"], dict) else json.loads(r["doc"]) for r in rows]
 

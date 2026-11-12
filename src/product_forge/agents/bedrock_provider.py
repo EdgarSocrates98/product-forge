@@ -19,6 +19,7 @@ Config:
 Honesty: when boto3 or usable credentials are absent the adapter exits
 with a named `unavailable:*` state — never a fabricated answer.
 """
+
 from __future__ import annotations
 
 import json
@@ -32,14 +33,12 @@ DEFAULT_MODEL = "anthropic.claude-3-7-sonnet-20250219-v1:0"
 def build_converse_request(req: dict[str, Any]) -> dict[str, Any]:
     """Pure mapping PF gateway request → Converse params (deterministic)."""
     messages = [
-        {"role": m.get("role", "user"),
-         "content": [{"text": str(m.get("content", ""))}]}
+        {"role": m.get("role", "user"), "content": [{"text": str(m.get("content", ""))}]}
         for m in req.get("messages", [])
         if m.get("role") in {"user", "assistant"}
     ] or [{"role": "user", "content": [{"text": ""}]}]
     params: dict[str, Any] = {
-        "modelId": os.environ.get("PF_BEDROCK_MODEL",
-                                  req.get("model") or DEFAULT_MODEL),
+        "modelId": os.environ.get("PF_BEDROCK_MODEL", req.get("model") or DEFAULT_MODEL),
         "messages": messages,
         "inferenceConfig": {"maxTokens": int(req.get("max_tokens", 2048))},
     }
@@ -56,9 +55,7 @@ def main() -> int:
     try:
         req = json.loads(sys.stdin.read() or "{}")
     except json.JSONDecodeError:
-        _reply({"error": {"code": "PF-PROVIDER",
-                          "message": "invalid JSON request",
-                          "state": "error"}})
+        _reply({"error": {"code": "PF-PROVIDER", "message": "invalid JSON request", "state": "error"}})
         return 2
     try:
         import boto3  # noqa: PLC0415 — optional dependency by design
@@ -70,49 +67,66 @@ def main() -> int:
             SSOTokenLoadError,
         )
     except ModuleNotFoundError:
-        _reply({"error": {"code": "PF-PROVIDER",
-                          "message": "boto3 not installed — "
-                                     "pip install 'boto3>=1.34'",
-                          "state": "unavailable:dependency"}})
+        _reply(
+            {
+                "error": {
+                    "code": "PF-PROVIDER",
+                    "message": "boto3 not installed — pip install 'boto3>=1.34'",
+                    "state": "unavailable:dependency",
+                }
+            }
+        )
         return 3
-    profile = os.environ.get("PF_BEDROCK_PROFILE") or \
-        os.environ.get("AWS_PROFILE")
+    profile = os.environ.get("PF_BEDROCK_PROFILE") or os.environ.get("AWS_PROFILE")
     try:
-        session = (boto3.Session(profile_name=profile) if profile
-                   else boto3.Session())
+        session = boto3.Session(profile_name=profile) if profile else boto3.Session()
         client = session.client(
             "bedrock-runtime",
-            region_name=os.environ.get("PF_BEDROCK_REGION") or
-            session.region_name or "us-east-1")
+            region_name=os.environ.get("PF_BEDROCK_REGION") or session.region_name or "us-east-1",
+        )
         resp = client.converse(**build_converse_request(req))
     except MissingDependencyException as e:
-        _reply({"error": {"code": "PF-PROVIDER",
-                          "message": str(e)[:200],
-                          "state": "unavailable:dependency"}})
+        _reply({"error": {"code": "PF-PROVIDER", "message": str(e)[:200], "state": "unavailable:dependency"}})
         return 3
     except ProfileNotFound as e:
-        _reply({"error": {"code": "PF-PROVIDER", "message": str(e)[:200],
-                          "state": "unavailable:no-profile"}})
+        _reply({"error": {"code": "PF-PROVIDER", "message": str(e)[:200], "state": "unavailable:no-profile"}})
         return 4
     except (NoCredentialsError, SSOTokenLoadError) as e:
-        _reply({"error": {
-            "code": "PF-PROVIDER",
-            "message": "SSO session missing/expired — run "
-                       f"`aws sso login --profile {profile or 'default'}`",
-            "detail": str(e)[:160],
-            "state": "unverified:no-sso-session"}})
+        _reply(
+            {
+                "error": {
+                    "code": "PF-PROVIDER",
+                    "message": "SSO session missing/expired — run "
+                    f"`aws sso login --profile {profile or 'default'}`",
+                    "detail": str(e)[:160],
+                    "state": "unverified:no-sso-session",
+                }
+            }
+        )
         return 5
     except ClientError as e:
         code = e.response.get("Error", {}).get("Code", "ClientError")
-        _reply({"error": {"code": "PF-PROVIDER", "message": code,
-                          "detail": str(e)[:200],
-                          "state": f"unavailable:{code}"}})
+        _reply(
+            {
+                "error": {
+                    "code": "PF-PROVIDER",
+                    "message": code,
+                    "detail": str(e)[:200],
+                    "state": f"unavailable:{code}",
+                }
+            }
+        )
         return 6
     out = resp.get("output", {}).get("message", {})
     text = "".join(b.get("text", "") for b in out.get("content", []))
-    _reply({"text": text, "model": resp.get("modelId"),
+    _reply(
+        {
+            "text": text,
+            "model": resp.get("modelId"),
             "usage": resp.get("usage", {}),
-            "stop_reason": resp.get("stopReason")})
+            "stop_reason": resp.get("stopReason"),
+        }
+    )
     return 0
 
 

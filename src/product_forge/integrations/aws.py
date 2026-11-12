@@ -19,8 +19,7 @@ def _boto3():
 
         return boto3
     except ImportError as e:
-        raise SourceUnavailableError(
-            "boto3 not installed — pip install product-forge[aws]") from e
+        raise SourceUnavailableError("boto3 not installed — pip install product-forge[aws]") from e
 
 
 def _session_ok(boto3: Any) -> None:
@@ -33,8 +32,13 @@ def _session_ok(boto3: Any) -> None:
 class AthenaConnector:
     """Real Athena query execution: start → poll → fetch results."""
 
-    def __init__(self, workgroup: str = "primary", database: str = "default",
-                 output: str = "", region: str | None = None) -> None:
+    def __init__(
+        self,
+        workgroup: str = "primary",
+        database: str = "default",
+        output: str = "",
+        region: str | None = None,
+    ) -> None:
         self.workgroup, self.database, self.output = workgroup, database, output
         self.region = region
 
@@ -51,12 +55,15 @@ class AthenaConnector:
         except Exception as e:
             raise SourceUnavailableError(f"athena workgroup check failed: {e}") from e
 
-    def execute(self, sql: str, *, row_limit: int = 1000, timeout_s: float = 60.0,
-                cancel: Any = None) -> dict[str, Any]:
+    def execute(
+        self, sql: str, *, row_limit: int = 1000, timeout_s: float = 60.0, cancel: Any = None
+    ) -> dict[str, Any]:
         c = self._client()
-        params: dict[str, Any] = {"QueryString": sql,
-                                  "WorkGroup": self.workgroup,
-                                  "QueryExecutionContext": {"Database": self.database}}
+        params: dict[str, Any] = {
+            "QueryString": sql,
+            "WorkGroup": self.workgroup,
+            "QueryExecutionContext": {"Database": self.database},
+        }
         if self.output:
             params["ResultConfiguration"] = {"OutputLocation": self.output}
         qid = c.start_query_execution(**params)["QueryExecutionId"]
@@ -70,8 +77,11 @@ class AthenaConnector:
             if state == "SUCCEEDED":
                 break
             if state in {"FAILED", "CANCELLED"}:
-                return {"status": "failed", "reason": st.get("StateChangeReason", state),
-                        "query_execution_id": qid}
+                return {
+                    "status": "failed",
+                    "reason": st.get("StateChangeReason", state),
+                    "query_execution_id": qid,
+                }
             time.sleep(0.5)
         else:
             c.stop_query_execution(QueryExecutionId=qid)
@@ -90,8 +100,13 @@ class AthenaConnector:
                 rows.append(vals)
             if truncated:
                 break
-        return {"status": "completed", "columns": cols, "rows": rows,
-                "truncated": truncated, "query_execution_id": qid}
+        return {
+            "status": "completed",
+            "columns": cols,
+            "rows": rows,
+            "truncated": truncated,
+            "query_execution_id": qid,
+        }
 
 
 def glue_catalog(database: str | None = None, region: str | None = None) -> dict[str, Any]:
@@ -105,12 +120,18 @@ def glue_catalog(database: str | None = None, region: str | None = None) -> dict
         if database and d["Name"] != database:
             continue
         tables = c.get_tables(DatabaseName=d["Name"]).get("TableList", [])
-        out["databases"].append({"name": d["Name"],
-                                 "tables": [{"name": t["Name"],
-                                             "columns": [col["Name"] for col in
-                                                         t.get("StorageDescriptor", {})
-                                                         .get("Columns", [])]}
-                                            for t in tables]})
+        out["databases"].append(
+            {
+                "name": d["Name"],
+                "tables": [
+                    {
+                        "name": t["Name"],
+                        "columns": [col["Name"] for col in t.get("StorageDescriptor", {}).get("Columns", [])],
+                    }
+                    for t in tables
+                ],
+            }
+        )
     return out
 
 
@@ -124,9 +145,11 @@ def quicksight_inventory(account_id: str, region: str | None = None) -> dict[str
         datasets = c.list_data_sets(AwsAccountId=account_id).get("DataSetSummaries", [])
     except Exception as e:
         raise SourceUnavailableError(f"quicksight inventory failed: {e}") from e
-    return {"engine": "quicksight",
-            "dashboards": [{"id": d["DashboardId"], "name": d["Name"]} for d in dashboards],
-            "datasets": [{"id": d["DataSetId"], "name": d["Name"]} for d in datasets]}
+    return {
+        "engine": "quicksight",
+        "dashboards": [{"id": d["DashboardId"], "name": d["Name"]} for d in dashboards],
+        "datasets": [{"id": d["DataSetId"], "name": d["Name"]} for d in datasets],
+    }
 
 
 def cost_summary(days: int = 30, region: str | None = None) -> dict[str, Any]:
@@ -141,15 +164,21 @@ def cost_summary(days: int = 30, region: str | None = None) -> dict[str, Any]:
     try:
         res = c.get_cost_and_usage(
             TimePeriod={"Start": start.isoformat(), "End": end.isoformat()},
-            Granularity="MONTHLY", Metrics=["UnblendedCost"],
-            GroupBy=[{"Type": "DIMENSION", "Key": "SERVICE"}])
+            Granularity="MONTHLY",
+            Metrics=["UnblendedCost"],
+            GroupBy=[{"Type": "DIMENSION", "Key": "SERVICE"}],
+        )
     except Exception as e:
         raise SourceUnavailableError(f"cost explorer failed: {e}") from e
     services = []
     for r in res.get("ResultsByTime", []):
         for g in r.get("Groups", []):
-            services.append({"service": g["Keys"][0],
-                             "amount": float(g["Metrics"]["UnblendedCost"]["Amount"]),
-                             "unit": g["Metrics"]["UnblendedCost"]["Unit"]})
+            services.append(
+                {
+                    "service": g["Keys"][0],
+                    "amount": float(g["Metrics"]["UnblendedCost"]["Amount"]),
+                    "unit": g["Metrics"]["UnblendedCost"]["Unit"],
+                }
+            )
     services.sort(key=lambda x: x["amount"], reverse=True)
     return {"engine": "cost-explorer", "period_days": days, "services": services[:25]}

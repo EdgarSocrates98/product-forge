@@ -280,12 +280,14 @@ class Board(Entity):
     product_id: str
     name: str
     description: str = ""
-    columns: list[dict[str, Any]] = Field(default_factory=lambda: [
-        {"id": "backlog", "name": "Backlog", "position": 0},
-        {"id": "doing", "name": "Em andamento", "position": 1},
-        {"id": "review", "name": "Em revisão", "position": 2},
-        {"id": "done", "name": "Concluído", "position": 3},
-    ])
+    columns: list[dict[str, Any]] = Field(
+        default_factory=lambda: [
+            {"id": "backlog", "name": "Backlog", "position": 0},
+            {"id": "doing", "name": "Em andamento", "position": 1},
+            {"id": "review", "name": "Em revisão", "position": 2},
+            {"id": "done", "name": "Concluído", "position": 3},
+        ]
+    )
     archived: bool = False
 
 

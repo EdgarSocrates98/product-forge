@@ -62,11 +62,13 @@ def prepare_version(
     previous["metadata"] = previous_metadata
     store.put_doc("documents", previous)
     next_version = int(previous_metadata.get("version", 1)) + 1
-    enriched.update({
-        "version": next_version,
-        "is_current": True,
-        "previous_document_id": previous.get("id"),
-    })
+    enriched.update(
+        {
+            "version": next_version,
+            "is_current": True,
+            "previous_document_id": previous.get("id"),
+        }
+    )
     return enriched, previous.get("id")
 
 
@@ -86,8 +88,11 @@ def explorer_versions(store: Any, product_id: str, document: dict[str, Any]) -> 
         "state": "historical",
         "document_key": key,
         "current_document_id": next(
-            (item.get("id") for item in reversed(family)
-             if (item.get("metadata") or {}).get("is_current", False)),
+            (
+                item.get("id")
+                for item in reversed(family)
+                if (item.get("metadata") or {}).get("is_current", False)
+            ),
             family[-1].get("id") if family else document.get("id"),
         ),
         "items": family or [document],

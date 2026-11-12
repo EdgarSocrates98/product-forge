@@ -60,8 +60,7 @@ def _run_bounded(
     try:
         process = subprocess.Popen(args, **kwargs)  # noqa: S603 - shell is disabled and executable is resolved
     except OSError as exc:
-        raise DefuddleError(
-            "DEFUDDLE-FAILED", "the optional extractor could not be started") from exc
+        raise DefuddleError("DEFUDDLE-FAILED", "the optional extractor could not be started") from exc
 
     killed = threading.Event()
     exceeded: dict[str, bool] = {"stdout": False, "stderr": False}
@@ -84,7 +83,7 @@ def _run_bounded(
                     return
                 remaining = limit - len(captured[name])
                 if len(chunk) > remaining:
-                    captured[name].extend(chunk[:max(0, remaining)])
+                    captured[name].extend(chunk[: max(0, remaining)])
                     exceeded[name] = True
                     stop_process()
                     return
@@ -93,10 +92,8 @@ def _run_bounded(
             stream.close()
 
     readers = [
-        threading.Thread(
-            target=drain, args=("stdout", process.stdout, max_stdout_bytes), daemon=True),
-        threading.Thread(
-            target=drain, args=("stderr", process.stderr, max_stderr_bytes), daemon=True),
+        threading.Thread(target=drain, args=("stdout", process.stdout, max_stdout_bytes), daemon=True),
+        threading.Thread(target=drain, args=("stderr", process.stderr, max_stderr_bytes), daemon=True),
     ]
     for reader in readers:
         reader.start()
@@ -118,8 +115,7 @@ def _run_bounded(
         for reader in readers:
             reader.join(timeout=2)
         writer.join(timeout=2)
-        raise DefuddleError(
-            "DEFUDDLE-TIMEOUT", "the optional extractor exceeded its time limit") from exc
+        raise DefuddleError("DEFUDDLE-TIMEOUT", "the optional extractor exceeded its time limit") from exc
     finally:
         if process.poll() is None:
             stop_process()
@@ -128,11 +124,9 @@ def _run_bounded(
         writer.join(timeout=2)
 
     if exceeded["stdout"]:
-        raise DefuddleError(
-            "DEFUDDLE-SIZE-LIMIT", "the extracted document exceeds the safe output limit")
+        raise DefuddleError("DEFUDDLE-SIZE-LIMIT", "the extracted document exceeds the safe output limit")
     if exceeded["stderr"]:
-        raise DefuddleError(
-            "DEFUDDLE-SIZE-LIMIT", "the optional extractor emitted excessive diagnostics")
+        raise DefuddleError("DEFUDDLE-SIZE-LIMIT", "the optional extractor emitted excessive diagnostics")
     return int(process.returncode or 0), bytes(captured["stdout"]), bytes(captured["stderr"])
 
 

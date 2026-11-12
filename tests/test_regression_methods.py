@@ -1,5 +1,6 @@
 """deep-regression-suite slice — parametric envelope+auth sweep across
 every method of every /api/v1 route, plus negative paths."""
+
 from __future__ import annotations
 
 import pytest
@@ -36,16 +37,16 @@ def test_every_method_every_route_enveloped_unauthenticated(client):
         for m in sorted(set(METHODS) & set(methods)):
             concrete = path.replace("{", "x-").replace("}", "")
             resp = client.request(m, concrete, json={})
-            body = resp.json() if resp.headers.get(
-                "content-type", "").startswith("application/json") else None
+            body = (
+                resp.json() if resp.headers.get("content-type", "").startswith("application/json") else None
+            )
             if not _envelope_ok(body):
                 misses.append(f"{m} {path} -> {resp.status_code}")
             elif path == "/api/v1/health":
                 continue  # documented public route
             elif resp.status_code != 401:
                 # unauthenticated call on a private route must be denied
-                misses.append(f"{m} {path} -> expected 401, got "
-                              f"{resp.status_code}")
+                misses.append(f"{m} {path} -> expected 401, got {resp.status_code}")
     assert not misses, f"{len(misses)} violations: {misses[:12]}"
 
 
@@ -66,18 +67,24 @@ def test_task_board_persists_move_and_comment(tmp_path):
     token = TokenStore(tmp_path / str(cfg["api"]["token_file"])).token
     headers = {"Authorization": f"Bearer {token}"}
     wid = client.post("/api/v1/workspaces", json={"name": "Tasks"}, headers=headers).json()["data"]["id"]
-    pid = client.post("/api/v1/products", json={"workspace_id": wid, "name": "Planner"},
-                      headers=headers).json()["data"]["id"]
-    created = client.post(f"/api/v1/products/{pid}/tasks", json={"title": "Ship board"},
-                          headers=headers)
+    pid = client.post(
+        "/api/v1/products", json={"workspace_id": wid, "name": "Planner"}, headers=headers
+    ).json()["data"]["id"]
+    created = client.post(f"/api/v1/products/{pid}/tasks", json={"title": "Ship board"}, headers=headers)
     assert created.status_code == 201
     task = created.json()["data"]
     assert task["workspace_id"] == wid and task["board_id"]
-    moved = client.post(f"/api/v1/products/{pid}/tasks/{task['id']}/move",
-                        json={"column_id": "doing", "position": 0}, headers=headers)
+    moved = client.post(
+        f"/api/v1/products/{pid}/tasks/{task['id']}/move",
+        json={"column_id": "doing", "position": 0},
+        headers=headers,
+    )
     assert moved.status_code == 200
-    comment = client.post(f"/api/v1/products/{pid}/tasks/{task['id']}/comments",
-                          json={"text": "Ready for review"}, headers=headers)
+    comment = client.post(
+        f"/api/v1/products/{pid}/tasks/{task['id']}/comments",
+        json={"text": "Ready for review"},
+        headers=headers,
+    )
     assert comment.status_code == 201
     board = client.get(f"/api/v1/products/{pid}/board", headers=headers).json()["data"]
     refreshed = next(item for item in board["tasks"] if item["id"] == task["id"])
@@ -94,24 +101,40 @@ def test_chat_task_proposal_requires_approval_and_is_idempotent(tmp_path):
     token = TokenStore(tmp_path / str(cfg["api"]["token_file"])).token
     headers = {"Authorization": f"Bearer {token}"}
     wid = client.post("/api/v1/workspaces", json={"name": "Proposals"}, headers=headers).json()["data"]["id"]
-    pid = client.post("/api/v1/products", json={"workspace_id": wid, "name": "Chat PM"},
-                      headers=headers).json()["data"]["id"]
-    payload = {"source": "chat", "session_id": "ses_1", "idempotency_key": "msg_1",
-               "tasks": [{"title": "Validate onboarding", "priority": "high"}]}
+    pid = client.post(
+        "/api/v1/products", json={"workspace_id": wid, "name": "Chat PM"}, headers=headers
+    ).json()["data"]["id"]
+    payload = {
+        "source": "chat",
+        "session_id": "ses_1",
+        "idempotency_key": "msg_1",
+        "tasks": [{"title": "Validate onboarding", "priority": "high"}],
+    }
     first = client.post(f"/api/v1/products/{pid}/task-proposals", json=payload, headers=headers)
     assert first.status_code == 201
     proposal = first.json()["data"]
     assert proposal["state"] == "proposed"
     assert client.get(f"/api/v1/products/{pid}/tasks", headers=headers).json()["data"]["items"] == []
-    approved = client.post(f"/api/v1/products/{pid}/task-proposals/{proposal['id']}/approve",
-                           json={"approved": True, "tasks": [{
-                               "title": "Validate onboarding copy",
-                               "description": "Review the welcome flow",
-                               "priority": "low",
-                           }]}, headers=headers)
+    approved = client.post(
+        f"/api/v1/products/{pid}/task-proposals/{proposal['id']}/approve",
+        json={
+            "approved": True,
+            "tasks": [
+                {
+                    "title": "Validate onboarding copy",
+                    "description": "Review the welcome flow",
+                    "priority": "low",
+                }
+            ],
+        },
+        headers=headers,
+    )
     assert approved.status_code == 200 and approved.json()["data"]["state"] == "approved"
-    retry = client.post(f"/api/v1/products/{pid}/task-proposals/{proposal['id']}/approve",
-                        json={"approved": True}, headers=headers)
+    retry = client.post(
+        f"/api/v1/products/{pid}/task-proposals/{proposal['id']}/approve",
+        json={"approved": True},
+        headers=headers,
+    )
     assert retry.status_code == 200
     tasks = client.get(f"/api/v1/products/{pid}/tasks", headers=headers).json()["data"]["items"]
     assert len(tasks) == 1
@@ -165,9 +188,10 @@ def test_rate_limit_is_enveloped(tmp_path):
     response = client.get("/api/v1/products")
     assert response.status_code == 429
     assert response.json()["error"]["code"] == "PF-RATE-LIMIT"
-    assert app_module._principal_allows(
-        {"principals": [{"token": "other", "workspaces": ["w"]}]}, "token", "w"
-    ) is False
+    assert (
+        app_module._principal_allows({"principals": [{"token": "other", "workspaces": ["w"]}]}, "token", "w")
+        is False
+    )
 
 
 def test_terminal_job_rejects_invalid_transition(tmp_path):
@@ -213,8 +237,7 @@ def test_expired_job_reaches_terminal_state(tmp_path):
     polled = client.get("/api/v1/jobs", params={"status": "expired"}, headers=headers)
     assert polled.status_code == 200
     assert any(
-        item["id"] == job["id"] and item["status"] == "expired"
-        for item in polled.json()["data"]["items"]
+        item["id"] == job["id"] and item["status"] == "expired" for item in polled.json()["data"]["items"]
     )
 
 
@@ -235,9 +258,7 @@ def test_core_domain_mutation_round_trips(tmp_path):
     ).json()["data"]
     pid = product["id"]
 
-    updated = client.patch(
-        f"/api/v1/products/{pid}", json={"name": "Updated"}, headers=headers
-    )
+    updated = client.patch(f"/api/v1/products/{pid}", json={"name": "Updated"}, headers=headers)
     assert updated.status_code == 200 and updated.json()["data"]["name"] == "Updated"
     assert client.get(f"/api/v1/products/{pid}", headers=headers).json()["data"]["name"] == "Updated"
     assert client.patch(f"/api/v1/products/{pid}", json={}, headers=headers).status_code == 422
@@ -249,38 +270,50 @@ def test_core_domain_mutation_round_trips(tmp_path):
     ).json()["data"]
     sid = source["id"]
     assert client.get(f"/api/v1/products/{pid}/sources/{sid}", headers=headers).json()["data"]["id"] == sid
-    assert client.patch(
-        f"/api/v1/products/{pid}/sources/{sid}", json={"name": "Updated notes"}, headers=headers
-    ).json()["data"]["name"] == "Updated notes"
+    assert (
+        client.patch(
+            f"/api/v1/products/{pid}/sources/{sid}", json={"name": "Updated notes"}, headers=headers
+        ).json()["data"]["name"]
+        == "Updated notes"
+    )
     assert client.patch(f"/api/v1/products/{pid}/sources/{sid}", json={}, headers=headers).status_code == 422
     assert client.delete(f"/api/v1/products/{pid}/sources/{sid}", headers=headers).json()["data"]["deleted"]
     assert client.get(f"/api/v1/products/{pid}/sources/{sid}", headers=headers).status_code == 404
 
-    agent = client.post(
-        f"/api/v1/products/{pid}/agents", json={"name": "Analyst"}, headers=headers
-    ).json()["data"]
+    agent = client.post(f"/api/v1/products/{pid}/agents", json={"name": "Analyst"}, headers=headers).json()[
+        "data"
+    ]
     aid = agent["id"]
-    assert client.patch(
-        f"/api/v1/products/{pid}/agents/{aid}", json={"mission": "Answer clearly"}, headers=headers
-    ).json()["data"]["mission"] == "Answer clearly"
+    assert (
+        client.patch(
+            f"/api/v1/products/{pid}/agents/{aid}", json={"mission": "Answer clearly"}, headers=headers
+        ).json()["data"]["mission"]
+        == "Answer clearly"
+    )
     assert client.delete(f"/api/v1/products/{pid}/agents/{aid}", headers=headers).status_code == 200
 
     dashboard = client.post(
         f"/api/v1/products/{pid}/dashboards", json={"name": "Overview"}, headers=headers
     ).json()["data"]
     did = dashboard["id"]
-    assert client.patch(
-        f"/api/v1/products/{pid}/dashboards/{did}", json={"description": "Updated"}, headers=headers
-    ).json()["data"]["description"] == "Updated"
+    assert (
+        client.patch(
+            f"/api/v1/products/{pid}/dashboards/{did}", json={"description": "Updated"}, headers=headers
+        ).json()["data"]["description"]
+        == "Updated"
+    )
     assert client.delete(f"/api/v1/products/{pid}/dashboards/{did}", headers=headers).status_code == 200
 
     initiative = client.post(
         f"/api/v1/products/{pid}/initiatives", json={"title": "Plan"}, headers=headers
     ).json()["data"]
     iid = initiative["id"]
-    assert client.patch(
-        f"/api/v1/products/{pid}/initiatives/{iid}", json={"title": "Updated plan"}, headers=headers
-    ).json()["data"]["title"] == "Updated plan"
+    assert (
+        client.patch(
+            f"/api/v1/products/{pid}/initiatives/{iid}", json={"title": "Updated plan"}, headers=headers
+        ).json()["data"]["title"]
+        == "Updated plan"
+    )
     assert client.delete(f"/api/v1/products/{pid}/initiatives/{iid}", headers=headers).status_code == 200
 
     db = tmp_path / "queries.db"
@@ -299,9 +332,12 @@ def test_core_domain_mutation_round_trips(tmp_path):
     ).json()["data"]
     qid = query["id"]
     assert client.get(f"/api/v1/products/{pid}/queries/{qid}", headers=headers).json()["data"]["id"] == qid
-    assert client.patch(
-        f"/api/v1/products/{pid}/queries/{qid}", json={"truncated": True}, headers=headers
-    ).json()["data"]["truncated"] is True
+    assert (
+        client.patch(
+            f"/api/v1/products/{pid}/queries/{qid}", json={"truncated": True}, headers=headers
+        ).json()["data"]["truncated"]
+        is True
+    )
     assert client.patch(f"/api/v1/products/{pid}/queries/{qid}", json={}, headers=headers).status_code == 422
     assert client.delete(f"/api/v1/products/{pid}/queries/{qid}", headers=headers).json()["data"]["deleted"]
     assert client.get(f"/api/v1/products/{pid}/queries/{qid}", headers=headers).status_code == 404

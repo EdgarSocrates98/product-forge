@@ -95,6 +95,7 @@ def test_delegates_api(tmp_path, monkeypatch):
     cfg["delegates"] = [{"id": "ds", "cli": "no-such-cli", "workflows": ["inventory"]}]
     cfg_path = home / "config.json"
     import json
+
     merged = {**cfg, "delegates": cfg["delegates"]}
     cfg_path.write_text(json.dumps(merged))
     tok = TokenStore(home / str(cfg["api"]["token_file"])).token

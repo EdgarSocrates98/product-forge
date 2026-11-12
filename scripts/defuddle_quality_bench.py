@@ -90,9 +90,7 @@ def main() -> int:
         "checks": checks,
         "score": f"{passed}/{len(checks)}",
         "extractor_output": (
-            "contentMarkdown"
-            if isinstance(payload, dict) and "contentMarkdown" in payload
-            else "content"
+            "contentMarkdown" if isinstance(payload, dict) and "contentMarkdown" in payload else "content"
         ),
         "parse_time_ms": payload.get("parseTime") if isinstance(payload, dict) else None,
     }

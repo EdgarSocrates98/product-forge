@@ -59,9 +59,12 @@ def risk_tier(agent: AgentDefinition) -> str:
 def publish_gate(agent: AgentDefinition) -> dict[str, object]:
     """Publish requirements for this agent: eval gate + approval flag."""
     tier = risk_tier(agent)
-    return {"tier": tier, "eval_gate": PUBLISH_GATES[tier],
-            "approval_required": tier == "high",
-            "allow_destructive_required": tier == "high"}
+    return {
+        "tier": tier,
+        "eval_gate": PUBLISH_GATES[tier],
+        "approval_required": tier == "high",
+        "allow_destructive_required": tier == "high",
+    }
 
 
 def check_input(agent: AgentDefinition, user_input: str) -> PolicyReport:
@@ -94,8 +97,7 @@ def check_tool(agent: AgentDefinition, tool_name: str) -> PolicyReport:
     return rep
 
 
-def check_budget(steps_done: int, calls_done: int,
-                 agent: AgentDefinition) -> PolicyReport:
+def check_budget(steps_done: int, calls_done: int, agent: AgentDefinition) -> PolicyReport:
     rep = PolicyReport(allowed=True)
     max_steps = int(agent.policies.get("max_steps", MAX_STEPS))
     max_calls = int(agent.policies.get("max_tool_calls", MAX_TOOL_CALLS))

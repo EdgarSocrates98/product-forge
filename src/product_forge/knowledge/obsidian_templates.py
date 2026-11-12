@@ -125,15 +125,17 @@ def build_canvas_document(
     nodes: list[dict[str, Any]] = []
     edges: list[dict[str, Any]] = []
     center_id = "node-" + hashlib.sha256(("center:" + title).encode("utf-8")).hexdigest()[:12]
-    nodes.append({
-        "id": center_id,
-        "type": "text",
-        "text": f"# {title}\n\n{central_note}".strip(),
-        "x": 0,
-        "y": 0,
-        "width": 420,
-        "height": 220,
-    })
+    nodes.append(
+        {
+            "id": center_id,
+            "type": "text",
+            "text": f"# {title}\n\n{central_note}".strip(),
+            "x": 0,
+            "y": 0,
+            "width": 420,
+            "height": 220,
+        }
+    )
     index = 0
     for group_id, heading, values in groups:
         for value in values:
@@ -151,14 +153,16 @@ def build_canvas_document(
                 "height": 140,
             }
             nodes.append(node)
-            edges.append({
-                "id": "edge-" + hashlib.sha256(f"{center_id}:{node_id}".encode()).hexdigest()[:12],
-                "fromNode": center_id,
-                "toNode": node_id,
-                "fromSide": "right",
-                "toSide": "left",
-                "toEnd": "arrow",
-            })
+            edges.append(
+                {
+                    "id": "edge-" + hashlib.sha256(f"{center_id}:{node_id}".encode()).hexdigest()[:12],
+                    "fromNode": center_id,
+                    "toNode": node_id,
+                    "fromSide": "right",
+                    "toSide": "left",
+                    "toEnd": "arrow",
+                }
+            )
             index += 1
     return {"nodes": nodes, "edges": edges}
 

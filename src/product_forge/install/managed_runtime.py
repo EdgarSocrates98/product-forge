@@ -31,8 +31,8 @@ def docker_compose_available() -> bool:
     if not docker:
         return False
     result = subprocess.run(  # noqa: S603 - executable is the discovered Docker binary
-        [docker, "compose", "version"], capture_output=True,
-        text=True, check=False, timeout=10)
+        [docker, "compose", "version"], capture_output=True, text=True, check=False, timeout=10
+    )
     return result.returncode == 0
 
 
@@ -50,8 +50,16 @@ def _project_name(home: Path) -> str:
 
 
 def _compose_args(home: Path, docker: str) -> list[str]:
-    return [docker, "compose", "-p", _project_name(home), "--env-file",
-            str(_env_file(home)), "-f", str(_compose(home))]
+    return [
+        docker,
+        "compose",
+        "-p",
+        _project_name(home),
+        "--env-file",
+        str(_env_file(home)),
+        "-f",
+        str(_compose(home)),
+    ]
 
 
 def _write_runtime_files(home: Path, *, password: str, port: int) -> None:
@@ -129,8 +137,7 @@ def ensure_postgres(home: Path, *, profile: str = "recommended") -> dict[str, ob
             save_config(cfg, home)
             return {"backend": "sqlite", "managed": False, "reason": "explicit fallback"}
         raise RuntimeError(
-            "Docker is disabled; use --profile minimal or set "
-            "PRODUCT_FORGE_ALLOW_SQLITE_FALLBACK=1"
+            "Docker is disabled; use --profile minimal or set PRODUCT_FORGE_ALLOW_SQLITE_FALLBACK=1"
         )
     if not docker_compose_available():
         raise RuntimeError(
@@ -157,23 +164,41 @@ def ensure_postgres(home: Path, *, profile: str = "recommended") -> dict[str, ob
     assert docker
     command = [*_compose_args(home, docker), "up", "-d"]
     result = subprocess.run(  # noqa: S603 - command is built from fixed Docker args
-        command, cwd=runtime, capture_output=True, text=True, check=False, timeout=120)
+        command, cwd=runtime, capture_output=True, text=True, check=False, timeout=120
+    )
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()[-500:]
         raise RuntimeError(f"PostgreSQL Docker service could not start: {detail}")
     deadline = time.monotonic() + 45
     while time.monotonic() < deadline:
         check = subprocess.run(  # noqa: S603 - command is built from fixed Docker args
-            [*_compose_args(home, docker),
-             "exec", "-T", "postgres", "pg_isready", "-U", "productforge", "-d", "productforge"],
-            cwd=runtime, capture_output=True, text=True, check=False, timeout=10,
+            [
+                *_compose_args(home, docker),
+                "exec",
+                "-T",
+                "postgres",
+                "pg_isready",
+                "-U",
+                "productforge",
+                "-d",
+                "productforge",
+            ],
+            cwd=runtime,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
         )
         if check.returncode == 0:
             dsn = f"postgresql://productforge:{quote(password, safe='')}@127.0.0.1:{port}/productforge"
-            cfg.setdefault("store", {}).update({
-                "backend": "postgres", "database_url": dsn,
-                "managed_by_docker": True, "managed_port": port,
-            })
+            cfg.setdefault("store", {}).update(
+                {
+                    "backend": "postgres",
+                    "database_url": dsn,
+                    "managed_by_docker": True,
+                    "managed_port": port,
+                }
+            )
             save_config(cfg, home)
             return {"backend": "postgres", "managed": True, "port": port, "health": "healthy"}
         time.sleep(1)

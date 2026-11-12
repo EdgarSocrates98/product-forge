@@ -31,10 +31,16 @@ def verify_oidc_token(token: str, cfg: dict[str, Any]) -> dict[str, Any]:
     if not jwks_url or not issuer or not audience:
         raise ValueError("OIDC requires issuer, audience and jwks_url")
     key = PyJWKClient(jwks_url).get_signing_key_from_jwt(token).key
-    claims = jwt.decode(token, key, algorithms=["RS256", "ES256"],
-                        issuer=issuer, audience=audience,
-                        options={"require": ["sub", "iss", "exp"]})
+    claims = jwt.decode(
+        token,
+        key,
+        algorithms=["RS256", "ES256"],
+        issuer=issuer,
+        audience=audience,
+        options={"require": ["sub", "iss", "exp"]},
+    )
     return claims
+
 
 SECRET_KEYS = (
     "token",
@@ -50,8 +56,7 @@ SECRET_KEYS = (
     "connection_string",
 )
 
-REDACT_EXEMPT = frozenset({"plan_token", "token_id", "token_preview",
-                           "tokens_in", "tokens_out"})
+REDACT_EXEMPT = frozenset({"plan_token", "token_id", "token_preview", "tokens_in", "tokens_out"})
 
 
 def _secretish(key: str) -> bool:
@@ -83,9 +88,20 @@ def subprocess_env() -> dict[str, str]:
     so declared CLIs outside ``/usr/bin`` still resolve.
     """
     keep = (
-        {"PATH", "SYSTEMROOT", "WINDIR", "PATHEXT", "COMSPEC", "USERPROFILE",
-         "HOMEDRIVE", "HOMEPATH", "TEMP", "TMP", "PYTHONUTF8",
-         "PYTHONIOENCODING"}
+        {
+            "PATH",
+            "SYSTEMROOT",
+            "WINDIR",
+            "PATHEXT",
+            "COMSPEC",
+            "USERPROFILE",
+            "HOMEDRIVE",
+            "HOMEPATH",
+            "TEMP",
+            "TMP",
+            "PYTHONUTF8",
+            "PYTHONIOENCODING",
+        }
         if os.name == "nt"
         else {"PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TZ"}
     )

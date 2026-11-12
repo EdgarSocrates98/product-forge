@@ -354,9 +354,7 @@ def test_markdown_projection_extracts_aliases_without_rewriting_content():
 
 
 def test_persisted_projection_is_structural_and_excludes_frontmatter_and_body():
-    projection = parse_markdown_document(
-        "---\ntoken: do-not-persist\n---\n# Note\nSee [[Other]].\n"
-    )
+    projection = parse_markdown_document("---\ntoken: do-not-persist\n---\n# Note\nSee [[Other]].\n")
     safe = obsidian_projection_metadata(projection)
     assert safe["wikilinks"] == ["Other"]
     assert "frontmatter" not in safe
@@ -364,9 +362,7 @@ def test_persisted_projection_is_structural_and_excludes_frontmatter_and_body():
 
 
 def test_security_projection_warns_without_copying_secret_values():
-    projection = parse_markdown_document(
-        "---\npassword: top-secret\n---\n# Note\nToken=abc123\n"
-    )
+    projection = parse_markdown_document("---\npassword: top-secret\n---\n# Note\nToken=abc123\n")
     safe = obsidian_projection_metadata(projection)
     assert safe["security_warnings"] == ["possible-secret-like-text-detected"]
     assert "top-secret" not in str(safe)
@@ -590,9 +586,7 @@ def test_canvas_validation_rejects_invalid_documents(document):
 
 
 def test_base_validation_is_explicit_about_partial_semantics():
-    result = validate_base_document(
-        "views:\n  - name: Payments\n    type: table\nfilters: status = 'open'\n"
-    )
+    result = validate_base_document("views:\n  - name: Payments\n    type: table\nfilters: status = 'open'\n")
 
     assert result["schema"] == "productforge/ObsidianBaseValidation/v1"
     assert result["state"] == "validated"
@@ -612,12 +606,14 @@ def test_base_validation_accepts_official_nested_filters_and_rejects_internal_ke
             "formulas": {"age": "now() - file.mtime"},
             "properties": {"knowledge_state": {"displayName": "State"}},
             "summaries": {"age": "Average"},
-            "views": [{
-                "type": "table",
-                "name": "Open investigations",
-                "limit": 10,
-                "order": ["file.mtime"],
-            }],
+            "views": [
+                {
+                    "type": "table",
+                    "name": "Open investigations",
+                    "limit": 10,
+                    "order": ["file.mtime"],
+                }
+            ],
         }
     )
     assert result["state"] == "validated"

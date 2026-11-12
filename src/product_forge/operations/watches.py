@@ -25,22 +25,34 @@ _OPS = {
 
 
 def create_watch(store: Store, product_id: str, spec: dict[str, Any]) -> dict[str, Any]:
-    w = {"id": new_id("wat"), "schema": "productforge/Watch/v1",
-         "product_id": product_id, "name": spec.get("name", "watch"),
-         "source_id": spec["source_id"], "statement": spec["statement"],
-         "value_column": spec.get("value_column", 0),
-         "threshold": {"op": spec.get("op", ">"), "value": float(spec.get("value", 0))},
-         "interval_s": int(spec.get("interval_s", 3600)),
-         "state": "active", "last_run_at": None, "last_value": None,
-         "created_at": utcnow(), "updated_at": utcnow()}
+    w = {
+        "id": new_id("wat"),
+        "schema": "productforge/Watch/v1",
+        "product_id": product_id,
+        "name": spec.get("name", "watch"),
+        "source_id": spec["source_id"],
+        "statement": spec["statement"],
+        "value_column": spec.get("value_column", 0),
+        "threshold": {"op": spec.get("op", ">"), "value": float(spec.get("value", 0))},
+        "interval_s": int(spec.get("interval_s", 3600)),
+        "state": "active",
+        "last_run_at": None,
+        "last_value": None,
+        "created_at": utcnow(),
+        "updated_at": utcnow(),
+    }
     return store.put_doc("watches", w, status="active", name=w["name"])
 
 
 def evaluate_watch(store: Store, watch: dict[str, Any]) -> dict[str, Any]:
-    run = execute_query(store, watch["product_id"], watch["source_id"],
-                        watch["statement"], row_limit=1)
-    result = {"watch_id": watch["id"], "query_id": run["id"],
-              "evaluated_at": utcnow(), "breached": False, "alert_id": None}
+    run = execute_query(store, watch["product_id"], watch["source_id"], watch["statement"], row_limit=1)
+    result = {
+        "watch_id": watch["id"],
+        "query_id": run["id"],
+        "evaluated_at": utcnow(),
+        "breached": False,
+        "alert_id": None,
+    }
     if run["status"] != "completed":
         result["error"] = run.get("error", run["status"])
         _touch(store, watch, None)
@@ -61,11 +73,18 @@ def evaluate_watch(store: Store, watch: dict[str, Any]) -> dict[str, Any]:
     breached = _OPS.get(thr["op"], _OPS[">"])(numeric, thr["value"])
     result.update({"value": numeric, "threshold": thr, "breached": breached})
     if breached:
-        alert = {"id": new_id("alr"), "schema": "productforge/Alert/v1",
-                 "product_id": watch["product_id"], "watch_id": watch["id"],
-                 "severity": "warning", "state": "open",
-                 "message": f"{watch['name']}: {numeric} {thr['op']} {thr['value']}",
-                 "value": numeric, "created_at": utcnow(), "updated_at": utcnow()}
+        alert = {
+            "id": new_id("alr"),
+            "schema": "productforge/Alert/v1",
+            "product_id": watch["product_id"],
+            "watch_id": watch["id"],
+            "severity": "warning",
+            "state": "open",
+            "message": f"{watch['name']}: {numeric} {thr['op']} {thr['value']}",
+            "value": numeric,
+            "created_at": utcnow(),
+            "updated_at": utcnow(),
+        }
         store.put_doc("alerts", alert, status="open")
         result["alert_id"] = alert["id"]
     _touch(store, watch, numeric)
@@ -82,8 +101,7 @@ def run_due(store: Store, product_id: str, *, now: float | None = None) -> dict[
         due = True if not last else (now - _ts(last)) >= w["interval_s"]
         if due:
             out.append(evaluate_watch(store, w))
-    return {"schema": "productforge/WatchRun/v1", "evaluated": len(out),
-            "results": out}
+    return {"schema": "productforge/WatchRun/v1", "evaluated": len(out), "results": out}
 
 
 def _ts(iso: str) -> float:

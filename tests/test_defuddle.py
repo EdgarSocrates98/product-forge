@@ -15,9 +15,17 @@ def test_defuddle_adapter_uses_stdin_json_and_preserves_provenance(monkeypatch):
         calls["args"] = args
         calls["payload"] = payload
         calls["kwargs"] = kwargs
-        return 0, json.dumps({
-            "title": "Runbook", "contentMarkdown": "# Safe path", "parseTime": 7,
-        }).encode(), b""
+        return (
+            0,
+            json.dumps(
+                {
+                    "title": "Runbook",
+                    "contentMarkdown": "# Safe path",
+                    "parseTime": 7,
+                }
+            ).encode(),
+            b"",
+        )
 
     monkeypatch.setattr("product_forge.knowledge.defuddle._run_bounded", fake_run)
     result = parse_defuddle("<html><body>safe</body></html>", "https://example.com/runbook")
@@ -34,9 +42,16 @@ def test_defuddle_adapter_keeps_legacy_content_fallback(monkeypatch):
     monkeypatch.setattr("product_forge.knowledge.defuddle.executable", lambda _command=None: "defuddle")
     monkeypatch.setattr(
         "product_forge.knowledge.defuddle._run_bounded",
-        lambda *args, **kwargs: (0, json.dumps({
-            "title": "Legacy", "content": "# Legacy content",
-        }).encode(), b""),
+        lambda *args, **kwargs: (
+            0,
+            json.dumps(
+                {
+                    "title": "Legacy",
+                    "content": "# Legacy content",
+                }
+            ).encode(),
+            b"",
+        ),
     )
 
     result = parse_defuddle("<p>safe</p>", "https://example.com/legacy")
