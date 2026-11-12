@@ -22,24 +22,46 @@ _cancels_lock = threading.Lock()
 
 def validate_query(statement: str, dialect: str) -> dict[str, Any]:
     v = sqlvalidate.validate(statement, dialect)
-    return {"schema": "productforge/QueryValidation/v1", "ok": v.ok,
-            "dialect": v.dialect, "kind": v.statement_kind,
-            "tables": v.tables, "errors": v.errors, "engine": v.engine}
+    return {
+        "schema": "productforge/QueryValidation/v1",
+        "ok": v.ok,
+        "dialect": v.dialect,
+        "kind": v.statement_kind,
+        "tables": v.tables,
+        "errors": v.errors,
+        "engine": v.engine,
+    }
 
 
-def execute_query(store: Store, product_id: str, source_id: str,
-                  statement: str, *, row_limit: int = 1000,
-                  timeout_s: float = 30.0, allowed_roots: list | None = None) -> dict[str, Any]:
+def execute_query(
+    store: Store,
+    product_id: str,
+    source_id: str,
+    statement: str,
+    *,
+    row_limit: int = 1000,
+    timeout_s: float = 30.0,
+    allowed_roots: list | None = None,
+) -> dict[str, Any]:
     ds = store.get("data_sources", source_id)
     if ds.get("product_id") != product_id:
         raise UnsafeOperationError("data source not in product scope")
     if not ds.get("read_only", True):
         raise UnsafeOperationError("source not marked read_only — refusing")
     v = sqlvalidate.validate(statement, ds.get("dialect", "sql"))
-    run = {"id": new_id("qry"), "schema": "productforge/QueryRun/v1",
-           "product_id": product_id, "source_id": source_id, "dialect": v.dialect,
-           "statement": statement, "status": "validated", "created_at": utcnow(),
-           "updated_at": utcnow(), "rows": 0, "duration_ms": 0.0}
+    run = {
+        "id": new_id("qry"),
+        "schema": "productforge/QueryRun/v1",
+        "product_id": product_id,
+        "source_id": source_id,
+        "dialect": v.dialect,
+        "statement": statement,
+        "status": "validated",
+        "created_at": utcnow(),
+        "updated_at": utcnow(),
+        "rows": 0,
+        "duration_ms": 0.0,
+    }
     if not v.ok:
         run["status"] = "rejected"
         run["error"] = "; ".join(v.errors)
@@ -63,13 +85,19 @@ def execute_query(store: Store, product_id: str, source_id: str,
 
         roots = allowed_roots or [Path(ds.get("locator", ".")).parent]
         result: QueryResult = connector_for(ds, roots).execute(
-            statement, row_limit=row_limit, timeout_s=timeout_s, cancel=cancel)
-        run.update({"status": "cancelled" if cancel.is_set() else "completed",
-                    "rows": result.row_count, "duration_ms": result.duration_ms,
-                    "truncated": result.truncated,
-                    "columns": result.columns,
-                    "masked_columns": result.masked_columns,
-                    "result_preview": result.rows[:100]})
+            statement, row_limit=row_limit, timeout_s=timeout_s, cancel=cancel
+        )
+        run.update(
+            {
+                "status": "cancelled" if cancel.is_set() else "completed",
+                "rows": result.row_count,
+                "duration_ms": result.duration_ms,
+                "truncated": result.truncated,
+                "columns": result.columns,
+                "masked_columns": result.masked_columns,
+                "result_preview": result.rows[:100],
+            }
+        )
     except TimeoutError:
         run["status"] = "timeout"
     except Exception as e:  # connector errors recorded on the run
@@ -147,17 +175,27 @@ def nl_to_sql(question: str, tables: list[str]) -> dict[str, Any]:
     q = question.lower()
     table = next((t for t in tables if t.lower() in q), None)
     if not table:
-        return {"ok": False, "reason": "no-known-table-in-question",
-                "tables_available": tables[:20]}
+        return {"ok": False, "reason": "no-known-table-in-question", "tables_available": tables[:20]}
     if m := re.search(r"(?:top|primeir\w+|maiores)\s+(\d+)", q):
-        return {"ok": True, "spec": {"table": table, "columns": ["*"],
-                                     "limit": int(m.group(1))},
-                "explain": f"top {m.group(1)} rows from {table}"}
+        return {
+            "ok": True,
+            "spec": {"table": table, "columns": ["*"], "limit": int(m.group(1))},
+            "explain": f"top {m.group(1)} rows from {table}",
+        }
     if re.search(r"(how many|count|quantos|quantas|total)", q):
-        return {"ok": True, "spec": {"table": table, "aggregate": {"fn": "count"}},
-                "explain": f"count rows in {table}"}
+        return {
+            "ok": True,
+            "spec": {"table": table, "aggregate": {"fn": "count"}},
+            "explain": f"count rows in {table}",
+        }
     if re.search(r"(list|show|mostr|listar)", q):
-        return {"ok": True, "spec": {"table": table, "columns": ["*"], "limit": 100},
-                "explain": f"sample rows from {table}"}
-    return {"ok": False, "reason": "pattern-not-recognized",
-            "hint": "try: 'how many <table>', 'top N <table>', 'list <table>'"}
+        return {
+            "ok": True,
+            "spec": {"table": table, "columns": ["*"], "limit": 100},
+            "explain": f"sample rows from {table}",
+        }
+    return {
+        "ok": False,
+        "reason": "pattern-not-recognized",
+        "hint": "try: 'how many <table>', 'top N <table>', 'list <table>'",
+    }

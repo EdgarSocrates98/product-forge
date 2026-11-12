@@ -128,7 +128,8 @@ class _PinnedHTTPConnection(http.client.HTTPConnection):
 
     def connect(self) -> None:
         self.sock = socket.create_connection(
-            (self._resolved_ip, self.port), self.timeout, self.source_address)
+            (self._resolved_ip, self.port), self.timeout, self.source_address
+        )
 
 
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):
@@ -140,12 +141,12 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
 
     def connect(self) -> None:
         self.sock = socket.create_connection(
-            (self._resolved_ip, self.port), self.timeout, self.source_address)
+            (self._resolved_ip, self.port), self.timeout, self.source_address
+        )
         if self._tunnel_host:
             self._tunnel()
         server_hostname = self._tunnel_host or self.host
-        self.sock = self._context.wrap_socket(
-            self.sock, server_hostname=server_hostname)
+        self.sock = self._context.wrap_socket(self.sock, server_hostname=server_hostname)
 
 
 class _PinnedHTTPHandler(urllib.request.HTTPHandler):
@@ -155,8 +156,8 @@ class _PinnedHTTPHandler(urllib.request.HTTPHandler):
 
     def http_open(self, req: Any) -> Any:
         return self.do_open(
-            lambda host, **kwargs: _PinnedHTTPConnection(
-                host, resolved_ip=self._resolved_ip, **kwargs), req)
+            lambda host, **kwargs: _PinnedHTTPConnection(host, resolved_ip=self._resolved_ip, **kwargs), req
+        )
 
 
 class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
@@ -166,9 +167,11 @@ class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
 
     def https_open(self, req: Any) -> Any:
         return self.do_open(
-            lambda host, **kwargs: _PinnedHTTPSConnection(
-                host, resolved_ip=self._resolved_ip, **kwargs), req,
-            context=self._context, check_hostname=self._check_hostname)
+            lambda host, **kwargs: _PinnedHTTPSConnection(host, resolved_ip=self._resolved_ip, **kwargs),
+            req,
+            context=self._context,
+            check_hostname=self._check_hostname,
+        )
 
 
 def _pinned_opener(addresses: list[str]) -> Any:

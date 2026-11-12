@@ -603,9 +603,7 @@ class ProductForgePortal(PortalAdapter):
                     actor="portal",
                 )
             except KnowledgeLifecycleError as exc:
-                raise PortalError(
-                    "KNOWLEDGE-TRANSITION-REFUSED", str(exc), http=422
-                ) from exc
+                raise PortalError("KNOWLEDGE-TRANSITION-REFUSED", str(exc), http=422) from exc
             doc["metadata"] = metadata
             st.put_doc("documents", doc)
             return {"document": doc, "transition": receipt}
@@ -821,9 +819,7 @@ class ProductForgePortal(PortalAdapter):
             imported = import_vault_document(_obsidian_vault(), raw_path)
         except ObsidianVaultError as exc:
             raise PortalError(exc.code, str(exc), http=422, details={"sync_state": exc.sync_state}) from exc
-        return {
-            k: v for k, v in imported.items() if k not in {"content", "markdown"}
-        } | {
+        return {k: v for k, v in imported.items() if k not in {"content", "markdown"}} | {
             "markdown": obsidian_projection_metadata(imported["markdown"]),
             "preview": imported["content"],
         }

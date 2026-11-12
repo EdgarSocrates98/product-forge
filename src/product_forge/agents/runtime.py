@@ -21,15 +21,25 @@ RUN_COLLECTION = "agent_runs"
 
 
 def _run_doc(agent: Any, run_id: str, user_input: str) -> dict[str, Any]:
-    return {"id": run_id, "schema": "productforge/AgentRun/v1",
-            "product_id": agent.product_id, "agent_id": agent.id,
-            "agent_version": agent.version, "input": user_input,
-            "status": "running", "steps": [], "violations": [],
-            "output": None, "created_at": utcnow(), "updated_at": utcnow()}
+    return {
+        "id": run_id,
+        "schema": "productforge/AgentRun/v1",
+        "product_id": agent.product_id,
+        "agent_id": agent.id,
+        "agent_version": agent.version,
+        "input": user_input,
+        "status": "running",
+        "steps": [],
+        "violations": [],
+        "output": None,
+        "created_at": utcnow(),
+        "updated_at": utcnow(),
+    }
 
 
-def run_agent(store: Store, agent: Any, user_input: str, *, actor: str = "api",
-              cfg: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_agent(
+    store: Store, agent: Any, user_input: str, *, actor: str = "api", cfg: dict[str, Any] | None = None
+) -> dict[str, Any]:
     run_id = new_id("run")
     run = _run_doc(agent, run_id, user_input)
 
@@ -47,6 +57,7 @@ def run_agent(store: Store, agent: Any, user_input: str, *, actor: str = "api",
     # deterministic template path remains the honest fallback.
     if cfg is not None:
         from .llm_runtime import try_llm_run
+
         llm_run = try_llm_run(store, agent, effective, run, cfg)
         if llm_run is not None:
             llm_run["updated_at"] = utcnow()
@@ -68,8 +79,7 @@ def run_agent(store: Store, agent: Any, user_input: str, *, actor: str = "api",
         tool_check = policy.check_tool(agent, step)
         if not tool_check.allowed:
             run["violations"].extend(tool_check.violations)
-            run["steps"].append({"step": step, "status": "denied",
-                                 "violations": tool_check.violations})
+            run["steps"].append({"step": step, "status": "denied", "violations": tool_check.violations})
             continue
         tool = REGISTRY[step]
         args = {"question": effective} if step == "knowledge_query" else {}
@@ -81,8 +91,9 @@ def run_agent(store: Store, agent: Any, user_input: str, *, actor: str = "api",
             out = {"error": e.body()}
             status = "error"
         calls += 1
-        run["steps"].append({"step": step, "status": status, "duration_ms": round(
-            (time.perf_counter() - t0) * 1000, 1)})
+        run["steps"].append(
+            {"step": step, "status": status, "duration_ms": round((time.perf_counter() - t0) * 1000, 1)}
+        )
         if status == "ok":
             if step == "knowledge_query":
                 citations.extend(out.get("citations", []))
@@ -116,9 +127,16 @@ def resume_run(store: Store, run_id: str) -> dict[str, Any]:
         raise UnsafeOperationError(f"run {run_id} is {run['status']}, not resumable")
     run["status"] = "resumed"
     run["updated_at"] = utcnow()
-    store.audit({"id": new_id("aud"), "created_at": utcnow(), "action": "agent.run.resume",
-                 "resource_type": "agent_runs", "resource_id": run_id,
-                 "product_id": run["product_id"]})
+    store.audit(
+        {
+            "id": new_id("aud"),
+            "created_at": utcnow(),
+            "action": "agent.run.resume",
+            "resource_type": "agent_runs",
+            "resource_id": run_id,
+            "product_id": run["product_id"],
+        }
+    )
     return run
 
 

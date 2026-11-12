@@ -1,0 +1,302 @@
+{
+  "agents": [
+    "agent-ops-coordinator",
+    "data-analyst-coordinator",
+    "integration-coordinator",
+    "pf-extractor",
+    "pf-judge",
+    "pf-synthesizer",
+    "pf-verifier",
+    "planning-coordinator",
+    "product-intel-coordinator"
+  ],
+  "capabilities": {
+    "agents": {
+      "available": true,
+      "count": 14,
+      "discovery": "workspace-file",
+      "optional": true,
+      "status": "available"
+    },
+    "evals": {
+      "available": true,
+      "count": 1,
+      "discovery": "cli",
+      "optional": true,
+      "status": "available"
+    },
+    "knowledge": {
+      "available": true,
+      "count": 1,
+      "discovery": "native-runtime",
+      "optional": true,
+      "status": "available"
+    },
+    "protocols": {
+      "available": true,
+      "count": 3,
+      "discovery": "bundled",
+      "optional": true,
+      "status": "available"
+    },
+    "rules": {
+      "available": true,
+      "count": 4,
+      "discovery": "native-runtime",
+      "optional": true,
+      "status": "available"
+    },
+    "skills": {
+      "available": true,
+      "count": 16,
+      "discovery": "workspace-file",
+      "optional": true,
+      "status": "available"
+    }
+  },
+  "coordinators": [
+    "agent-ops-coordinator",
+    "data-analyst-coordinator",
+    "integration-coordinator",
+    "planning-coordinator",
+    "product-intel-coordinator"
+  ],
+  "degraded_reasons": [],
+  "discovery": {
+    "commands": [
+      {
+        "argv": [
+          "productforge",
+          "product",
+          "context",
+          "{product_id}"
+        ],
+        "description": "recover the Product Context Package for a product",
+        "id": "product-context",
+        "mode": "direct-capability",
+        "read_only": true
+      },
+      {
+        "argv": [
+          "productforge",
+          "knowledge",
+          "query",
+          "{product_id}",
+          "{question}"
+        ],
+        "description": "grounded answer over product knowledge with citations",
+        "id": "knowledge-query",
+        "mode": "direct-capability",
+        "read_only": true
+      },
+      {
+        "argv": [
+          "productforge",
+          "doctor"
+        ],
+        "description": "environment + installation health",
+        "id": "doctor",
+        "mode": "diagnostic-only",
+        "read_only": true
+      }
+    ],
+    "manifest": "forge.agentic.json"
+  },
+  "domains": [
+    "agentic-workspaces",
+    "analytics",
+    "dashboards",
+    "knowledge-management",
+    "product-intelligence"
+  ],
+  "eval_suites": [
+    {
+      "command": [
+        "productforge",
+        "agent",
+        "eval",
+        "{agent_id}"
+      ],
+      "id": "agent-eval",
+      "kind": "output-verification"
+    }
+  ],
+  "forge_id": "product-forge",
+  "health": {
+    "checks": [
+      {
+        "detail": "16 skills",
+        "id": "skills-bundle",
+        "status": "PASS"
+      },
+      {
+        "detail": "5 coordinators, 4 executors",
+        "id": "agent-specs",
+        "status": "PASS"
+      },
+      {
+        "detail": "4 rule areas",
+        "id": "rules-catalog",
+        "status": "PASS"
+      }
+    ],
+    "status": "healthy"
+  },
+  "install_modes": [
+    "project",
+    "workspace",
+    "user"
+  ],
+  "installed": {
+    "hosts": [
+      "claude",
+      "codex",
+      "copilot",
+      "devin"
+    ],
+    "profile": "recommended",
+    "scope": "project"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "attestation": "forge_context/1.3.4 source:5674012d1a5760df",
+    "files": {
+      "forge.agentic.json": "sha256:4e8716f751652db219304141f7eda85de29360f8faf6abd619c4f34b339b7e89",
+      "forge.json": "sha256:3943db5d70b2ebdde9281e3a9396b7d708db924332d24020120934245155db4f"
+    }
+  },
+  "interfaces": {
+    "cli": {
+      "entry": "product_forge.cli:app",
+      "name": "productforge",
+      "version_cmd": [
+        "productforge",
+        "--version"
+      ]
+    },
+    "mcp": {
+      "command": [
+        "productforge",
+        "mcp",
+        "serve"
+      ],
+      "server_name": "product-forge",
+      "verify_tool": "productforge_status"
+    },
+    "python": {
+      "distribution": "product-forge",
+      "package": "product_forge"
+    }
+  },
+  "kind": "specialist",
+  "knowledge_providers": [
+    {
+      "id": "product-knowledge",
+      "interface": "native-runtime"
+    }
+  ],
+  "name": "Product Forge",
+  "protocol_version": "1",
+  "protocols": [
+    {
+      "id": "forge/v1",
+      "version": "1"
+    },
+    {
+      "id": "forge/context/v1",
+      "version": "1"
+    },
+    {
+      "id": "forge/context-registry/v1",
+      "version": "1"
+    }
+  ],
+  "recorded_at": "2026-11-12T03:47:38Z",
+  "recorded_by": {
+    "agent": "product-forge",
+    "version": "0.2.3"
+  },
+  "resources": {
+    "agents-bundle": {
+      "kind": "bundled",
+      "location": "product_forge/agents",
+      "optional": false
+    },
+    "context-manifest": {
+      "kind": "copied",
+      "location": ".forge/context/capabilities/product-forge.json",
+      "optional": false
+    },
+    "install-state": {
+      "kind": "referenced",
+      "location": ".product-forge",
+      "optional": true
+    },
+    "rules-catalog": {
+      "kind": "bundled",
+      "location": "rules",
+      "optional": false
+    },
+    "skills-bundle": {
+      "kind": "bundled",
+      "location": "product_forge/skills",
+      "optional": false
+    }
+  },
+  "rule_areas": [
+    "pf-agent",
+    "pf-cloud",
+    "pf-know",
+    "pf-sql"
+  ],
+  "runtime": {
+    "distribution": "product-forge",
+    "offline_available": true,
+    "package": "product_forge",
+    "python": ">=3.11",
+    "requires_credentials": false,
+    "requires_network": false
+  },
+  "schema": "forge/context/v1",
+  "security": {
+    "mutating_verbs": [
+      "agent eval",
+      "agent publish",
+      "agent run",
+      "detach",
+      "install",
+      "integrate",
+      "knowledge import",
+      "obsidian export",
+      "obsidian import",
+      "repair",
+      "uninstall"
+    ],
+    "read_only_default": true,
+    "requires_approval": [
+      "agent publish",
+      "install",
+      "uninstall"
+    ]
+  },
+  "skills": [
+    "pf-agent-factory",
+    "pf-analytics",
+    "pf-apis",
+    "pf-aws",
+    "pf-azure",
+    "pf-dashboards",
+    "pf-data-products",
+    "pf-finops",
+    "pf-governance",
+    "pf-knowledge",
+    "pf-prioritization",
+    "pf-product-discovery",
+    "pf-product-strategy",
+    "pf-reporting",
+    "pf-requirements",
+    "pf-sql"
+  ],
+  "state": "available",
+  "version": "0.2.3"
+}

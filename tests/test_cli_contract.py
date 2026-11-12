@@ -29,9 +29,7 @@ def test_json_output_falls_back_to_ascii_for_legacy_windows_codepages(monkeypatc
 def test_obsidian_cli_exposes_safe_preview_plan_and_explicit_apply(tmp_path: Path, monkeypatch) -> None:
     vault = tmp_path / "vault"
     (vault / "notes").mkdir(parents=True)
-    (vault / "notes" / "runbook.md").write_text(
-        "# Runbook\n\nRestart the worker safely.\n", encoding="utf-8"
-    )
+    (vault / "notes" / "runbook.md").write_text("# Runbook\n\nRestart the worker safely.\n", encoding="utf-8")
     candidate = tmp_path / "candidate.md"
     candidate.write_text("# Candidate\n\nReviewed change.\n", encoding="utf-8")
     monkeypatch.setenv("FORGE_OBSIDIAN_VAULT", str(vault))
@@ -65,14 +63,10 @@ def test_obsidian_cli_exposes_safe_preview_plan_and_explicit_apply(tmp_path: Pat
     assert applied.exit_code == 0, applied.stdout
     applied_payload = json.loads(applied.stdout)
     assert applied_payload["sync_state"] == "created"
-    assert (vault / "notes" / "next.md").read_text(encoding="utf-8") == candidate.read_text(
-        encoding="utf-8"
-    )
+    assert (vault / "notes" / "next.md").read_text(encoding="utf-8") == candidate.read_text(encoding="utf-8")
 
 
-def test_obsidian_import_and_evidence_are_real_product_capabilities(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_obsidian_import_and_evidence_are_real_product_capabilities(tmp_path: Path, monkeypatch) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()
     (vault / "runbook.md").write_text("# Runbook\n\nEvidence.\n", encoding="utf-8")
@@ -82,9 +76,7 @@ def test_obsidian_import_and_evidence_are_real_product_capabilities(
     runner = CliRunner()
     assert runner.invoke(app, ["install", "--yes"]).exit_code == 0
     workspace = json.loads(runner.invoke(app, ["workspace", "create", "ws"]).stdout)
-    product = json.loads(
-        runner.invoke(app, ["product", "create", workspace["id"], "Payments"]).stdout
-    )
+    product = json.loads(runner.invoke(app, ["product", "create", workspace["id"], "Payments"]).stdout)
 
     imported = runner.invoke(
         app,

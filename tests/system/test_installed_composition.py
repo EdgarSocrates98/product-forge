@@ -63,8 +63,13 @@ def test_installed_composition_fake_provider(tmp_path: Path) -> None:
         "HOME": str(tmp_path / "home"),
         "PRODUCT_FORGE_HOME": str(product_home),
     }
-    command = [str(venv / ("Scripts/productforge.exe" if os.name == "nt" else "bin/productforge")),
-               "portal", "--no-open", "--port", "0"]
+    command = [
+        str(venv / ("Scripts/productforge.exe" if os.name == "nt" else "bin/productforge")),
+        "portal",
+        "--no-open",
+        "--port",
+        "0",
+    ]
     # Keep the installed server log visible when the opt-in lane fails. A
     # generic 500 envelope is intentionally safe for clients, but without
     # the child log the system harness cannot diagnose a broken bundle.
@@ -78,7 +83,7 @@ def test_installed_composition_fake_provider(tmp_path: Path) -> None:
                 if composition.get("state") == "running":
                     break
             if process.poll() is not None:
-                    raise AssertionError("portal exited during startup")
+                raise AssertionError("portal exited during startup")
             time.sleep(0.2)
         assert composition.get("state") == "running", composition
 
@@ -88,26 +93,57 @@ def test_installed_composition_fake_provider(tmp_path: Path) -> None:
         token = urllib.parse.parse_qs(parsed.query)["forge_session"][0]
         assert _request(base, token, "/api/v1/health")["data"]["status"] in {"healthy", "degraded"}
 
-        _request(base, token, "/api/v1/bridge/bootstrap", method="POST",
-                 body={"confirm": "bootstrap"})
-        workspace = _request(base, token, "/api/v1/workspaces", method="POST",
-                             body={"name": "Installed system", "confirm": "create"})["data"]
-        product = _request(base, token, "/api/v1/products", method="POST",
-                           body={"workspace_id": workspace["id"], "name": "System journey",
-                                 "confirm": "create"})["data"]
-        task = _request(base, token, f"/api/v1/products/{product['id']}/tasks", method="POST",
-                        body={"title": "Verify installed journey", "confirm": "create"})["data"]
+        _request(base, token, "/api/v1/bridge/bootstrap", method="POST", body={"confirm": "bootstrap"})
+        workspace = _request(
+            base,
+            token,
+            "/api/v1/workspaces",
+            method="POST",
+            body={"name": "Installed system", "confirm": "create"},
+        )["data"]
+        product = _request(
+            base,
+            token,
+            "/api/v1/products",
+            method="POST",
+            body={"workspace_id": workspace["id"], "name": "System journey", "confirm": "create"},
+        )["data"]
+        task = _request(
+            base,
+            token,
+            f"/api/v1/products/{product['id']}/tasks",
+            method="POST",
+            body={"title": "Verify installed journey", "confirm": "create"},
+        )["data"]
         assert task["product_id"] == product["id"]
 
-        session = _request(base, token, "/api/v1/chat/sessions", method="POST",
-                           body={"provider": "fake", "title": "Installed fake chat",
-                                 "confirm": "create"})["data"]
-        _request(base, token, f"/api/v1/chat/sessions/{session['id']}/prompt", method="POST",
-                 body={"text": "Create a follow-up task", "confirm": "send"})
+        session = _request(
+            base,
+            token,
+            "/api/v1/chat/sessions",
+            method="POST",
+            body={"provider": "fake", "title": "Installed fake chat", "confirm": "create"},
+        )["data"]
+        _request(
+            base,
+            token,
+            f"/api/v1/chat/sessions/{session['id']}/prompt",
+            method="POST",
+            body={"text": "Create a follow-up task", "confirm": "send"},
+        )
         events: list[dict] = []
         for _ in range(30):
-            events = _request(base, token, f"/api/v1/chat/sessions/{session['id']}/events",
-                              method="POST", body={"after_seq": 0}).get("data", {}).get("items", [])
+            events = (
+                _request(
+                    base,
+                    token,
+                    f"/api/v1/chat/sessions/{session['id']}/events",
+                    method="POST",
+                    body={"after_seq": 0},
+                )
+                .get("data", {})
+                .get("items", [])
+            )
             if events:
                 break
             time.sleep(0.3)

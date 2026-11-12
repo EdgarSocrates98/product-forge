@@ -2,6 +2,7 @@
 forge/PortalApi/1 envelope ({schema, correlation_id, data|error}) with
 typed PF-* error codes, including unauthenticated and unknown-path
 responses. GET probes only; mutating verbs are covered per-domain."""
+
 from __future__ import annotations
 
 import pytest
@@ -33,9 +34,13 @@ def _assert_envelope(body: object, path: str) -> list[str]:
 
 
 def test_all_get_routes_emit_envelope(client):
-    routes = [r.path for r in client.app.routes
-              if getattr(r, "methods", None) and "GET" in r.methods
-              and str(getattr(r, "path", "")).startswith("/api/v1")]
+    routes = [
+        r.path
+        for r in client.app.routes
+        if getattr(r, "methods", None)
+        and "GET" in r.methods
+        and str(getattr(r, "path", "")).startswith("/api/v1")
+    ]
     assert len(routes) >= 45, f"expected ≥45 /api/v1 GET routes, found {len(routes)}"
     failures: list[str] = []
     for path in routes:

@@ -12,14 +12,13 @@ from __future__ import annotations
 import re
 from typing import Any
 
-_ACTION_MARKERS = re.compile(
-    r"^\s*[-*]?\s*(todo|action|ação|task|next step)[:\-]?\s+(.+)", re.IGNORECASE)
+_ACTION_MARKERS = re.compile(r"^\s*[-*]?\s*(todo|action|ação|task|next step)[:\-]?\s+(.+)", re.IGNORECASE)
 _DECISION_MARKERS = re.compile(
-    r"^\s*[-*]?\s*(decision|decisão|decidimos|agreed|acordado)[:\-]?\s+(.+)", re.IGNORECASE)
+    r"^\s*[-*]?\s*(decision|decisão|decidimos|agreed|acordado)[:\-]?\s+(.+)", re.IGNORECASE
+)
 
 
-def conclude_experiment(exp: dict[str, Any], results: dict[str, float],
-                        verdict: str = "") -> dict[str, Any]:
+def conclude_experiment(exp: dict[str, Any], results: dict[str, float], verdict: str = "") -> dict[str, Any]:
     """Compare recorded results to baseline/guardrails — deterministic verdict."""
     guardrail_breaches = {
         g: {"limit": limit, "observed": results.get(g)}
@@ -31,15 +30,19 @@ def conclude_experiment(exp: dict[str, Any], results: dict[str, float],
     elif verdict:
         outcome = verdict
     else:
-        improved = [m for m in exp.get("success_metrics") or []
-                    if m in results and m in (exp.get("baseline") or {})
-                    and results[m] > exp["baseline"][m]]
-        outcome = ("supporting_hypothesis" if improved
-                   else "inconclusive:not-enough-improvement")
-    return {"outcome": outcome, "results": results,
-            "guardrail_breaches": guardrail_breaches,
-            "status": "stopped" if guardrail_breaches else "concluded",
-            "note": "deterministic comparison; no causal inference implied"}
+        improved = [
+            m
+            for m in exp.get("success_metrics") or []
+            if m in results and m in (exp.get("baseline") or {}) and results[m] > exp["baseline"][m]
+        ]
+        outcome = "supporting_hypothesis" if improved else "inconclusive:not-enough-improvement"
+    return {
+        "outcome": outcome,
+        "results": results,
+        "guardrail_breaches": guardrail_breaches,
+        "status": "stopped" if guardrail_breaches else "concluded",
+        "note": "deterministic comparison; no causal inference implied",
+    }
 
 
 def extract_drafts(transcript: str) -> list[dict[str, Any]]:
@@ -68,7 +71,9 @@ def decision_completeness(decision: dict[str, Any]) -> dict[str, Any]:
         "risks": bool(decision.get("risks")),
     }
     missing = [k for k, ok in checks.items() if not ok]
-    return {"schema": "productforge/DecisionCompleteness/v1",
-            "completeness": round(sum(checks.values()) / len(checks), 2),
-            "missing": missing,
-            "note": "completeness ≠ correctness — fields present, quality human-judged"}
+    return {
+        "schema": "productforge/DecisionCompleteness/v1",
+        "completeness": round(sum(checks.values()) / len(checks), 2),
+        "missing": missing,
+        "note": "completeness ≠ correctness — fields present, quality human-judged",
+    }

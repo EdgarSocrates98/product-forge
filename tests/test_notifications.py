@@ -9,8 +9,12 @@ def test_webhook_channel_is_disabled_and_secret_is_reference_only(tmp_path, monk
     home = tmp_path / "pf"
     st = Store(db_path(home, load_config(home)))
     try:
-        ch = register_channel(st, kind="webhook", name="ops",
-                              config={"url": "https://example.test/hook", "secret_env": "PF_HOOK"})
+        ch = register_channel(
+            st,
+            kind="webhook",
+            name="ops",
+            config={"url": "https://example.test/hook", "secret_env": "PF_HOOK"},
+        )
         assert ch["enabled"] is False
         assert "PF_HOOK" in ch["config"]["secret_env"]
         assert st.list("notifications", limit=10)[0]["enabled"] is False

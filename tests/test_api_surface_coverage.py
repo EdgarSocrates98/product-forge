@@ -89,7 +89,8 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
     call("POST", "/api/v1/jobs/drain", params={"limit": 2})
 
     source = call(
-        "POST", f"/api/v1/products/{pid}/sources",
+        "POST",
+        f"/api/v1/products/{pid}/sources",
         json={"name": "brief", "type": "markdown", "locator": "brief.md"},
     )
     sid = source["id"]
@@ -101,7 +102,8 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
     call("GET", f"/api/v1/products/{pid}/board")
     fail("POST", f"/api/v1/products/{pid}/board", json={"name": "Duplicate"})
     task = call(
-        "POST", f"/api/v1/products/{pid}/tasks",
+        "POST",
+        f"/api/v1/products/{pid}/tasks",
         json={"title": "Diagnose", "column_id": "todo", "position": 0},
     )
     tid = task["id"]
@@ -113,7 +115,8 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
     call("DELETE", f"/api/v1/products/{pid}/tasks/{tid}")
 
     agent = call(
-        "POST", f"/api/v1/products/{pid}/agents",
+        "POST",
+        f"/api/v1/products/{pid}/agents",
         json={"name": "Surface agent", "mission": "summarize evidence", "template": "product-analyst"},
     )
     aid = agent["id"]
@@ -123,19 +126,19 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
     call("GET", f"/api/v1/products/{pid}/agents/{aid}/runs")
     call("POST", f"/api/v1/products/{pid}/agents/{aid}/archive")
 
-    notebook = call(
-        "POST", f"/api/v1/products/{pid}/notebooks", json={"title": "Surface notebook"}
-    )
+    notebook = call("POST", f"/api/v1/products/{pid}/notebooks", json={"title": "Surface notebook"})
     nid = notebook["id"]
     block = call(
-        "POST", f"/api/v1/products/{pid}/notebooks/{nid}/blocks",
+        "POST",
+        f"/api/v1/products/{pid}/notebooks/{nid}/blocks",
         json={"kind": "markdown", "content": "Evidence notes"},
     )
     call("POST", f"/api/v1/products/{pid}/notebooks/{nid}/blocks/{block['id']}/run")
     call("GET", f"/api/v1/products/{pid}/notebooks/{nid}/render")
 
     document = call(
-        "POST", f"/api/v1/products/{pid}/documents",
+        "POST",
+        f"/api/v1/products/{pid}/documents",
         json={"title": "surface.md", "content": "# Events\n\nThe events table is healthy."},
     )
     did = document["id"]
@@ -148,14 +151,16 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
     call("POST", f"/api/v1/products/{pid}/knowledge/extract")
 
     data_source = call(
-        "POST", f"/api/v1/products/{pid}/data-sources",
+        "POST",
+        f"/api/v1/products/{pid}/data-sources",
         json={"name": "sqlite", "connector": "sqlite", "locator": str(db)},
     )
     dsid = data_source["id"]
     call("GET", f"/api/v1/products/{pid}/data-sources/{dsid}/schema")
     call("POST", f"/api/v1/products/{pid}/data-sources/{dsid}/verify")
     metric = call(
-        "POST", f"/api/v1/products/{pid}/metrics",
+        "POST",
+        f"/api/v1/products/{pid}/metrics",
         json={"name": "event count", "formula": "count(*)", "source_id": dsid},
     )
     call("GET", f"/api/v1/products/{pid}/metrics")
@@ -163,13 +168,15 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
 
     call("POST", f"/api/v1/products/{pid}/queries/validate", json={"statement": "SELECT 1"})
     call(
-        "POST", f"/api/v1/products/{pid}/queries/compile",
+        "POST",
+        f"/api/v1/products/{pid}/queries/compile",
         json={"spec": {"table": "events", "aggregate": {"fn": "count"}}},
     )
     call("GET", f"/api/v1/products/{pid}/health")
     call("GET", f"/api/v1/products/{pid}/evidence-graph")
     run = call(
-        "POST", f"/api/v1/products/{pid}/queries/execute",
+        "POST",
+        f"/api/v1/products/{pid}/queries/execute",
         json={"source_id": dsid, "statement": "SELECT * FROM events"},
     )
     qid = run["id"]
@@ -180,13 +187,15 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
     call("DELETE", f"/api/v1/products/{pid}/queries/{qid}")
 
     dashboard = call(
-        "POST", f"/api/v1/products/{pid}/dashboards",
+        "POST",
+        f"/api/v1/products/{pid}/dashboards",
         json={"name": "Surface dashboard", "widgets": []},
     )
     call("GET", f"/api/v1/products/{pid}/dashboards")
     call("POST", f"/api/v1/products/{pid}/dashboards/{dashboard['id']}/render")
     initiative = call(
-        "POST", f"/api/v1/products/{pid}/initiatives",
+        "POST",
+        f"/api/v1/products/{pid}/initiatives",
         json={"title": "Improve observability", "hypothesis": "fewer blind spots"},
     )
     call("GET", f"/api/v1/products/{pid}/initiatives")
@@ -234,17 +243,20 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
     )
     assert preview["preview"].startswith("# Existing")
     imported = call(
-        "POST", f"/api/v1/products/{pid}/documents/from-obsidian",
+        "POST",
+        f"/api/v1/products/{pid}/documents/from-obsidian",
         json={"confirm": "import", "path": "obsidian.md", "title": "Imported note"},
     )
     assert imported["source_path"] == "obsidian.md"
     plan = call(
-        "POST", f"/api/v1/products/{pid}/documents/obsidian/sync-plan",
+        "POST",
+        f"/api/v1/products/{pid}/documents/obsidian/sync-plan",
         json={"path": "obsidian.md", "content": "# Updated note\n"},
     )
     assert plan["outcome"] == "conflict"
     exported = call(
-        "POST", f"/api/v1/products/{pid}/documents/to-obsidian",
+        "POST",
+        f"/api/v1/products/{pid}/documents/to-obsidian",
         json={
             "confirm": "export",
             "path": "obsidian.md",
@@ -254,12 +266,14 @@ def test_api_surface_routes_are_executable(api, monkeypatch):
     )
     assert exported["sync_state"] == "updated"
     skipped = call(
-        "POST", f"/api/v1/products/{pid}/documents/obsidian/sync-skip",
+        "POST",
+        f"/api/v1/products/{pid}/documents/obsidian/sync-skip",
         json={"confirm": "skip", "path": "deferred.md", "content": "# Deferred\n", "reason": "review"},
     )
     assert skipped["outcome"] == "skipped"
     rolled_back = call(
-        "POST", f"/api/v1/products/{pid}/documents/obsidian/rollback",
+        "POST",
+        f"/api/v1/products/{pid}/documents/obsidian/rollback",
         json={"confirm": "rollback", "path": "obsidian.md", "receipt_path": exported["receipt_path"]},
     )
     assert rolled_back["outcome"] == "rolled_back"

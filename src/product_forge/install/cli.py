@@ -6,6 +6,7 @@ plan → confirm → apply → doctor) — the same UX contract as
 `sparkforge-aws install`. With flags the command stays non-interactive
 JSON for CI and scripts.
 """
+
 from __future__ import annotations
 
 import sys
@@ -51,8 +52,10 @@ def run_guided_install() -> int:
         )
         if not kw.get("dry_run"):
             from .managed_runtime import ensure_postgres
-            result["runtime"] = ensure_postgres(lifecycle._init_app_home()["home"],
-                                                  profile=kw.get("profile", "recommended"))
+
+            result["runtime"] = ensure_postgres(
+                lifecycle._init_app_home()["home"], profile=kw.get("profile", "recommended")
+            )
         return result
 
     def _doctor(**kw: Any) -> dict[str, Any]:
@@ -66,20 +69,33 @@ def run_guided_install() -> int:
     )
 
 
-def run_flag_install(*, scope: str, profile: str, host: str,
-                     root: str | None, components: str | None,
-                     gateway_profile: str | None,
-                     dry_run: bool, yes: bool) -> dict[str, Any]:
+def run_flag_install(
+    *,
+    scope: str,
+    profile: str,
+    host: str,
+    root: str | None,
+    components: str | None,
+    gateway_profile: str | None,
+    dry_run: bool,
+    yes: bool,
+) -> dict[str, Any]:
     """Non-interactive flag path — returns the receipt doc."""
-    comps = (tuple(c.strip() for c in components.split(",") if c.strip())
-             if components else None)
+    comps = tuple(c.strip() for c in components.split(",") if c.strip()) if components else None
     result = lifecycle.install(
-        scope=scope, profile=profile, hosts=_hosts_tuple(host),
-        root=Path(root) if root else None, components=comps,
-        gateway_profile=gateway_profile, dry_run=dry_run, yes=yes)
+        scope=scope,
+        profile=profile,
+        hosts=_hosts_tuple(host),
+        root=Path(root) if root else None,
+        components=comps,
+        gateway_profile=gateway_profile,
+        dry_run=dry_run,
+        yes=yes,
+    )
     if not dry_run:
         from ..config import home_dir
         from .managed_runtime import ensure_postgres
+
         result["runtime"] = ensure_postgres(home_dir("user"), profile=profile)
     return result
 

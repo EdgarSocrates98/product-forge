@@ -1,5 +1,15 @@
 """Neutral, dependency-light Obsidian interoperability library."""
 
+from .notes import (
+    build_note_ref,
+    forge_note_path,
+    moc_note,
+    redact_value,
+    render_frontmatter,
+    render_note,
+    section_yaml,
+    slugify,
+)
 from .obsidian import (
     AttachmentResolver,
     ConflictDetector,
@@ -46,19 +56,26 @@ __all__ = [
     "VaultScanner",
     "VaultWriter",
     "WikilinkResolver",
+    "build_note_ref",
     "export_vault_document",
+    "forge_note_path",
     "import_vault_document",
     "import_vault_documents",
     "list_obsidian_receipts",
+    "moc_note",
     "obsidian_projection_metadata",
     "parse_markdown_document",
     "plan_vault_sync",
+    "redact_value",
+    "render_frontmatter",
+    "render_note",
     "rollback_vault_document",
     "scan_vault_documents",
+    "section_yaml",
     "serialize_base_document",
     "skip_vault_sync",
+    "slugify",
     "validate_base_document",
     "validate_canvas_document",
     "validate_vault_authorization",
 ]
-

@@ -35,8 +35,12 @@ def test_gets_require_auth(tmp_path, monkeypatch):
     # public
     assert c.get("/api/v1/health").status_code == 200
     # private GETs now require bearer (§3.2)
-    for path in ("/api/v1/workspaces", "/api/v1/capabilities",
-                 "/api/v1/delegates", "/api/v1/agent-templates"):
+    for path in (
+        "/api/v1/workspaces",
+        "/api/v1/capabilities",
+        "/api/v1/delegates",
+        "/api/v1/agent-templates",
+    ):
         assert c.get(path).status_code == 401, path
         assert c.get(path, headers={"Authorization": "Bearer wrong"}).status_code == 401
         assert c.get(path, headers={"Authorization": f"Bearer {tok}"}).status_code == 200
@@ -105,8 +109,7 @@ def test_delegate_audit_ids_unique(tmp_path, monkeypatch):
     st = Store(db_path(home, cfg))
     call(cfg, st, "p1", "d", "w")
     call(cfg, st, "p1", "d", "w")  # second call must NOT overwrite first audit
-    rows = st._conn.execute(
-        "SELECT id FROM entities WHERE collection='audit_events'").fetchall()
+    rows = st._conn.execute("SELECT id FROM entities WHERE collection='audit_events'").fetchall()
     assert len(rows) == 2 and rows[0][0] != rows[1][0]
     st.close()
 
@@ -128,12 +131,12 @@ def test_durable_jobs(tmp_path, monkeypatch):
     done = reg.run_next()
     assert done["status"] == "done"
     import json
+
     assert json.loads(done["result"])["echo"] == "a"
     # crash simulation: force a job to running, then recover
     st._conn.execute("UPDATE jobs SET status='running' WHERE id=?", (done["id"],))
     assert JobRegistry(st).recover() == 1
-    assert st._conn.execute("SELECT status FROM jobs WHERE id=?",
-                            (done["id"],)).fetchone()[0] == "queued"
+    assert st._conn.execute("SELECT status FROM jobs WHERE id=?", (done["id"],)).fetchone()[0] == "queued"
     # handler that always fails → dead_letter after MAX_ATTEMPTS
     reg.register("boom", lambda p: 1 / 0)
     reg.enqueue("boom", {})
@@ -159,15 +162,18 @@ def test_rbac_workspace_scope(tmp_path, monkeypatch):
     (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
     cfg = load_config(home)
     admin = TokenStore(home / str(cfg["api"]["token_file"])).token
-    cfg["principals"] = [{"token": admin, "role": "admin", "workspaces": []},
-                         {"token": "viewer_tok", "role": "viewer", "workspaces": []}]
+    cfg["principals"] = [
+        {"token": admin, "role": "admin", "workspaces": []},
+        {"token": "viewer_tok", "role": "viewer", "workspaces": []},
+    ]
     (home / "config.json").write_text(__import__("json").dumps(cfg))
     c = TestClient(create_app(home))
     h_adm = {"Authorization": f"Bearer {admin}"}
     # admin creates workspace+product OUTSIDE its declared scope → also 403
     wid = c.post("/api/v1/workspaces", json={"name": "W"}, headers=h_adm).json()["data"]["id"]
-    pid = c.post("/api/v1/products", json={"workspace_id": wid, "name": "P"},
-                 headers=h_adm).json()["data"]["id"]
+    pid = c.post("/api/v1/products", json={"workspace_id": wid, "name": "P"}, headers=h_adm).json()["data"][
+        "id"
+    ]
     # any product route is now outside both principals' workspace lists
     assert c.get(f"/api/v1/products/{pid}", headers=h_adm).status_code == 403
     # unknown-token principal → 401, not a scope leak
@@ -183,9 +189,17 @@ def test_metrics_catalog_and_nl(tmp_path, monkeypatch):
     home = home_dir("user")
     (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
     st = Store(db_path(home, load_config(home)))
-    put_metric(st, "p1", {"name": "monthly recurring revenue",
-                          "formula": "SUM(mrr)", "source_id": "s1",
-                          "dimensions": ["region"], "owner": "finops"})
+    put_metric(
+        st,
+        "p1",
+        {
+            "name": "monthly recurring revenue",
+            "formula": "SUM(mrr)",
+            "source_id": "s1",
+            "dimensions": ["region"],
+            "owner": "finops",
+        },
+    )
     r = resolve(st, "p1", "show me monthly recurring revenue by region")
     assert r["status"] == "matched"
     sql = metric_sql(r["matched"][0]["metric"], "subscriptions")
@@ -208,9 +222,16 @@ def test_health_center_and_evidence_graph(tmp_path, monkeypatch):
     st.put("products", Product(id="p1", workspace_id="w1", name="X"))
     h = compute_health(st, "p1")
     assert h["schema"] == "productforge/ProductHealth/v1"
-    assert set(h["dimensions"]) == {"value", "adoption", "experience",
-                                    "reliability", "cost", "delivery",
-                                    "knowledge", "risk"}
+    assert set(h["dimensions"]) == {
+        "value",
+        "adoption",
+        "experience",
+        "reliability",
+        "cost",
+        "delivery",
+        "knowledge",
+        "risk",
+    }
     # every score is explainable — evidence lists non-empty
     for d in h["dimensions"].values():
         assert d["evidence"], "score without provenance is forbidden"
@@ -224,9 +245,13 @@ def test_experiments_and_meetings(tmp_path, monkeypatch):
     from product_forge.intel.experiments import conclude_experiment, decision_completeness, extract_drafts
 
     # experiment: guardrail breach → stopped, honest outcome
-    exp = {"title": "Checkout A/B", "hypothesis": "fewer steps → more conversion",
-           "success_metrics": ["conversion"], "guardrails": {"error_rate": 0.05},
-           "baseline": {"conversion": 0.10}}
+    exp = {
+        "title": "Checkout A/B",
+        "hypothesis": "fewer steps → more conversion",
+        "success_metrics": ["conversion"],
+        "guardrails": {"error_rate": 0.05},
+        "baseline": {"conversion": 0.10},
+    }
     out = conclude_experiment(exp, {"conversion": 0.13, "error_rate": 0.08})
     assert out["outcome"] == "stopped_by_guardrail" and out["status"] == "stopped"
     out2 = conclude_experiment(exp, {"conversion": 0.14, "error_rate": 0.01})
@@ -237,7 +262,8 @@ def test_experiments_and_meetings(tmp_path, monkeypatch):
     # meeting extraction → drafts only
     drafts = extract_drafts(
         "Alice: onboard\nDecisão: remover etapa de CNPJ\nTODO: criar ticket de tracking\n"
-        "decision: rename plan tiers")
+        "decision: rename plan tiers"
+    )
     kinds = [d["kind"] for d in drafts]
     assert kinds.count("decision") == 2 and kinds.count("action") == 1
     assert all(d["line"] for d in drafts)

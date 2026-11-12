@@ -25,18 +25,58 @@ MAX_PREVIEW_BYTES = 512 * 1024
 MAX_CLASSIFY_BYTES = 8192
 
 IGNORED_DIRS = {
-    ".git", ".hg", ".svn", ".idea", ".vscode", ".angular", ".next",
-    ".pytest_cache", ".ruff_cache", ".mypy_cache", ".tox", ".venv", "venv",
-    "env", "node_modules", "dist", "build", "target", "coverage", "__pycache__",
-    ".cache", ".gradle", ".terraform", ".serverless", "vendor", "tmp", "temp",
+    ".git",
+    ".hg",
+    ".svn",
+    ".idea",
+    ".vscode",
+    ".angular",
+    ".next",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+    ".tox",
+    ".venv",
+    "venv",
+    "env",
+    "node_modules",
+    "dist",
+    "build",
+    "target",
+    "coverage",
+    "__pycache__",
+    ".cache",
+    ".gradle",
+    ".terraform",
+    ".serverless",
+    "vendor",
+    "tmp",
+    "temp",
 }
 SENSITIVE_NAMES = {
-    ".env", ".env.local", ".env.development", ".env.production", ".env.test",
-    "credentials", "credentials.json", "secrets.json", "secret.json",
-    "id_rsa", "id_ed25519", "known_hosts", "config.json",
+    ".env",
+    ".env.local",
+    ".env.development",
+    ".env.production",
+    ".env.test",
+    "credentials",
+    "credentials.json",
+    "secrets.json",
+    "secret.json",
+    "id_rsa",
+    "id_ed25519",
+    "known_hosts",
+    "config.json",
 }
 SENSITIVE_SUFFIXES = {
-    ".pem", ".key", ".p12", ".pfx", ".crt", ".cer", ".der", ".jks",
+    ".pem",
+    ".key",
+    ".p12",
+    ".pfx",
+    ".crt",
+    ".cer",
+    ".der",
+    ".jks",
 }
 DOC_SUFFIXES = {".md", ".mdx", ".txt", ".rst", ".adoc", ".yaml", ".yml", ".json", ".toml"}
 MANIFESTS = {
@@ -55,8 +95,17 @@ MANIFESTS = {
     "main.tf": "terraform",
 }
 PROJECT_DOC_NAMES = {
-    "readme", "readme.md", "agents.md", "claude.md", "contributing.md",
-    "architecture.md", "adr", "decision", "decisions", "runbook", "roadmap",
+    "readme",
+    "readme.md",
+    "agents.md",
+    "claude.md",
+    "contributing.md",
+    "architecture.md",
+    "adr",
+    "decision",
+    "decisions",
+    "runbook",
+    "roadmap",
 }
 
 
@@ -150,8 +199,11 @@ def _workspace_root(start: Path) -> tuple[Path, str]:
         if current_repo is None and candidate != current:
             continue
         try:
-            children = [p for p in candidate.iterdir()
-                        if p.is_dir() and not _ignored_dir(p.name) and _looks_like_repo(p)]
+            children = [
+                p
+                for p in candidate.iterdir()
+                if p.is_dir() and not _ignored_dir(p.name) and _looks_like_repo(p)
+            ]
         except OSError:
             continue
         if len(children) >= 2 and not (candidate / ".git").exists():
@@ -171,6 +223,7 @@ def _project_name(root: Path) -> str:
                     return str(value)
             elif manifest == "pyproject.toml":
                 import tomllib
+
                 value = tomllib.loads(path.read_text(encoding="utf-8")).get("project", {}).get("name")
                 if value:
                     return str(value)
@@ -233,9 +286,11 @@ def _walk_documents(repo: Path, workspace: Path, limit: int) -> tuple[list[dict[
         for current_raw, dirs, files in walker:
             current = Path(current_raw)
             depth = len(current.relative_to(repo).parts)
-            dirs[:] = [name for name in sorted(dirs, key=str.lower)
-                       if not _ignored_dir(name) and not _is_reparse(current / name)
-                       and depth < MAX_DEPTH]
+            dirs[:] = [
+                name
+                for name in sorted(dirs, key=str.lower)
+                if not _ignored_dir(name) and not _is_reparse(current / name) and depth < MAX_DEPTH
+            ]
             if depth >= MAX_DEPTH:
                 dirs[:] = []
             for name in sorted(files, key=str.lower):
@@ -250,26 +305,27 @@ def _walk_documents(repo: Path, workspace: Path, limit: int) -> tuple[list[dict[
                     stat_result = path.stat()
                     size = int(stat_result.st_size)
                     modified_at = (
-                        datetime.fromtimestamp(stat_result.st_mtime, UTC)
-                        .isoformat().replace("+00:00", "Z")
+                        datetime.fromtimestamp(stat_result.st_mtime, UTC).isoformat().replace("+00:00", "Z")
                     )
                 except OSError:
                     skipped.append(path.relative_to(workspace).as_posix())
                     continue
                 relative = path.relative_to(workspace).as_posix()
-                documents.append({
-                    "id": hashlib.sha256(relative.encode("utf-8")).hexdigest()[:16],
-                    "path": relative,
-                    "relative_path": path.relative_to(repo).as_posix(),
-                    "repository": repo.name,
-                    "kind": kind,
-                    "title": _title(path),
-                    "extension": path.suffix.lower(),
-                    "size": size,
-                    "modified_at": modified_at,
-                    "state": "discovered",
-                    "readable": size <= MAX_PREVIEW_BYTES,
-                })
+                documents.append(
+                    {
+                        "id": hashlib.sha256(relative.encode("utf-8")).hexdigest()[:16],
+                        "path": relative,
+                        "relative_path": path.relative_to(repo).as_posix(),
+                        "repository": repo.name,
+                        "kind": kind,
+                        "title": _title(path),
+                        "extension": path.suffix.lower(),
+                        "size": size,
+                        "modified_at": modified_at,
+                        "state": "discovered",
+                        "readable": size <= MAX_PREVIEW_BYTES,
+                    }
+                )
                 if len(documents) >= limit:
                     return documents, skipped
     except OSError:
@@ -289,16 +345,18 @@ def discover_workspace(
     for repo in repos:
         manifests = [name for name in MANIFESTS if (repo / name).is_file()]
         repo_id = hashlib.sha256(repo.relative_to(root).as_posix().encode("utf-8")).hexdigest()[:16]
-        repository_items.append({
-            "id": repo_id,
-            "name": _project_name(repo),
-            "path": repo.relative_to(root).as_posix() if repo != root else ".",
-            "repository": repo.name,
-            "is_git": (repo / ".git").exists(),
-            "languages": sorted({MANIFESTS[name] for name in manifests}),
-            "manifests": manifests,
-            "state": "discovered",
-        })
+        repository_items.append(
+            {
+                "id": repo_id,
+                "name": _project_name(repo),
+                "path": repo.relative_to(root).as_posix() if repo != root else ".",
+                "repository": repo.name,
+                "is_git": (repo / ".git").exists(),
+                "languages": sorted({MANIFESTS[name] for name in manifests}),
+                "manifests": manifests,
+                "state": "discovered",
+            }
+        )
         remaining = max(0, max_documents - len(documents))
         if remaining:
             found, repo_skipped = _walk_documents(repo, root, remaining)

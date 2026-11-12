@@ -31,14 +31,13 @@ def test_templates_eval_to_publishable(tmp_path, monkeypatch):
     st = Store(db_path(home, load_config(home)))
     st.put("products", Product(id="p1", workspace_id="w1", name="Pay"))
     text = "# Payments\nError E42 means insufficient funds. Retry with backoff."
-    st.put("documents", Document(id="d1", product_id="p1", title="runbook.md",
-                                 sha256=sha256_text(text)))
+    st.put("documents", Document(id="d1", product_id="p1", title="runbook.md", sha256=sha256_text(text)))
     st.put_chunks("d1", "p1", chunk_text(text))
 
     for name in ("product-analyst", "product-researcher", "api-analyst", "data-steward"):
-        agent = AgentDefinition(id=f"a_{name}", product_id="p1", name=name,
-                                template=name,
-                                tools_allowed=TEMPLATES[name]["tools"])
+        agent = AgentDefinition(
+            id=f"a_{name}", product_id="p1", name=name, template=name, tools_allowed=TEMPLATES[name]["tools"]
+        )
         report = run_evals(st, agent)
         assert report["total"] == len(TEMPLATES[name]["eval_cases"])
         assert report["score"] >= 0.5, f"{name} eval {report['score']} below publish gate"
@@ -59,7 +58,7 @@ def test_templates_api(tmp_path, monkeypatch):
     cfg = load_config(home)
     tok = TokenStore(home / str(cfg["api"]["token_file"])).token
     c = TestClient(create_app(home))
-    items = c.get("/api/v1/agent-templates",
-                  headers={"Authorization": f"Bearer {tok}"}).json()["data"]["items"]
-    assert any(i["name"] == "data-steward" and i["skill"] == "pf-data-products"
-               for i in items)
+    items = c.get("/api/v1/agent-templates", headers={"Authorization": f"Bearer {tok}"}).json()["data"][
+        "items"
+    ]
+    assert any(i["name"] == "data-steward" and i["skill"] == "pf-data-products" for i in items)

@@ -26,21 +26,34 @@ def main() -> int:
     password_env = "PRODUCT_FORGE_SMTP_PASSWORD"  # noqa: S105 - env var name, not a password
     with tempfile.TemporaryDirectory(prefix="productforge-smtp-") as directory:
         store = Store(Path(directory) / "smoke.db")
-        channel = register_channel(store, kind="email", name="authorized-smtp-smoke", config={
-            "host": os.environ["PRODUCT_FORGE_SMTP_HOST"],
-            "port": int(os.environ["PRODUCT_FORGE_SMTP_PORT"]),
-            "username": os.environ["PRODUCT_FORGE_SMTP_USERNAME"],
-            "password_env": password_env,
-            "from": os.environ["PRODUCT_FORGE_SMTP_FROM"],
-            "to": os.environ["PRODUCT_FORGE_SMTP_TO"],
-            "subject": "Product Forge SMTP homologation",
-        })
+        channel = register_channel(
+            store,
+            kind="email",
+            name="authorized-smtp-smoke",
+            config={
+                "host": os.environ["PRODUCT_FORGE_SMTP_HOST"],
+                "port": int(os.environ["PRODUCT_FORGE_SMTP_PORT"]),
+                "username": os.environ["PRODUCT_FORGE_SMTP_USERNAME"],
+                "password_env": password_env,
+                "from": os.environ["PRODUCT_FORGE_SMTP_FROM"],
+                "to": os.environ["PRODUCT_FORGE_SMTP_TO"],
+                "subject": "Product Forge SMTP homologation",
+            },
+        )
         channel["enabled"] = True
-        receipt = deliver_alert(store, {"kind": "smtp_homologation", "synthetic": True}, channel,
-                                approved=True)
+        receipt = deliver_alert(
+            store, {"kind": "smtp_homologation", "synthetic": True}, channel, approved=True
+        )
         result = receipt.get("delivery", {})
-        print(json.dumps({"status": result.get("state"), "attempts": result.get("attempts"),
-                          "channel": "authorized-smtp-smoke"}))
+        print(
+            json.dumps(
+                {
+                    "status": result.get("state"),
+                    "attempts": result.get("attempts"),
+                    "channel": "authorized-smtp-smoke",
+                }
+            )
+        )
         return 0 if result.get("state") == "delivered" else 1
 
 

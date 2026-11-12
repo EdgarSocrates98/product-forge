@@ -59,9 +59,9 @@ def _report(**overrides):
 
 
 def _product(client, headers):
-    workspace = client.post(
-        "/api/v1/workspaces", headers=headers, json={"name": "Investigations"}
-    ).json()["data"]
+    workspace = client.post("/api/v1/workspaces", headers=headers, json={"name": "Investigations"}).json()[
+        "data"
+    ]
     return client.post(
         "/api/v1/products",
         headers=headers,

@@ -20,7 +20,8 @@ from ..security import safe_path
 MAX_ROWS = 5000
 MAX_COLS = 100
 SENSITIVE_COL = __import__("re").compile(
-    r"(password|secret|token|ssn|cpf|card_number|cvv|api_key)", __import__("re").I)
+    r"(password|secret|token|ssn|cpf|card_number|cvv|api_key)", __import__("re").I
+)
 
 
 @dataclass
@@ -36,8 +37,9 @@ class QueryResult:
 class Connector(Protocol):
     def verify(self) -> dict[str, Any]: ...
     def schema(self) -> dict[str, Any]: ...
-    def execute(self, sql: str, *, row_limit: int, timeout_s: float,
-                cancel: threading.Event | None = None) -> QueryResult: ...
+    def execute(
+        self, sql: str, *, row_limit: int, timeout_s: float, cancel: threading.Event | None = None
+    ) -> QueryResult: ...
 
 
 def _mask(columns: list[str], rows: list[list[Any]]) -> tuple[list[list[Any]], list[str]]:
@@ -66,14 +68,26 @@ class SQLiteConnector:
 
     def schema(self) -> dict[str, Any]:
         with self._conn() as c:
-            tables = [r[0] for r in c.execute(
-                "SELECT name FROM sqlite_master WHERE type IN ('table','view')")]
-            cols = {t: [dict(zip(("name", "type"), (r[1], r[2]), strict=False))
-                        for r in c.execute(f'PRAGMA table_info("{t}")')] for t in tables}
+            tables = [
+                r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view')")
+            ]
+            cols = {
+                t: [
+                    dict(zip(("name", "type"), (r[1], r[2]), strict=False))
+                    for r in c.execute(f'PRAGMA table_info("{t}")')
+                ]
+                for t in tables
+            }
         return {"engine": "sqlite", "tables": [{"name": t, "columns": cols[t]} for t in tables]}
 
-    def execute(self, sql: str, *, row_limit: int = MAX_ROWS, timeout_s: float = 30.0,
-                cancel: threading.Event | None = None) -> QueryResult:
+    def execute(
+        self,
+        sql: str,
+        *,
+        row_limit: int = MAX_ROWS,
+        timeout_s: float = 30.0,
+        cancel: threading.Event | None = None,
+    ) -> QueryResult:
         start = time.perf_counter()
         conn = self._conn()
         deadline = start + timeout_s
@@ -93,10 +107,14 @@ class SQLiteConnector:
         finally:
             conn.close()
         rows, masked = _mask(columns, rows)
-        return QueryResult(columns=columns, rows=[list(r) for r in rows],
-                           row_count=len(rows), truncated=truncated,
-                           duration_ms=round((time.perf_counter() - start) * 1000, 1),
-                           masked_columns=masked)
+        return QueryResult(
+            columns=columns,
+            rows=[list(r) for r in rows],
+            row_count=len(rows),
+            truncated=truncated,
+            duration_ms=round((time.perf_counter() - start) * 1000, 1),
+            masked_columns=masked,
+        )
 
 
 class DuckDBConnector:
@@ -107,8 +125,9 @@ class DuckDBConnector:
     def _conn(self):  # type: ignore[no-untyped-def]
         import duckdb
 
-        return duckdb.connect(str(self.db_file) if self.db_file else ":memory:",
-                              read_only=self.read_only and bool(self.db_file))
+        return duckdb.connect(
+            str(self.db_file) if self.db_file else ":memory:", read_only=self.read_only and bool(self.db_file)
+        )
 
     def verify(self) -> dict[str, Any]:
         try:
@@ -121,12 +140,20 @@ class DuckDBConnector:
     def schema(self) -> dict[str, Any]:
         with self._conn() as c:
             tables = [r[0] for r in c.execute("SHOW TABLES").fetchall()]
-            cols = {t: [{"name": r[0], "type": r[1]} for r in
-                        c.execute(f"DESCRIBE {t}").fetchall()] for t in tables}
+            cols = {
+                t: [{"name": r[0], "type": r[1]} for r in c.execute(f"DESCRIBE {t}").fetchall()]
+                for t in tables
+            }
         return {"engine": "duckdb", "tables": [{"name": t, "columns": cols[t]} for t in tables]}
 
-    def execute(self, sql: str, *, row_limit: int = MAX_ROWS, timeout_s: float = 30.0,
-                cancel: threading.Event | None = None) -> QueryResult:
+    def execute(
+        self,
+        sql: str,
+        *,
+        row_limit: int = MAX_ROWS,
+        timeout_s: float = 30.0,
+        cancel: threading.Event | None = None,
+    ) -> QueryResult:
         start = time.perf_counter()
         with self._conn() as c:
             cur = c.execute(sql)
@@ -135,10 +162,14 @@ class DuckDBConnector:
             truncated = len(rows) > row_limit
             rows = rows[:row_limit]
         rows, masked = _mask(columns, rows)
-        return QueryResult(columns=columns, rows=[list(r) for r in rows],
-                           row_count=len(rows), truncated=truncated,
-                           duration_ms=round((time.perf_counter() - start) * 1000, 1),
-                           masked_columns=masked)
+        return QueryResult(
+            columns=columns,
+            rows=[list(r) for r in rows],
+            row_count=len(rows),
+            truncated=truncated,
+            duration_ms=round((time.perf_counter() - start) * 1000, 1),
+            masked_columns=masked,
+        )
 
 
 class PostgresConnector:
@@ -150,6 +181,7 @@ class PostgresConnector:
     def _conn(self):
         try:
             import psycopg
+
             return psycopg.connect(self.dsn, connect_timeout=5)
         except ImportError as exc:
             raise SourceUnavailableError("install product-forge[postgres]") from exc
@@ -170,26 +202,34 @@ class PostgresConnector:
             tables: dict[str, list[dict[str, str]]] = {}
             for table, name, kind in cur.fetchall():
                 tables.setdefault(table, []).append({"name": name, "type": kind})
-        return {"engine": "postgres", "tables": [{"name": n, "columns": cols}
-                                                    for n, cols in tables.items()]}
+        return {"engine": "postgres", "tables": [{"name": n, "columns": cols} for n, cols in tables.items()]}
 
-    def execute(self, sql: str, *, row_limit: int = MAX_ROWS, timeout_s: float = 30.0,
-                cancel: threading.Event | None = None) -> QueryResult:
+    def execute(
+        self,
+        sql: str,
+        *,
+        row_limit: int = MAX_ROWS,
+        timeout_s: float = 30.0,
+        cancel: threading.Event | None = None,
+    ) -> QueryResult:
         del cancel
         start = time.perf_counter()
         with self._conn() as conn, conn.cursor() as cur:
-            cur.execute("SELECT set_config('statement_timeout', %s, false)",
-                        (str(int(timeout_s * 1000)),))
+            cur.execute("SELECT set_config('statement_timeout', %s, false)", (str(int(timeout_s * 1000)),))
             cur.execute(sql)
             columns = [d.name for d in (cur.description or [])][:MAX_COLS]
             rows = cur.fetchmany(row_limit + 1)
         truncated = len(rows) > row_limit
         rows = rows[:row_limit]
         masked_rows, masked = _mask(columns, rows)
-        return QueryResult(columns=columns, rows=[list(r) for r in masked_rows],
-                           row_count=len(rows), truncated=truncated,
-                           duration_ms=round((time.perf_counter() - start) * 1000, 1),
-                           masked_columns=masked)
+        return QueryResult(
+            columns=columns,
+            rows=[list(r) for r in masked_rows],
+            row_count=len(rows),
+            truncated=truncated,
+            duration_ms=round((time.perf_counter() - start) * 1000, 1),
+            masked_columns=masked,
+        )
 
 
 def connector_for(ds: dict[str, Any], allowed_roots: list[Path] | None = None) -> Connector:
@@ -201,4 +241,5 @@ def connector_for(ds: dict[str, Any], allowed_roots: list[Path] | None = None) -
     if kind == "postgres":
         return PostgresConnector(str(ds["locator"]))
     raise UnsafeOperationError(
-        f"connector '{kind}' has no verified local driver — register credentials/driver first")
+        f"connector '{kind}' has no verified local driver — register credentials/driver first"
+    )

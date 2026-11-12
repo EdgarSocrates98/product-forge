@@ -16,12 +16,19 @@ def _seed(home):
     from product_forge.store.sqlite import Store
 
     st = Store(db_path(home, load_config(home)))
-    text = ("# Payments API\n\nGET /api/v1/charges creates charges. "
-            "Table payments.transactions stores them. Metric: error rate. "
-            "Owner: Payments Team.\n\n"
-            "# Retry Policy\n\nExponential backoff, event payment.retried.")
-    doc = Document(id="doc_t", product_id="prd_t", title="payments.md",
-                   content_hash=sha256_text(text), status=DocumentStatus.INDEXED)
+    text = (
+        "# Payments API\n\nGET /api/v1/charges creates charges. "
+        "Table payments.transactions stores them. Metric: error rate. "
+        "Owner: Payments Team.\n\n"
+        "# Retry Policy\n\nExponential backoff, event payment.retried."
+    )
+    doc = Document(
+        id="doc_t",
+        product_id="prd_t",
+        title="payments.md",
+        content_hash=sha256_text(text),
+        status=DocumentStatus.INDEXED,
+    )
     st.put("documents", doc)
     st.put_chunks("doc_t", "prd_t", chunk_text(text))
     return st
@@ -70,13 +77,14 @@ def test_api_knowledge_flow(home):
     c = TestClient(create_app(home))
     h = {"Authorization": f"Bearer {tok}"}
     wid = c.post("/api/v1/workspaces", json={"name": "W"}, headers=h).json()["data"]["id"]
-    pid = c.post("/api/v1/products", json={"workspace_id": wid, "name": "P"},
-                 headers=h).json()["data"]["id"]
-    r = c.post(f"/api/v1/products/{pid}/documents",
-               json={"title": "d.md", "content": "GET /api/v1/x\n\nTable orders"}, headers=h)
+    pid = c.post("/api/v1/products", json={"workspace_id": wid, "name": "P"}, headers=h).json()["data"]["id"]
+    r = c.post(
+        f"/api/v1/products/{pid}/documents",
+        json={"title": "d.md", "content": "GET /api/v1/x\n\nTable orders"},
+        headers=h,
+    )
     assert r.status_code == 201
-    r = c.post(f"/api/v1/products/{pid}/knowledge/query",
-               json={"question": "orders table"}, headers=h)
+    r = c.post(f"/api/v1/products/{pid}/knowledge/query", json={"question": "orders table"}, headers=h)
     assert r.status_code == 200 and r.json()["data"]["citations"]
     r = c.post(f"/api/v1/products/{pid}/knowledge/extract", headers=h)
     assert r.status_code == 200 and r.json()["data"]["entities"] > 0

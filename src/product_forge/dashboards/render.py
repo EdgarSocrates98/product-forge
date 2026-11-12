@@ -16,22 +16,25 @@ from ..store.sqlite import Store
 WIDGET_TYPES = {"kpi_card", "table", "bar_chart", "line_chart", "pie_chart", "metric_trend"}
 
 
-def render_dashboard(store: Store, product_id: str, dashboard: dict[str, Any],
-                     *, max_rows: int = 500) -> dict[str, Any]:
+def render_dashboard(
+    store: Store, product_id: str, dashboard: dict[str, Any], *, max_rows: int = 500
+) -> dict[str, Any]:
     out_widgets = []
     for w in dashboard.get("widgets", []):
-        out_widgets.append(_render_widget(store, product_id, w,
-                                          dashboard.get("filters", {}), max_rows))
+        out_widgets.append(_render_widget(store, product_id, w, dashboard.get("filters", {}), max_rows))
     ok = sum(1 for w in out_widgets if w["state"] == "ok")
-    return {"schema": "productforge/DashboardRender/v1",
-            "dashboard_id": dashboard["id"], "name": dashboard.get("name"),
-            "widgets": out_widgets,
-            "stats": {"total": len(out_widgets), "ok": ok,
-                      "unavailable": len(out_widgets) - ok}}
+    return {
+        "schema": "productforge/DashboardRender/v1",
+        "dashboard_id": dashboard["id"],
+        "name": dashboard.get("name"),
+        "widgets": out_widgets,
+        "stats": {"total": len(out_widgets), "ok": ok, "unavailable": len(out_widgets) - ok},
+    }
 
 
-def _render_widget(store: Store, product_id: str, w: dict[str, Any],
-                   dash_filters: dict[str, Any], max_rows: int) -> dict[str, Any]:
+def _render_widget(
+    store: Store, product_id: str, w: dict[str, Any], dash_filters: dict[str, Any], max_rows: int
+) -> dict[str, Any]:
     base = {"id": w.get("id"), "type": w.get("type", "table"), "title": w.get("title", "")}
     source_id = w.get("source_id")
     if not source_id:
@@ -49,12 +52,21 @@ def _render_widget(store: Store, product_id: str, w: dict[str, Any],
     except Exception as e:
         return {**base, "state": "unavailable", "error": str(e)[:200]}
     if run["status"] != "completed":
-        return {**base, "state": "unavailable", "error": run.get("error", run["status"]),
-                "query_id": run["id"]}
+        return {
+            **base,
+            "state": "unavailable",
+            "error": run.get("error", run["status"]),
+            "query_id": run["id"],
+        }
     rows, cols = run.get("result_preview", []), run.get("columns", [])
-    return {**base, "state": "ok", "query_id": run["id"],
-            "duration_ms": run["duration_ms"], "truncated": run.get("truncated", False),
-            "data": _shape(w.get("type", "table"), cols, rows)}
+    return {
+        **base,
+        "state": "ok",
+        "query_id": run["id"],
+        "duration_ms": run["duration_ms"],
+        "truncated": run.get("truncated", False),
+        "data": _shape(w.get("type", "table"), cols, rows),
+    }
 
 
 def _shape(wtype: str, cols: list[str], rows: list[list[Any]]) -> dict[str, Any]:
@@ -63,8 +75,12 @@ def _shape(wtype: str, cols: list[str], rows: list[list[Any]]) -> dict[str, Any]
         return {"value": val, "label": cols[0] if cols else "value"}
     if wtype in {"bar_chart", "line_chart", "pie_chart"}:
         labels = [str(r[0]) for r in rows] if cols else []
-        series = [{"name": cols[i] if i < len(cols) else f"c{i}",
-                   "values": [r[i] if i < len(r) else None for r in rows]}
-                  for i in range(1, len(cols))]
+        series = [
+            {
+                "name": cols[i] if i < len(cols) else f"c{i}",
+                "values": [r[i] if i < len(r) else None for r in rows],
+            }
+            for i in range(1, len(cols))
+        ]
         return {"labels": labels, "series": series}
     return {"columns": cols, "rows": rows}

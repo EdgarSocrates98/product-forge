@@ -11,8 +11,19 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-ALLOWED_DIALECTS = {"sql", "sqlite", "postgres", "mysql", "tsql", "trino",
-                    "athena", "spark", "duckdb", "dax", "kql"}
+ALLOWED_DIALECTS = {
+    "sql",
+    "sqlite",
+    "postgres",
+    "mysql",
+    "tsql",
+    "trino",
+    "athena",
+    "spark",
+    "duckdb",
+    "dax",
+    "kql",
+}
 
 _ALLOWED_HEADS = {"select", "with", "show", "describe", "desc", "explain", "values", "pragma-read-only"}
 _FORBIDDEN = re.compile(
@@ -57,9 +68,17 @@ def _sqlglot_validate(sql: str, v: Validation) -> Validation:
     from sqlglot import exp
 
     v.engine = "sqlglot"
-    dialect = {"sql": None, "sqlite": "sqlite", "postgres": "postgres",
-               "mysql": "mysql", "tsql": "tsql", "trino": "trino",
-               "athena": "presto", "spark": "spark", "duckdb": "duckdb"}.get(v.dialect)
+    dialect = {
+        "sql": None,
+        "sqlite": "sqlite",
+        "postgres": "postgres",
+        "mysql": "mysql",
+        "tsql": "tsql",
+        "trino": "trino",
+        "athena": "presto",
+        "spark": "spark",
+        "duckdb": "duckdb",
+    }.get(v.dialect)
     try:
         parsed = sqlglot.parse(sql, read=dialect)
     except sqlglot.errors.ParseError as e:
@@ -70,8 +89,17 @@ def _sqlglot_validate(sql: str, v: Validation) -> Validation:
         v.errors.append("multi-statement-not-allowed")
         return v
     node = statements[0]
-    allowed = (exp.Select, exp.Union, exp.Subquery, exp.With, exp.Values,
-               exp.Describe, exp.Show, exp.Pragma, exp.Summarize)
+    allowed = (
+        exp.Select,
+        exp.Union,
+        exp.Subquery,
+        exp.With,
+        exp.Values,
+        exp.Describe,
+        exp.Show,
+        exp.Pragma,
+        exp.Summarize,
+    )
     if not isinstance(node, allowed):
         v.errors.append(f"statement-not-read-only:{type(node).__name__}")
         return v
@@ -83,7 +111,9 @@ def _sqlglot_validate(sql: str, v: Validation) -> Validation:
 
 _KQL_FORBIDDEN = re.compile(
     r"\.\s*(alter|drop|create|ingest|set|append|replace|merge|move|rename|"
-    r"clear|execute|revoke|grant)\b|\bexternaldata\b|\bhttp_request\b", re.I)
+    r"clear|execute|revoke|grant)\b|\bexternaldata\b|\bhttp_request\b",
+    re.I,
+)
 _DAX_FORBIDDEN = re.compile(r"\b(import|export|backup|restore)\b", re.I)
 
 
@@ -146,5 +176,4 @@ def check_allowlist(tables: list[str], allowlist: list[str]) -> list[str]:
     if not allowlist:
         return []
     allowed = {a.lower() for a in allowlist}
-    return [t for t in tables if t.lower() not in allowed
-            and t.lower().split(".")[-1] not in allowed]
+    return [t for t in tables if t.lower() not in allowed and t.lower().split(".")[-1] not in allowed]

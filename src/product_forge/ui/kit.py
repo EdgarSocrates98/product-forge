@@ -241,9 +241,7 @@ def _option_window(ctx: UIContext, n: int, idx: int, extra: int = 0) -> tuple[in
 
 
 def _more_marker(ctx: UIContext, direction: str, count: int) -> str:
-    arrow = (
-        ("↑" if direction == "up" else "↓") if ctx.unicode else ("^" if direction == "up" else "v")
-    )
+    arrow = ("↑" if direction == "up" else "↓") if ctx.unicode else ("^" if direction == "up" else "v")
     return _c(ctx, "2", f"    {arrow} {count} more")
 
 
@@ -281,9 +279,7 @@ def select(
                 line = f" {mark} {_ellipsize(ctx, opt, ctx.width - 6)}"
                 out.append(_c(ctx, "7", line) if i == idx and ctx.color else line)
                 if descriptions and i == idx and descriptions[i]:
-                    out.append(
-                        f"      {_c(ctx, '2', _ellipsize(ctx, descriptions[i], ctx.width - 10))}"
-                    )
+                    out.append(f"      {_c(ctx, '2', _ellipsize(ctx, descriptions[i], ctx.width - 10))}")
             if end < len(options):
                 out.append(_more_marker(ctx, "down", len(options) - end))
             lines_drawn = _redraw(ctx, sys.stdout, lines_drawn, out)
@@ -530,9 +526,7 @@ def format_status_doc(doc: dict[str, Any], *, ctx: UIContext | None = None) -> s
         _kv(
             ctx,
             t("doc_status", ctx.language),
-            doc.get("status")
-            and state_color(ctx, str(doc["status"]), str(doc["status"]).upper())
-            or None,
+            doc.get("status") and state_color(ctx, str(doc["status"]), str(doc["status"]).upper()) or None,
         ),
         _kv(ctx, t("doc_target", ctx.language), doc.get("target_root")),
         _kv(ctx, t("doc_scope", ctx.language), doc.get("scope")),
@@ -565,9 +559,7 @@ def format_status_doc(doc: dict[str, Any], *, ctx: UIContext | None = None) -> s
             icon = _check_icon(ctx, str(c.get("status", "")))
             detail = str(c.get("detail") or "")
             if c.get("repairable"):
-                detail = (detail + "  " if detail else "") + _c(
-                    ctx, "36", t("doc_repairable", ctx.language)
-                )
+                detail = (detail + "  " if detail else "") + _c(ctx, "36", t("doc_repairable", ctx.language))
             line = f"  {icon} {_pad_visible(str(c.get('id', '?')), w_id)}"
             if detail:
                 line += f" {_ellipsize(ctx, detail, ctx.width - w_id - 8)}"
@@ -640,10 +632,7 @@ def format_status_doc(doc: dict[str, Any], *, ctx: UIContext | None = None) -> s
                 lbl += f": {decision}"
             out.append(f"    {_c(ctx, '33', '▲')} {_ellipsize(ctx, lbl, ctx.width - 10)}")
         for m in ws.get("unknown_members") or []:
-            out.append(
-                f"    {_c(ctx, '33', '·')} {m} "
-                f"{_c(ctx, '2', t('doc_unknown_member', ctx.language))}"
-            )
+            out.append(f"    {_c(ctx, '33', '·')} {m} {_c(ctx, '2', t('doc_unknown_member', ctx.language))}")
         for r in ws.get("member_results") or []:
             out.append(
                 f"    {_c(ctx, '2', '·')} {r.get('member', '?')}: "
@@ -661,8 +650,7 @@ def format_status_doc(doc: dict[str, Any], *, ctx: UIContext | None = None) -> s
     if isinstance(error, dict) and (error.get("kind") or error.get("detail")):
         out.append("")
         out.append(
-            f"  {_c(ctx, '31', t('doc_refused', ctx.language))} "
-            f"{_ellipsize(ctx, str(error.get('kind', '')))}"
+            f"  {_c(ctx, '31', t('doc_refused', ctx.language))} {_ellipsize(ctx, str(error.get('kind', '')))}"
         )
         if error.get("detail"):
             out.append(f"    {_ellipsize(ctx, str(error['detail']), ctx.width - 8)}")

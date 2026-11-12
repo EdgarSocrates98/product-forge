@@ -21,8 +21,7 @@ def test_forge_json_version_matches_package() -> None:
     manifest = json.loads((REPO / "forge.json").read_text(encoding="utf-8"))
     version = _package_version()
     assert manifest["version"] == version, (
-        f"forge.json version {manifest['version']} diverges from "
-        f"package __version__ {version}"
+        f"forge.json version {manifest['version']} diverges from package __version__ {version}"
     )
 
 
@@ -30,8 +29,7 @@ def test_agentic_manifest_version_matches_package() -> None:
     manifest = json.loads((REPO / "forge.agentic.json").read_text(encoding="utf-8"))
     version = _package_version()
     assert manifest["version"] == version, (
-        f"forge.agentic.json version {manifest['version']} diverges from "
-        f"package __version__ {version}"
+        f"forge.agentic.json version {manifest['version']} diverges from package __version__ {version}"
     )
 
 
@@ -56,16 +54,15 @@ def test_agentic_manifest_publishes_implemented_knowledge_capabilities() -> None
 def test_packaged_manifests_match_root_manifests() -> None:
     for name in ("forge.json", "forge.agentic.json"):
         root = json.loads((REPO / name).read_text(encoding="utf-8"))
-        packaged = json.loads(
-            (REPO / "src" / "product_forge" / name).read_text(encoding="utf-8")
-        )
+        packaged = json.loads((REPO / "src" / "product_forge" / name).read_text(encoding="utf-8"))
         assert packaged == root, f"packaged {name} diverges from root manifest"
 
 
 def test_portal_manifest_version_matches_package() -> None:
     manifest = json.loads(
-        (REPO / "src" / "product_forge" / "portal_assets" / "angular" / "browser" / "manifest.json")
-        .read_text(encoding="utf-8")
+        (
+            REPO / "src" / "product_forge" / "portal_assets" / "angular" / "browser" / "manifest.json"
+        ).read_text(encoding="utf-8")
     )
     assert manifest["product_forge_version"] == _package_version()
 
@@ -75,9 +72,7 @@ def test_embedded_bridge_manifest_and_version_are_packaged_contracts() -> None:
     match = re.search(r'__version__\s*=\s*"([^"]+)"', init)
     assert match, "embedded Bridge __version__ not found"
     version = match.group(1)
-    manifest = json.loads(
-        (REPO / "src" / "forge_agent_bridge" / "forge.json").read_text(encoding="utf-8")
-    )
+    manifest = json.loads((REPO / "src" / "forge_agent_bridge" / "forge.json").read_text(encoding="utf-8"))
     agentic = json.loads(
         (REPO / "src" / "forge_agent_bridge" / "forge.agentic.json").read_text(encoding="utf-8")
     )

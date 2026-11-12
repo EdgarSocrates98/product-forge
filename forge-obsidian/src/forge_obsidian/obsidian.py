@@ -177,9 +177,7 @@ def validate_canvas_document(document: str | bytes | Mapping[str, Any]) -> dict[
     nodes = value.get("nodes")
     edges = value.get("edges")
     if not isinstance(nodes, list) or not isinstance(edges, list):
-        raise ObsidianVaultError(
-            "OBSIDIAN-CANVAS-INVALID", "canvas document requires nodes and edges arrays"
-        )
+        raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", "canvas document requires nodes and edges arrays")
 
     node_ids: set[str] = set()
     for node in nodes:
@@ -215,9 +213,7 @@ def validate_canvas_document(document: str | bytes | Mapping[str, Any]) -> dict[
                 f"canvas {node_type} node requires string field '{required_content}'",
             )
         if node_type == "group" and "label" in node and not isinstance(node["label"], str):
-            raise ObsidianVaultError(
-                "OBSIDIAN-CANVAS-INVALID", "canvas group label must be a string"
-            )
+            raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", "canvas group label must be a string")
         node_ids.add(node_id)
 
     edge_ids: set[str] = set()
@@ -235,14 +231,10 @@ def validate_canvas_document(document: str | bytes | Mapping[str, Any]) -> dict[
             raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", "canvas edge endpoint does not exist")
         for field in ("fromSide", "toSide"):
             if field in edge and edge[field] not in _CANVAS_SIDES:
-                raise ObsidianVaultError(
-                    "OBSIDIAN-CANVAS-INVALID", f"canvas edge field '{field}' is invalid"
-                )
+                raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", f"canvas edge field '{field}' is invalid")
         for field in ("fromEnd", "toEnd"):
             if field in edge and edge[field] not in _CANVAS_ENDS:
-                raise ObsidianVaultError(
-                    "OBSIDIAN-CANVAS-INVALID", f"canvas edge field '{field}' is invalid"
-                )
+                raise ObsidianVaultError("OBSIDIAN-CANVAS-INVALID", f"canvas edge field '{field}' is invalid")
         edge_ids.add(edge_id)
 
     return {
@@ -300,8 +292,7 @@ def validate_base_document(document: str | bytes | Mapping[str, Any]) -> dict[st
                     "OBSIDIAN-BASE-INVALID", f"base field '{section}' has an invalid shape"
                 )
             if any(
-                not isinstance(key, str) or not isinstance(item, str)
-                for key, item in value[section].items()
+                not isinstance(key, str) or not isinstance(item, str) for key, item in value[section].items()
             ):
                 raise ObsidianVaultError(
                     "OBSIDIAN-BASE-INVALID", f"base field '{section}' must map names to strings"
@@ -331,9 +322,7 @@ def validate_base_document(document: str | bytes | Mapping[str, Any]) -> dict[st
             if "filters" in view:
                 validate_filter(view["filters"], location=f"views[{index}].filters")
             if "limit" in view and (
-                isinstance(view["limit"], bool)
-                or not isinstance(view["limit"], int)
-                or view["limit"] < 0
+                isinstance(view["limit"], bool) or not isinstance(view["limit"], int) or view["limit"] < 0
             ):
                 raise ObsidianVaultError(
                     "OBSIDIAN-BASE-INVALID", f"base view {index} limit must be a non-negative integer"
@@ -420,10 +409,7 @@ def _reparse(path: Path) -> bool:
 def _reparse_stat(info: os.stat_result) -> bool:
     if stat.S_ISLNK(info.st_mode):
         return True
-    return bool(
-        getattr(info, "st_file_attributes", 0)
-        & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
-    )
+    return bool(getattr(info, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
 
 
 def _safe(
@@ -458,6 +444,10 @@ def _safe(
             continue
         try:
             directory_info = current.lstat()
+        except FileNotFoundError as exc:
+            if for_write:
+                continue  # missing parents are created by the atomic writer
+            raise ObsidianVaultError("OBSIDIAN-NOT-FOUND", "vault document was not found") from exc
         except OSError as exc:
             raise ObsidianVaultError(
                 "OBSIDIAN-SYMLINK-REFUSED", "vault path contains an unreadable directory"
@@ -551,14 +541,13 @@ def parse_markdown_document(content: str) -> dict[str, Any]:
         for language in re.findall(r"^```([^\r\n]*)", body, flags=re.MULTILINE)
         if language.strip()
     ]
+
     def _string_list(value: Any) -> list[str]:
         values = value if isinstance(value, list) else [value]
         return sorted({str(item).strip() for item in values if str(item).strip()})
 
     aliases = _string_list(frontmatter.get("aliases", frontmatter.get("alias", [])))
-    block_references = sorted(
-        set(re.findall(r"(?<![\w])\^([A-Za-z0-9][A-Za-z0-9_-]{0,79})\b", body))
-    )
+    block_references = sorted(set(re.findall(r"(?<![\w])\^([A-Za-z0-9][A-Za-z0-9_-]{0,79})\b", body)))
     relative_links = sorted(
         {
             match.group(1).strip()
@@ -569,15 +558,27 @@ def parse_markdown_document(content: str) -> dict[str, Any]:
         }
     )
     attachment_extensions = {
-        ".avif", ".bmp", ".gif", ".jpeg", ".jpg", ".m4a", ".mp3", ".mp4",
-        ".ogg", ".pdf", ".png", ".svg", ".wav", ".webm", ".webp",
+        ".avif",
+        ".bmp",
+        ".gif",
+        ".jpeg",
+        ".jpg",
+        ".m4a",
+        ".mp3",
+        ".mp4",
+        ".ogg",
+        ".pdf",
+        ".png",
+        ".svg",
+        ".wav",
+        ".webm",
+        ".webp",
     }
     attachments = sorted(
         {
             reference.split("#", 1)[0].split("?", 1)[0]
             for reference in [*embeds, *relative_links]
-            if Path(reference.split("#", 1)[0].split("?", 1)[0]).suffix.lower()
-            in attachment_extensions
+            if Path(reference.split("#", 1)[0].split("?", 1)[0]).suffix.lower() in attachment_extensions
         }
     )
     security_warnings = (
@@ -645,13 +646,9 @@ def _import_vault_document_from_root(
     try:
         content = raw_content.decode("utf-8")
     except UnicodeDecodeError as exc:
-        raise ObsidianVaultError(
-            "OBSIDIAN-UTF8-INVALID", "vault document is not valid UTF-8"
-        ) from exc
+        raise ObsidianVaultError("OBSIDIAN-UTF8-INVALID", "vault document is not valid UTF-8") from exc
     if "\x00" in content:
-        raise ObsidianVaultError(
-            "OBSIDIAN-BINARY-REFUSED", "binary content is not a Markdown document"
-        )
+        raise ObsidianVaultError("OBSIDIAN-BINARY-REFUSED", "binary content is not a Markdown document")
     return {
         "schema": "productforge/ObsidianDocument/v1",
         "path": path.relative_to(root).as_posix(),
@@ -1309,5 +1306,3 @@ def _atomic_write(path: Path, content: bytes) -> None:
                 os.unlink(temporary)
             except FileNotFoundError:
                 pass
-
-

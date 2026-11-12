@@ -44,8 +44,10 @@ def run_tui(*, ctx: UIContext | None = None) -> int:
     while True:
         dashboard(
             "PRODUCT FORGE  command centre",
-            [("Workspace", [("root", str(Path.cwd()))]),
-             ("Actions", [(label, "open") for label, _ in actions])],
+            [
+                ("Workspace", [("root", str(Path.cwd()))]),
+                ("Actions", [(label, "open") for label, _ in actions]),
+            ],
             ctx=ctx,
         )
         idx = select("What do you want to inspect?", [label for label, _ in actions] + ["quit"], ctx=ctx)

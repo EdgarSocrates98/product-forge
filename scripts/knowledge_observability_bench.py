@@ -222,21 +222,15 @@ def _retrieval_quality() -> tuple[dict[str, Any], dict[str, Any]]:
                     )
                     for citation in citations
                 )
-                context_tokens = sum(
-                    max(1, len(str(citation["snippet"]).split())) for citation in citations
-                )
+                context_tokens = sum(max(1, len(str(citation["snippet"]).split())) for citation in citations)
                 context_token_counts.append(context_tokens)
                 rows.append(
                     {
                         "question": question,
                         "expected_document_id": expected_id,
-                        "retrieved_document_ids": [
-                            citation["document_id"] for citation in citations
-                        ],
+                        "retrieved_document_ids": [citation["document_id"] for citation in citations],
                         "relevant_retrieved": sum(
-                            1
-                            for citation in citations
-                            if citation["document_id"] == expected_id
+                            1 for citation in citations if citation["document_id"] == expected_id
                         ),
                         "citation_fields_complete": valid,
                         "context_tokens_estimate": context_tokens,
@@ -246,17 +240,9 @@ def _retrieval_quality() -> tuple[dict[str, Any], dict[str, Any]]:
             retrieved = sum(len(row["retrieved_document_ids"]) for row in rows)
             precision = relevant / retrieved if retrieved else 0.0
             recall = relevant / len(rows) if rows else 0.0
-            completeness = (
-                sum(row["citation_fields_complete"] for row in rows) / len(rows)
-                if rows
-                else 0.0
-            )
+            completeness = sum(row["citation_fields_complete"] for row in rows) / len(rows) if rows else 0.0
             citation_quality = {
-                "status": (
-                    "PASS"
-                    if precision == 1.0 and recall == 1.0 and completeness == 1.0
-                    else "FAIL"
-                ),
+                "status": ("PASS" if precision == 1.0 and recall == 1.0 and completeness == 1.0 else "FAIL"),
                 "scope": "deterministic fixture retrieval; not a provider answer-quality evaluation",
                 "precision_at_3": round(precision, 3),
                 "recall_at_3": round(recall, 3),
@@ -267,9 +253,7 @@ def _retrieval_quality() -> tuple[dict[str, Any], dict[str, Any]]:
                 "status": "PASS",
                 "scope": "retrieval-context estimate",
                 "max_context_tokens": max(context_token_counts, default=0),
-                "mean_context_tokens": round(
-                    sum(context_token_counts) / len(context_token_counts), 3
-                )
+                "mean_context_tokens": round(sum(context_token_counts) / len(context_token_counts), 3)
                 if context_token_counts
                 else 0,
                 "provider_usage": "FIXTURE_PROVIDER",
@@ -301,8 +285,7 @@ def _provider_usage() -> dict[str, Any]:
             "request=json.loads(sys.stdin.read())\n"
             "assert request['schema']=='productforge/SynthesisRequest/v1'\n"
             "print(json.dumps({'text':'fixture grounded answer',"
-            f"'tokens_in':{reported_tokens_in},'tokens_out':{reported_tokens_out}" +
-            "}))\n",
+            f"'tokens_in':{reported_tokens_in},'tokens_out':{reported_tokens_out}" + "}))\n",
             encoding="utf-8",
         )
         store = Store(root / "usage.db")
@@ -363,12 +346,8 @@ def _row(size: int) -> dict[str, Any]:
         scanned, scan_ms, scan_peak, scan_rss = _measure(
             lambda: scan_vault_documents(vault, prefix="notes", limit=size)
         )
-        imported, import_ms, import_peak, import_rss = _measure(
-            lambda: import_vault_documents(vault, paths)
-        )
-        resolved, resolve_ms, resolve_peak, resolve_rss = _measure(
-            lambda: _resolve_wikilinks(imported)
-        )
+        imported, import_ms, import_peak, import_rss = _measure(lambda: import_vault_documents(vault, paths))
+        resolved, resolve_ms, resolve_peak, resolve_rss = _measure(lambda: _resolve_wikilinks(imported))
         _exported, export_ms, export_peak, export_rss = _measure(
             lambda: export_vault_document(
                 vault,

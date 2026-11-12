@@ -367,7 +367,7 @@ def _obsidian_descriptor(
             "import_read_only",
             "sync_plan",
             "reviewed_sync",
-                "sync_skip",
+            "sync_skip",
             "rollback",
             "history",
         ]
@@ -523,9 +523,7 @@ def create_app(home: Path | None = None) -> FastAPI:
                 for principal in (ctx.cfg.get("principals") or [])
             )
             valid_token = (
-                bool(oidc_claims)
-                if oidc_enabled
-                else ctx.tokens.check(token) or configured_principal_token
+                bool(oidc_claims) if oidc_enabled else ctx.tokens.check(token) or configured_principal_token
             )
             if not valid_token:
                 err = {
@@ -1873,9 +1871,7 @@ def create_app(home: Path | None = None) -> FastAPI:
         except ObsidianVaultError as exc:
             raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         return envelope(
-            {
-                k: v for k, v in imported.items() if k not in {"content", "markdown"}
-            }
+            {k: v for k, v in imported.items() if k not in {"content", "markdown"}}
             | {
                 "markdown": obsidian_projection_metadata(imported["markdown"]),
                 "preview": imported["content"],
@@ -1954,7 +1950,7 @@ def create_app(home: Path | None = None) -> FastAPI:
                 "source": "obsidian",
                 "obsidian_path": imported["path"],
                 "size": imported["size"],
-                    "obsidian_projection": obsidian_projection_metadata(imported["markdown"]),
+                "obsidian_projection": obsidian_projection_metadata(imported["markdown"]),
                 "provenance": imported["provenance"],
             },
         )
@@ -2092,9 +2088,7 @@ def create_app(home: Path | None = None) -> FastAPI:
                 source=str(payload.get("source") or "product-forge"),
             )
         except ObsidianVaultError as exc:
-            raise ForgeError(
-                str(exc), details={"code": exc.code, "sync_state": exc.sync_state}
-            ) from exc
+            raise ForgeError(str(exc), details={"code": exc.code, "sync_state": exc.sync_state}) from exc
         ctx.audit(
             req,
             "obsidian.document.sync_skipped",

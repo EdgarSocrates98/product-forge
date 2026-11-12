@@ -1,6 +1,5 @@
 """Spec: llm-gateway-integration — contract + routing, provider via subprocess+JSON."""
 
-
 import sys
 
 import pytest
@@ -31,7 +30,8 @@ def test_synthesis_with_provider_and_budget(tmp_path, monkeypatch):
         "import json,sys\n"
         "req=json.loads(sys.stdin.read())\n"
         "print(json.dumps({'text':'answer grounded in '+str(len(req['citations']))+' citations',"
-        " 'tokens_in':12,'tokens_out':34}))\n")
+        " 'tokens_in':12,'tokens_out':34}))\n"
+    )
     home = home_dir("user")
     (home / "state" / "objects").mkdir(parents=True, exist_ok=True)
     cfg = load_config(home)
@@ -62,6 +62,7 @@ def test_synthesis_provider_failure_is_error(tmp_path, monkeypatch):
     assert r["status"] == "error"
     # no budget recorded for a failed call
     from product_forge.errors import NotFoundError
+
     with pytest.raises(NotFoundError):
         st.get("budget_ledger", "budget:p1:1970-01-01")
     st.close()
@@ -83,9 +84,9 @@ def test_kn_query_gateway_states(tmp_path, monkeypatch):
     c = TestClient(create_app(home))
     h = {"Authorization": f"Bearer {tok}"}
     wid = c.post("/api/v1/workspaces", json={"name": "W"}, headers=h).json()["data"]["id"]
-    pid = c.post("/api/v1/products", json={"workspace_id": wid, "name": "P"},
-                 headers=h).json()["data"]["id"]
-    r = c.post(f"/api/v1/products/{pid}/knowledge/query",
-               json={"question": "anything"}, headers=h).json()["data"]
+    pid = c.post("/api/v1/products", json={"workspace_id": wid, "name": "P"}, headers=h).json()["data"]["id"]
+    r = c.post(f"/api/v1/products/{pid}/knowledge/query", json={"question": "anything"}, headers=h).json()[
+        "data"
+    ]
     assert r["synthesis"] == "unavailable:no-provider-adapter"
     assert r["answer"] is None

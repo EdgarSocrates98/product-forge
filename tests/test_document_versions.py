@@ -10,8 +10,12 @@ def test_source_backed_documents_keep_persisted_lineage(tmp_path):
     )
     assert previous is None
     first = Document(
-        id=new_id("doc"), product_id="prd_1", title="Runbook", content_hash="a",
-        status=DocumentStatus.INDEXED, metadata=first_metadata,
+        id=new_id("doc"),
+        product_id="prd_1",
+        title="Runbook",
+        content_hash="a",
+        status=DocumentStatus.INDEXED,
+        metadata=first_metadata,
     )
     store.put("documents", first)
 
@@ -19,8 +23,12 @@ def test_source_backed_documents_keep_persisted_lineage(tmp_path):
         store, "prd_1", {"source": "url", "source_url": "https://example.com/runbook"}
     )
     second = Document(
-        id=new_id("doc"), product_id="prd_1", title="Runbook", content_hash="b",
-        status=DocumentStatus.INDEXED, metadata=second_metadata,
+        id=new_id("doc"),
+        product_id="prd_1",
+        title="Runbook",
+        content_hash="b",
+        status=DocumentStatus.INDEXED,
+        metadata=second_metadata,
     )
     store.put("documents", second)
 

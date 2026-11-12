@@ -87,7 +87,7 @@ else
   done
 fi
 if [ -z "$PY" ]; then
-  echo "install.windows.sh: FORGE-PYTHON-NOT-FOUND — nenhum interpretador em PATH (precisa >=3.10)" >&2
+  echo "install.windows.sh: FORGE-PYTHON-NOT-FOUND — nenhum interpretador em PATH (precisa >=3.11)" >&2
   echo "  remedio: instale Python e reabra o Git Bash, ou aponte FORGE_PYTHON=<caminho/python.exe>, ou rode ./install.windows.sh --python <exe>" >&2
   echo "  remedy: install Python and reopen Git Bash, or set FORGE_PYTHON=<python.exe path>, or run ./install.windows.sh --python <exe>" >&2
   cd "$_forge_original_dir"
