@@ -19,16 +19,30 @@ def test_install_plan_then_apply(project, tmp_path, monkeypatch):
     plan = kit_lifecycle.install(scope="project", root=project,
                                  hosts=("devin",), dry_run=True)
     assert plan["status"] == "planned" and plan["planned_files"]
-    assert any(f["path"].startswith(".devin/skills/pf-") for f in plan["planned_files"])
+    # `.agents/` is the shared host surface — devin reads it natively
+    # (vendored installkit 1.0.4+ consolidates skills there, not
+    # `.devin/skills/`).
+    assert any(f["path"].startswith(".agents/skills/pf-") for f in plan["planned_files"])
 
     doc = kit_lifecycle.install(scope="project", root=project,
                                 hosts=("devin",), yes=True)
     assert doc["checks"][0]["status"] == "PASS"
     assert (project / ".agents/skills/pf-sql/SKILL.md").is_file()
-    assert (project / ".devin/skills/pf-aws/SKILL.md").is_file()
+    assert (project / ".agents/skills/pf-aws/SKILL.md").is_file()
     assert (project / ".agents/agents/product-intel-coordinator.md").is_file()
     assert (project / ".agents/agents/executors/pf-judge.md").is_file()
-    assert "product-forge:managed" in (project / "AGENTS.md").read_text()
+    # Consumer docs are forge_context-managed now: `forge:*` blocks +
+    # `.forge/context/` registry, not `product-forge:managed` markers.
+    agents_md = (project / "AGENTS.md").read_text()
+    assert "forge:product-forge:begin" in agents_md
+    assert "forge:ecosystem:begin" in agents_md
+    registry = json.loads(
+        (project / ".forge/context/registry.json").read_text())
+    assert registry["schema"] == "forge/context-registry/v1"
+    entry = next(f for f in registry["forges"] if f["forge_id"] == "product-forge")
+    assert entry["kind"] == "specialist"
+    check_ids = {c["id"] for c in doc["checks"]}
+    assert {"context-registry", "consumer-docs"} <= check_ids
     mcp = json.loads((project / ".mcp.json").read_text())
     assert mcp["mcpServers"]["product-forge"]["command"] == "productforge"
     assert doc["app_home"]["home"]

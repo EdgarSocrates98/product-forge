@@ -1,0 +1,112 @@
+{
+  "domains_index": {
+    "agentic-workspaces": [
+      "product-forge"
+    ],
+    "analytics": [
+      "product-forge"
+    ],
+    "dashboards": [
+      "product-forge"
+    ],
+    "knowledge-management": [
+      "product-forge"
+    ],
+    "product-intelligence": [
+      "product-forge"
+    ]
+  },
+  "forges": [
+    {
+      "domains": [
+        "agentic-workspaces",
+        "analytics",
+        "dashboards",
+        "knowledge-management",
+        "product-intelligence"
+      ],
+      "forge_id": "product-forge",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin"
+      ],
+      "installed_at": "2026-11-12T03:47:38Z",
+      "installed_by": {
+        "agent": "product-forge",
+        "version": "0.2.3"
+      },
+      "kind": "specialist",
+      "manifest": {
+        "path": "capabilities/product-forge.json",
+        "sha256": "sha256:fdf47a6564ce83613b7d10ad7a09986f53934e60ca86ec7c69406d6e1214eac5"
+      },
+      "name": "Product Forge",
+      "owner": "product-forge",
+      "profile": "recommended",
+      "qualified_ids": [
+        "product-forge:agent-eval",
+        "product-forge:agent-ops-coordinator",
+        "product-forge:data-analyst-coordinator",
+        "product-forge:doctor",
+        "product-forge:forge/context-registry/v1",
+        "product-forge:forge/context/v1",
+        "product-forge:forge/v1",
+        "product-forge:integration-coordinator",
+        "product-forge:knowledge-query",
+        "product-forge:pf-agent",
+        "product-forge:pf-agent-factory",
+        "product-forge:pf-analytics",
+        "product-forge:pf-apis",
+        "product-forge:pf-aws",
+        "product-forge:pf-azure",
+        "product-forge:pf-cloud",
+        "product-forge:pf-dashboards",
+        "product-forge:pf-data-products",
+        "product-forge:pf-extractor",
+        "product-forge:pf-finops",
+        "product-forge:pf-governance",
+        "product-forge:pf-judge",
+        "product-forge:pf-know",
+        "product-forge:pf-knowledge",
+        "product-forge:pf-prioritization",
+        "product-forge:pf-product-discovery",
+        "product-forge:pf-product-strategy",
+        "product-forge:pf-reporting",
+        "product-forge:pf-requirements",
+        "product-forge:pf-sql",
+        "product-forge:pf-synthesizer",
+        "product-forge:pf-verifier",
+        "product-forge:planning-coordinator",
+        "product-forge:product-context",
+        "product-forge:product-intel-coordinator",
+        "product-forge:product-knowledge"
+      ],
+      "scope": "project",
+      "state": "available",
+      "updated_at": "2026-11-12T03:47:38Z",
+      "version": "0.2.3"
+    }
+  ],
+  "ownership": {
+    "files": {
+      "ROUTING.md": "shared",
+      "capabilities/<forge-id>.json": "fully-managed",
+      "registry.json": "shared"
+    },
+    "kinds": [
+      "fully-managed",
+      "shared",
+      "managed-block",
+      "user",
+      "preexisting",
+      "foreign-installer"
+    ],
+    "policy": "registry.json and ROUTING.md are shared documents regenerated deterministically from per-forge entries. capabilities/<forge-id>.json is fully-managed by <forge-id> alone \u2014 a forge never creates, overwrites or deletes another forge's manifest or registry entry."
+  },
+  "schema": "forge/context-registry/v1",
+  "updated_at": "2026-11-12T03:47:38Z",
+  "version": 1,
+  "workspace_root": "E:\\projetos\\FORJAS\\product-forge"
+}

@@ -839,6 +839,13 @@ plan_app = typer.Typer(help="Planning: initiatives, PRD, roadmap")
 app.add_typer(dash_app, name="dashboard")
 app.add_typer(plan_app, name="plan")
 
+from forge_obsidian.cli import obsidian_app as _shared_obsidian_app  # noqa: E402
+
+app.add_typer(
+    _shared_obsidian_app("product-forge", source="product-forge"),
+    name="obsidian",
+)
+
 
 @dash_app.command("create")
 def dash_create(product_id: str, name: str, widgets: str = "[]") -> None:

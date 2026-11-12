@@ -18,7 +18,7 @@ import time
 from collections.abc import Iterator, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -458,6 +458,12 @@ def _safe(
             continue
         try:
             directory_info = current.lstat()
+        except FileNotFoundError as exc:
+            if for_write:
+                continue  # missing parents are created by the atomic writer
+            raise ObsidianVaultError(
+                "OBSIDIAN-NOT-FOUND", "vault document was not found"
+            ) from exc
         except OSError as exc:
             raise ObsidianVaultError(
                 "OBSIDIAN-SYMLINK-REFUSED", "vault path contains an unreadable directory"
@@ -668,7 +674,7 @@ def _import_vault_document_from_root(
             "adapter": "stdlib-obsidian-markdown",
             "vault": root.name,
             "cli_required": False,
-            "imported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "imported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         },
     }
 
@@ -756,7 +762,7 @@ def scan_vault_documents(
                     "title": Path(relative).stem.replace("-", " ").replace("_", " ").strip().title(),
                     "size": info.st_size,
                     "modified_at": (
-                        datetime.fromtimestamp(info.st_mtime, UTC).isoformat().replace("+00:00", "Z")
+                        datetime.fromtimestamp(info.st_mtime, timezone.utc).isoformat().replace("+00:00", "Z")
                     ),
                 }
             )
@@ -930,7 +936,7 @@ def _export_vault_document_unlocked(
                     "backup_path": None,
                     "warnings": ["candidate already matches the vault document"],
                     "unresolved": [],
-                    "exported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+                    "exported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                     "provenance": {
                         "adapter": "stdlib-obsidian-markdown",
                         "vault": root.name,
@@ -982,7 +988,7 @@ def _export_vault_document_unlocked(
         "backup_path": backup_path.relative_to(root).as_posix() if backup_path else None,
         "warnings": [],
         "unresolved": [],
-        "exported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "exported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "provenance": {"adapter": "stdlib-obsidian-markdown", "vault": root.name, "cli_required": False},
     }
     return _persist_sync_receipt(root, receipt)
@@ -1049,7 +1055,7 @@ def _skip_vault_sync_unlocked(
             "backup_path": None,
             "warnings": [reason[:240]],
             "unresolved": [],
-            "exported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "exported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "provenance": {
                 "adapter": "stdlib-obsidian-markdown",
                 "vault": root.name,
@@ -1148,7 +1154,7 @@ def _rollback_vault_document_unlocked(
     _atomic_write(path, restored_bytes)
     if hashlib.sha256(path.read_bytes()).hexdigest() != restored_hash:
         raise ObsidianVaultError("OBSIDIAN-INTEGRITY", "post-rollback hash verification failed")
-    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     rollback_id = hashlib.sha256(f"{current_hash}:{restored_hash}:{timestamp}".encode()).hexdigest()[:24]
     return _persist_sync_receipt(
         root,
@@ -1241,7 +1247,7 @@ def plan_vault_sync(
         "outcome": state,
         "warnings": ["confirmation required for mutation"] if state in {"created", "updated"} else [],
         "unresolved": ["manual conflict resolution required"] if state == "conflict" else [],
-        "planned_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "planned_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
 
 

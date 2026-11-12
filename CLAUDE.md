@@ -15,19 +15,16 @@ Same hard rules as AGENTS.md — kept in sync manually (edit both).
 Commands: `python -m pytest -q` · `python -m ruff check src tests` ·
 `productforge install --dry-run` · `productforge doctor`.
 
+<!-- forge:ecosystem:begin -->
+## Forge Ecosystem
 
-<!-- product-forge:managed:begin -->
-## Product Forge
+Forge specialists are installed here. The agent contract is
+`AGENTS.md`; the operating protocol is `AGENT_PROTOCOL.md`; the
+registry is `.forge/context/registry.json` and routing is
+`.forge/context/ROUTING.md`.
 
-Specialist Forge for product intelligence, analytics and agentic workspaces.
+@AGENTS.md
 
-- CLI: `productforge` (status, doctor, workspace, product, knowledge, agent,
-  query, source, dashboard, plan, api, mcp, portal).
-- Knowledge: `productforge knowledge import|query <pid>` — FTS5 with citations.
-- Agents: `productforge agent create|run|eval|publish` — eval-gated publishing.
-- Analytics: `productforge source|query` — read-only SQL (sqlglot validated).
-- MCP: `productforge mcp serve` exposes productforge_* tools to hosts.
-- Skills: `skills/pf-*` — 16 domain skills (strategy, SQL, dashboards, APIs,
-  cloud, governance, FinOps, reporting, knowledge, agent factory).
-- API envelope: `forge/PortalApi/1` (schema + correlation_id + data|error).
-<!-- product-forge:managed:end -->
+Managed block — regenerated on install/repair; never overrides
+system, developer or host policies.
+<!-- forge:ecosystem:end -->
