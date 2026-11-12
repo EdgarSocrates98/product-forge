@@ -163,6 +163,7 @@
     "mcp",
     "serve"
   ],
+  "mcp_verify_tool": "productforge_status",
   "host_adapters": [
     "claude",
     "devin",
