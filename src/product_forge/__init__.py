@@ -5,7 +5,7 @@ agent factory, analytics studio, dashboard studio and product operations,
 exposed through CLI, HTTP API, MCP and the Forge Portal.
 """
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 __all__ = ["__version__"]
 
 FORGE_ID = "product-forge"
