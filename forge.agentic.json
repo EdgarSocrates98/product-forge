@@ -8,77 +8,143 @@
     {
       "id": "doctor",
       "mode": "DIAGNOSTIC_ONLY",
-      "command": ["{cli}", "doctor"],
+      "command": [
+        "{cli}",
+        "doctor"
+      ],
       "description": "Environment health and capability diagnostics",
       "read_only": true
     },
     {
       "id": "product-context",
       "mode": "DIRECT_CAPABILITY",
-      "command": ["{cli}", "product", "context", "{product_id}"],
+      "command": [
+        "{cli}",
+        "product",
+        "context",
+        "{product_id}"
+      ],
       "description": "Recover the Product Context Package for a product",
       "read_only": true
     },
     {
       "id": "knowledge-query",
       "mode": "DIRECT_CAPABILITY",
-      "command": ["{cli}", "knowledge", "query", "{product_id}", "{question}"],
+      "command": [
+        "{cli}",
+        "knowledge",
+        "query",
+        "{product_id}",
+        "{question}"
+      ],
       "description": "Grounded answer over product knowledge with citations",
       "read_only": true
     },
     {
       "id": "knowledge-import",
       "mode": "DIRECT_CAPABILITY",
-      "command": ["{cli}", "knowledge", "import", "{product_id}", "{file}"],
+      "command": [
+        "{cli}",
+        "knowledge",
+        "import",
+        "{product_id}",
+        "{file}"
+      ],
       "description": "Import a local Markdown document with an auditable receipt",
       "read_only": false
     },
     {
       "id": "obsidian.preview",
       "mode": "DIAGNOSTIC_ONLY",
-      "command": ["{cli}", "knowledge", "obsidian", "preview", "{path}"],
+      "command": [
+        "{cli}",
+        "knowledge",
+        "obsidian",
+        "preview",
+        "{path}"
+      ],
       "description": "Preview authorized Obsidian note metadata and projection",
       "read_only": true
     },
     {
       "id": "obsidian.import",
       "mode": "DIRECT_CAPABILITY",
-      "command": ["{cli}", "knowledge", "obsidian", "import", "{product_id}", "{path}"],
+      "command": [
+        "{cli}",
+        "knowledge",
+        "obsidian",
+        "import",
+        "{product_id}",
+        "{path}"
+      ],
       "description": "Import one selected authorized Obsidian note into product knowledge",
       "read_only": false
     },
     {
       "id": "obsidian.export",
       "mode": "DIRECT_CAPABILITY",
-      "command": ["{cli}", "knowledge", "obsidian", "export", "{path}", "{file}", "--yes"],
+      "command": [
+        "{cli}",
+        "knowledge",
+        "obsidian",
+        "export",
+        "{path}",
+        "{file}",
+        "--yes"
+      ],
       "description": "Export a reviewed knowledge document to the authorized Obsidian vault",
       "read_only": false
     },
     {
       "id": "obsidian.sync.plan",
       "mode": "DIRECT_CAPABILITY",
-      "command": ["{cli}", "knowledge", "obsidian", "sync-plan", "{path}", "{file}"],
+      "command": [
+        "{cli}",
+        "knowledge",
+        "obsidian",
+        "sync-plan",
+        "{path}",
+        "{file}"
+      ],
       "description": "Plan a reviewed Obsidian sync without mutation",
       "read_only": true
     },
     {
       "id": "obsidian.sync.apply",
       "mode": "DIRECT_CAPABILITY",
-      "command": ["{cli}", "knowledge", "obsidian", "export", "{path}", "{file}", "--yes"],
+      "command": [
+        "{cli}",
+        "knowledge",
+        "obsidian",
+        "export",
+        "{path}",
+        "{file}",
+        "--yes"
+      ],
       "description": "Apply an explicitly reviewed Obsidian sync and emit a receipt",
       "read_only": false
     },
     {
       "id": "knowledge.evidence.list",
       "mode": "DIAGNOSTIC_ONLY",
-      "command": ["{cli}", "knowledge", "evidence", "{product_id}"],
+      "command": [
+        "{cli}",
+        "knowledge",
+        "evidence",
+        "{product_id}"
+      ],
       "description": "List body-free knowledge evidence and provenance",
       "read_only": true
     },
     {
       "id": "knowledge.context.project",
       "mode": "DIRECT_CAPABILITY",
-      "command": ["{cli}", "product", "context", "{product_id}"],
+      "command": [
+        "{cli}",
+        "product",
+        "context",
+        "{product_id}"
+      ],
       "description": "Recover the Product Context Package for a product",
       "read_only": true
     }
@@ -92,12 +158,155 @@
     "product-intel-coordinator"
   ],
   "coordinators": [],
-  "mcp_command": ["{cli}", "mcp", "serve"],
-  "host_adapters": ["claude", "devin", "codex", "copilot"],
+  "mcp_command": [
+    "{cli}",
+    "mcp",
+    "serve"
+  ],
+  "host_adapters": [
+    "claude",
+    "devin",
+    "codex",
+    "copilot"
+  ],
   "host_partial": {
     "cursor": "marker + .mcp.json only — no skill/agent catalog adapter"
   },
   "read_only_default": true,
   "requires_aws_credentials": false,
-  "requires_llm": false
+  "requires_llm": false,
+  "resources": [
+    {
+      "id": "pf-agent-factory",
+      "kind": "skill",
+      "location": "skills/pf-agent-factory/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-analytics",
+      "kind": "skill",
+      "location": "skills/pf-analytics/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-apis",
+      "kind": "skill",
+      "location": "skills/pf-apis/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-aws",
+      "kind": "skill",
+      "location": "skills/pf-aws/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-azure",
+      "kind": "skill",
+      "location": "skills/pf-azure/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-dashboards",
+      "kind": "skill",
+      "location": "skills/pf-dashboards/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-data-products",
+      "kind": "skill",
+      "location": "skills/pf-data-products/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-finops",
+      "kind": "skill",
+      "location": "skills/pf-finops/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-governance",
+      "kind": "skill",
+      "location": "skills/pf-governance/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-knowledge",
+      "kind": "skill",
+      "location": "skills/pf-knowledge/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-prioritization",
+      "kind": "skill",
+      "location": "skills/pf-prioritization/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-product-discovery",
+      "kind": "skill",
+      "location": "skills/pf-product-discovery/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-product-strategy",
+      "kind": "skill",
+      "location": "skills/pf-product-strategy/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-reporting",
+      "kind": "skill",
+      "location": "skills/pf-reporting/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-requirements",
+      "kind": "skill",
+      "location": "skills/pf-requirements/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "pf-sql",
+      "kind": "skill",
+      "location": "skills/pf-sql/SKILL.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "agent-ops-coordinator",
+      "kind": "agent",
+      "location": "agents/agent-ops-coordinator.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "data-analyst-coordinator",
+      "kind": "agent",
+      "location": "agents/data-analyst-coordinator.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "integration-coordinator",
+      "kind": "agent",
+      "location": "agents/integration-coordinator.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "planning-coordinator",
+      "kind": "agent",
+      "location": "agents/planning-coordinator.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "product-intel-coordinator",
+      "kind": "agent",
+      "location": "agents/product-intel-coordinator.md",
+      "resource_class": "agentic"
+    },
+    {
+      "id": "rules/catalog",
+      "kind": "rule",
+      "location": "rules/catalog",
+      "resource_class": "policy"
+    }
+  ]
 }
