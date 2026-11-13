@@ -35,12 +35,12 @@
       "installed_at": "2026-11-12T03:47:38Z",
       "installed_by": {
         "agent": "product-forge",
-        "version": "0.2.3"
+        "version": "0.2.5"
       },
       "kind": "specialist",
       "manifest": {
         "path": "capabilities/product-forge.json",
-        "sha256": "sha256:fdf47a6564ce83613b7d10ad7a09986f53934e60ca86ec7c69406d6e1214eac5"
+        "sha256": "sha256:c8a6a6e577b2bd08d726841b795892a33d5db36d8eaef76c56a52d8bd82fbcf3"
       },
       "name": "Product Forge",
       "owner": "product-forge",
@@ -85,8 +85,8 @@
       ],
       "scope": "project",
       "state": "available",
-      "updated_at": "2026-11-12T03:47:38Z",
-      "version": "0.2.3"
+      "updated_at": "2026-11-13T18:48:32Z",
+      "version": "0.2.5"
     }
   ],
   "ownership": {
@@ -106,7 +106,7 @@
     "policy": "registry.json and ROUTING.md are shared documents regenerated deterministically from per-forge entries. capabilities/<forge-id>.json is fully-managed by <forge-id> alone \u2014 a forge never creates, overwrites or deletes another forge's manifest or registry entry."
   },
   "schema": "forge/context-registry/v1",
-  "updated_at": "2026-11-12T03:47:38Z",
+  "updated_at": "2026-11-13T18:48:32Z",
   "version": 1,
   "workspace_root": "E:\\projetos\\FORJAS\\product-forge"
 }

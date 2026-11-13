@@ -122,6 +122,7 @@ src = ["src", "tests"]
 exclude = [
     "src/product_forge/_forge_portal.py",  # vendored byte-parity — never edit
     "src/product_forge/_installkit.py",    # vendored forge installkit — never edit
+    "src/product_forge/_forgecontext.py",  # vendored context registry — never edit
     "src/forge_agent_bridge",              # vendored Bridge — lint in its own repo
 ]
 

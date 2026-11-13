@@ -81,7 +81,7 @@ system, developer or host policies (instruction hierarchy, §5.5).
 <!-- forge:ecosystem:end -->
 
 <!-- forge:product-forge:begin -->
-### Product Forge — `product-forge` 0.2.3
+### Product Forge — `product-forge` 0.2.5
 
 Domains: agentic-workspaces, analytics, dashboards, knowledge-management, product-intelligence
 
