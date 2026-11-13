@@ -4,7 +4,7 @@
   "distribution": "product-forge",
   "cli": "productforge",
   "python": ">=3.11",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "mcp_server_name": "product-forge",
   "mcp_command": [
     "productforge",
