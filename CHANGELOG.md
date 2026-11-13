@@ -3,6 +3,12 @@
 All notable changes. Format follows the evolution cycles (see
 `prompt_evo_pf_continue.md` / `prompt_evo_ai_workspace.md` programs).
 
+## [0.2.5] — 2026-11-13
+
+### Changed
+
+- Unified platform release: version bump + VERSION_DUMP.unified-release.json.
+
 ## [Unreleased]
 
 ## [0.2.4] - 2026-11-12
