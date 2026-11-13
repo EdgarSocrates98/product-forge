@@ -92,7 +92,7 @@ safety limits (hierarchy, spec §5.5).
 ## Installed forges
 
 <!-- forge:product-forge:begin -->
-### Product Forge — `product-forge` 0.2.3
+### Product Forge — `product-forge` 0.2.5
 
 Domains: agentic-workspaces, analytics, dashboards, knowledge-management, product-intelligence
 

@@ -19,7 +19,7 @@ _No domain is claimed by more than one forge._
 
 ## Forges
 
-### product-forge — Product Forge 0.2.3
+### product-forge — Product Forge 0.2.5
 
 - state: available · scope: project · profile: recommended
 - hosts: claude, codex, copilot, devin
