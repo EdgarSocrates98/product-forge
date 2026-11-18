@@ -14,6 +14,7 @@ manifest + registration into install/uninstall/repair.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,16 @@ HOSTS = kit.HOSTS
 GATEWAY_PROFILES = ("economy", "balanced", "deep")
 
 FORGE_ID = "product-forge"
+
+# Honest profile matrix (install-2.1): the vendored installkit's
+# ``profile_asset_kinds`` is the source of truth — ``recommended`` and
+# ``full`` install the SAME asset kinds today. ``full`` is a declared
+# alias of ``recommended``, not a superset: ``tui``/``graph-studio`` are
+# opt-in components (``--components``), never profile-gated. Declared
+# here so nothing implies a difference that does not exist.
+PROFILE_ASSET_MATRIX: dict[str, tuple[str, ...]] = {
+    profile: kit.profile_asset_kinds(profile) for profile in PROFILES
+}
 
 
 def _spec() -> kit.ForgeSpec:
@@ -165,19 +176,158 @@ def _ctx(
     )
 
 
-def _bridge_install(*, dry_run: bool, yes: bool) -> dict[str, Any]:
+# -- Agent Bridge wiring ---------------------------------------------------
+# The bridge is vendored inside the wheel (byte-parity with the
+# forge-agent-bridge repo), so every bridge behavior lives in this
+# wrapper — the vendored install lifecycle is never edited here.
+
+_BRIDGE_STATE = "components.json"  # the bridge's own install ledger
+_BRIDGE_PROVISIONED = "bridge-provisioned"  # ownership marker under OUR state_dir
+
+
+def _bridge_root() -> Path:
+    """Account-level bridge state root — ``~/.forge-bridge``, matching the
+    vendored ``forge_agent_bridge.install.lifecycle._root_for("user")``.
+    ``FORGE_HOME_OVERRIDE`` redirects it in tests, like every ``~/.forge``
+    path in the installkit."""
+    return Path(os.environ.get("FORGE_HOME_OVERRIDE") or Path.home()) / ".forge-bridge"
+
+
+def _bridge_service_check() -> dict[str, Any]:
+    """The wheel ships the bridge as a module (``python -m
+    forge_agent_bridge.cli``) — there is no ``forge-bridge`` console
+    script, so the vendored ``verify-cli`` PATH probe can never pass
+    here. The honest service check is module importability."""
+    import importlib.util
+
+    step = {
+        "component": "service",
+        "action": "verify-module",
+        "target": "python -m forge_agent_bridge.cli (vendored in product-forge)",
+    }
+    ok = (
+        importlib.util.find_spec("forge_agent_bridge") is not None
+        and importlib.util.find_spec("forge_agent_bridge.cli") is not None
+    )
+    return {
+        **step,
+        "result": "importable" if ok else "unverified:forge_agent_bridge not importable",
+    }
+
+
+def _bridge_install(*, state_dir: Path, dry_run: bool, yes: bool) -> dict[str, Any]:
     """Provision the vendored Agent Bridge runtime state
     (``~/.forge-bridge``: dirs, pair.token 0600, providers snapshot,
-    ledger). The bridge ships inside product-forge, so its install runs
-    in-process — `productforge install` IS the bridge install. A bridge
-    failure degrades to ``unverified:*`` instead of crashing the
-    forge install."""
+    ledger) — at most once per account.
+
+    When the bridge's own install ledger already exists — provisioned by
+    us or by a standalone ``forge-bridge install`` — the step reports
+    ``skipped`` instead of rewriting the providers/config/ledger
+    snapshots. Repair of partial or drifted bridge state goes through
+    the standalone bridge install surface, never silently from here.
+    When this install does provision, an ownership marker is recorded
+    under THIS install's ``state_dir`` so uninstall can prove ownership.
+    A bridge failure degrades to ``unverified:*`` instead of crashing
+    the forge install."""
+    root = _bridge_root()
+    base: dict[str, Any] = {"forge": "forge-agent-bridge", "root": str(root)}
+    if (root / _BRIDGE_STATE).is_file():
+        return {
+            **base,
+            "status": "skipped",
+            "reason": "bridge state already provisioned — existing "
+            "providers/config/ledger preserved; repair via the "
+            "forge-agent-bridge install surface",
+        }
     try:
         from forge_agent_bridge.install import lifecycle as bridge
 
-        return bridge.install(scope="user", profile="recommended", dry_run=dry_run, yes=yes)
+        doc = bridge.install(
+            scope="user",
+            profile="recommended",
+            # `service` (a PATH verify-cli probe) is replaced below by the
+            # import-based check — the wheel ships no such script.
+            components=("state", "pairing", "providers"),
+            root=root,
+            dry_run=dry_run,
+            yes=yes,
+        )
+        service = _bridge_service_check()
+        doc.setdefault("plan", []).append({k: v for k, v in service.items() if k != "result"})
+        if not dry_run:
+            bucket = "applied" if service["result"] == "importable" else "unverified"
+            doc.setdefault(bucket, []).append(service)
+            try:
+                (state_dir / _BRIDGE_PROVISIONED).write_text(
+                    "product-forge\n", encoding="utf-8"
+                )
+            except OSError:
+                pass
+        return doc
     except Exception as exc:  # noqa: BLE001 - degraded, never fatal
-        return {"forge": "forge-agent-bridge", "status": "unverified", "error": str(exc)}
+        return {**base, "status": "unverified", "error": str(exc)}
+
+
+def _bridge_standalone_registered() -> bool:
+    """A standalone forge-agent-bridge install leaves account-registry or
+    distribution evidence — either one makes ``~/.forge-bridge`` foreign-
+    owned for our uninstall path."""
+    if (kit.installations_dir() / "forge-agent-bridge.json").exists():
+        return True
+    try:
+        from importlib import metadata as ilm
+
+        ilm.distribution("forge-agent-bridge")
+        return True
+    except Exception:
+        return False
+
+
+def _bridge_uninstall(state_dir: Path) -> dict[str, Any]:
+    """Ownership-aware bridge cleanup: bridge files are removed only when
+    THIS install's provisioning marker is present and no standalone
+    forge-agent-bridge installation is registered — ``pair.token``,
+    ``events/`` and ``backups/`` are user content preserved by the
+    bridge's own uninstall either way. Unknown-provenance state is
+    reported ``skipped``, never deleted."""
+    root = _bridge_root()
+    base: dict[str, Any] = {"forge": "forge-agent-bridge", "root": str(root)}
+    marker = state_dir / _BRIDGE_PROVISIONED
+    if not root.exists():
+        marker.unlink(missing_ok=True)  # stale marker, bridge state gone
+        return {
+            **base,
+            "status": "not-applicable",
+            "reason": "no bridge state at ~/.forge-bridge",
+        }
+    if _bridge_standalone_registered():
+        return {
+            **base,
+            "status": "skipped",
+            "reason": "a standalone forge-agent-bridge installation is "
+            "registered — its files are foreign-owned and preserved",
+        }
+    if not marker.is_file():
+        return {
+            **base,
+            "status": "skipped",
+            "reason": "bridge state was not provisioned by this install — "
+            "providers/config/ledger preserved (ownership unknown)",
+        }
+    try:
+        from forge_agent_bridge.install import lifecycle as _bridge_lc
+
+        out = _bridge_lc.uninstall(scope="user", root=root)
+        marker.unlink(missing_ok=True)
+        return out
+    except Exception as exc:  # noqa: BLE001 - honest degraded state
+        return {**base, "status": "unverified", "error": str(exc)}
+
+
+def _skipped(component: str, reason: str) -> dict[str, Any]:
+    """Named skipped state — a step the caller explicitly did not opt in
+    to is reported, never silently dropped or faked."""
+    return {"component": component, "status": "skipped", "reason": reason}
 
 
 def _source() -> dict[str, Any]:
@@ -190,11 +340,48 @@ def _source() -> dict[str, Any]:
         return {"kind": "git-checkout", "path": str(Path(__file__).resolve().parents[3])}
 
 
+def _declared_install_fields() -> dict[str, Any]:
+    """install-2.1 declarations of THIS forge's ``forge.json`` — copied
+    verbatim into the account-registry manifest (never fabricated;
+    mirrors ``forge_bootstrap``'s register step and the sibling forges):
+
+    - ``installation_kind``: ``content``|``service``|``control-tool``.
+    - ``install``: the declared surface (operations/flags/hosts/scopes/
+      profiles/approval) — the orchestrator's argv builder only sends
+      what is declared.
+    - ``depends_on``: forge_ids that install first (order only — the
+      vendored bridge makes this an ordering declaration, never a
+      requirement).
+    """
+    for cand in (_PKG_DIR / "forge.json", _REPO_DIR / "forge.json"):
+        cfg = kit._load_json(cand, None)
+        if not isinstance(cfg, dict):
+            continue
+        doc: dict[str, Any] = {}
+        if cfg.get("installation_kind"):
+            doc["installation_kind"] = str(cfg["installation_kind"])
+        if cfg.get("install"):
+            doc["install"] = dict(cfg["install"])
+        if "depends_on" in cfg:
+            doc["depends_on"] = [str(d) for d in cfg["depends_on"]]
+        return doc
+    return {}
+
+
 def _register(spec: kit.ForgeSpec, root: Path) -> None:
     try:
+        declared = _declared_install_fields()
         kit.register_installation(
             kit.manifest_for(
-                spec, install_root=root, venv=None, version=__version__, source=_source(), shim=None
+                spec,
+                install_root=root,
+                venv=None,
+                version=__version__,
+                source=_source(),
+                shim=None,
+                installation_kind=declared.get("installation_kind"),
+                install=declared.get("install"),
+                depends_on=declared.get("depends_on"),
             )
         )
     except kit.InstallError:
@@ -209,22 +396,44 @@ def install(
     root: Path | None = None,
     components: tuple[str, ...] | None = None,
     gateway_profile: str | None = None,
+    init_app: bool | None = None,
+    with_bridge: bool | None = None,
     dry_run: bool = False,
     yes: bool = False,
 ) -> dict[str, Any]:
     if gateway_profile is not None and gateway_profile not in GATEWAY_PROFILES:
         raise kit.InstallError(kit.E_PROFILE, f"gateway_profile {gateway_profile!r}; {GATEWAY_PROFILES}")
+    # User-level provisioning (account app home, bridge state) is opt-in
+    # at project/workspace scope: a content install must not mutate
+    # ~/.productforge or ~/.forge-bridge unless the user asked. At
+    # scope=user the account install keeps provisioning them by default.
+    init_app = scope == "user" if init_app is None else init_app
+    with_bridge = scope == "user" if with_bridge is None else with_bridge
     selected = tuple(HOSTS) if hosts == ("all",) else hosts
     ctx = _ctx(scope, profile, selected, root, dry_run, components)
     if ctx.dry_run:
         doc = kit.plan(ctx)
-        bridge_doc = _bridge_install(dry_run=True, yes=yes)
-        doc["bridge"] = bridge_doc
-        planned = doc.get("planned_files")
-        if isinstance(planned, list):
-            planned.extend(
-                {"path": f"bridge:{s['component']} → {s['target']}", "kind": "bridge", "action": s["action"]}
-                for s in bridge_doc.get("plan", [])
+        doc["app_home"] = (
+            {"component": "app-home", "status": "planned", "target": "~/.productforge"}
+            if init_app
+            else _skipped("app-home", f"scope={scope} — opt in with --init-app")
+        )
+        if with_bridge:
+            bridge_doc = _bridge_install(state_dir=ctx.state_dir, dry_run=True, yes=yes)
+            doc["bridge"] = bridge_doc
+            planned = doc.get("planned_files")
+            if isinstance(planned, list):
+                planned.extend(
+                    {
+                        "path": f"bridge:{s['component']} → {s['target']}",
+                        "kind": "bridge",
+                        "action": s["action"],
+                    }
+                    for s in bridge_doc.get("plan", [])
+                )
+        else:
+            doc["bridge"] = _skipped(
+                "forge-agent-bridge", f"scope={scope} — opt in with --with-bridge"
             )
         return doc
     with kit.acquire_lock(ctx.state_dir):
@@ -234,8 +443,18 @@ def install(
         _register_context(ctx, result)
         _drop_stale_doc_entries(ctx)
     _register(ctx.spec, ctx.root)
-    result["app_home"] = _init_app_home(gateway_profile)
-    result["bridge"] = _bridge_install(dry_run=False, yes=yes)
+    result["app_home"] = (
+        _init_app_home(gateway_profile)
+        if init_app
+        else _skipped("app-home", f"scope={scope} — opt in with --init-app")
+    )
+    result["bridge"] = (
+        _bridge_install(state_dir=ctx.state_dir, dry_run=False, yes=yes)
+        if with_bridge
+        else _skipped(
+            "forge-agent-bridge", f"scope={scope} — opt in with --with-bridge"
+        )
+    )
     return result
 
 
@@ -266,7 +485,7 @@ def doctor(*, scope: str = "project", root: Path | None = None, verify_mcp: bool
     try:
         from forge_agent_bridge.install import lifecycle as _bridge_lc
 
-        doc["bridge"] = _bridge_lc.doctor(scope="user")
+        doc["bridge"] = _bridge_lc.doctor(scope="user", root=_bridge_root())
     except Exception as exc:  # noqa: BLE001 - honest degraded state
         doc["bridge"] = {"status": "unverified", "error": str(exc)}
     doc["portal"] = _portal_composition()
@@ -370,11 +589,15 @@ def update(
     hosts: tuple[str, ...] = ("all",),
     root: Path | None = None,
     gateway_profile: str | None = None,
+    with_bridge: bool | None = None,
     yes: bool = False,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     if gateway_profile is not None and gateway_profile not in GATEWAY_PROFILES:
         raise kit.InstallError(kit.E_PROFILE, f"gateway_profile {gateway_profile!r}; {GATEWAY_PROFILES}")
+    # Same opt-in rule as install(): user-level bridge state is only
+    # provisioned at scope=user by default or when explicitly asked.
+    with_bridge = scope == "user" if with_bridge is None else with_bridge
     selected = tuple(HOSTS) if hosts == ("all",) else hosts
     ctx = _ctx(scope, profile, selected, root, dry_run)
     if ctx.dry_run:
@@ -387,7 +610,13 @@ def update(
         # (idempotente: re-registro inalterado = zero writes).
         _register_context(ctx, result)
         _drop_stale_doc_entries(ctx)
-    result["bridge"] = _bridge_install(dry_run=False, yes=yes)
+    result["bridge"] = (
+        _bridge_install(state_dir=ctx.state_dir, dry_run=False, yes=yes)
+        if with_bridge
+        else _skipped(
+            "forge-agent-bridge", f"scope={scope} — opt in with --with-bridge"
+        )
+    )
     return result
 
 
@@ -404,14 +633,11 @@ def uninstall(
             doc.setdefault("checks", []).extend(checks)
             if any(c.get("status") == "BLOCKED" for c in checks):
                 doc["status"] = "failed"
-    try:
-        from forge_agent_bridge.install import lifecycle as _bridge_lc
-
-        # Bridge uninstall is state-preserving by contract (pair.token,
-        # events, backups kept) — `purge_state` here only purges PF state.
-        doc["bridge"] = _bridge_lc.uninstall(scope="user")
-    except Exception as exc:  # noqa: BLE001 - honest degraded state
-        doc["bridge"] = {"status": "unverified", "error": str(exc)}
+    # Ownership-aware: bridge files leave only when THIS install
+    # provisioned them (marker under our state_dir) and no standalone
+    # forge-agent-bridge is registered. `purge_state` purges PF state —
+    # pair.token/events/backups are user content, preserved regardless.
+    doc["bridge"] = _bridge_uninstall(ctx.state_dir)
     return doc
 
 

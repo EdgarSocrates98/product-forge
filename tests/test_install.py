@@ -16,6 +16,7 @@ def project(tmp_path):
 
 def test_install_plan_then_apply(project, tmp_path, monkeypatch):
     monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("FORGE_HOME_OVERRIDE", str(tmp_path / "acct"))
     plan = kit_lifecycle.install(scope="project", root=project, hosts=("devin",), dry_run=True)
     assert plan["status"] == "planned" and plan["planned_files"]
     # `.agents/` is the shared host surface — devin reads it natively
@@ -42,7 +43,20 @@ def test_install_plan_then_apply(project, tmp_path, monkeypatch):
     assert {"context-registry", "consumer-docs"} <= check_ids
     mcp = json.loads((project / ".mcp.json").read_text())
     assert mcp["mcpServers"]["product-forge"]["command"] == "productforge"
-    assert doc["app_home"]["home"]
+    # install-2.1: user-level state is opt-in at project scope — named
+    # skipped states, and zero writes under the account dirs.
+    assert doc["app_home"]["status"] == "skipped"
+    assert doc["bridge"]["status"] == "skipped"
+    assert not (tmp_path / "home").exists()
+    assert not (tmp_path / "acct" / ".forge-bridge").exists()
+    # The account registry entry still records the declared surface.
+    manifest = json.loads(
+        (tmp_path / "acct" / ".forge" / "installations" / "product-forge.json").read_text()
+    )
+    assert manifest["installation_kind"] == "content"
+    assert manifest["install"]["approval"] == "--yes"
+    assert manifest["depends_on"] == ["forge-agent-bridge"]
+    assert manifest["mcp"]["verify_tool"] == "productforge_status"
 
 
 def test_minimal_profile_skips_skills(project):
@@ -135,12 +149,14 @@ def test_mcp_tools_expanded(tmp_path, monkeypatch):
 
 def test_workspace_scope_and_gateway_profile(project, tmp_path, monkeypatch):
     monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("FORGE_HOME_OVERRIDE", str(tmp_path / "acct"))
     doc = kit_lifecycle.install(
         scope="workspace",
         root=project,
         hosts=("claude",),
         gateway_profile="deep",
         components=("skills", "mcp"),
+        init_app=True,  # explicit opt-in: user-config write at workspace scope
         yes=True,
     )
     assert doc["status"] == "completed"
@@ -183,3 +199,104 @@ def test_wizard_module_contract():
 
     assert icli.guided_install_available() in (True, False)
     assert callable(icli.run_guided_install)
+
+
+# -- install-2.1: user-state opt-in + bridge ownership ----------------------
+
+
+def test_opt_in_provisions_app_home_and_bridge(project, tmp_path, monkeypatch):
+    """--init-app/--with-bridge at project scope provision user-level
+    state once; the service check is module-import based (the wheel
+    ships no `forge-bridge` script); a second run skips instead of
+    rewriting the providers/config/ledger snapshots."""
+    monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "home"))
+    acct = tmp_path / "acct"
+    monkeypatch.setenv("FORGE_HOME_OVERRIDE", str(acct))
+    doc = kit_lifecycle.install(
+        scope="project",
+        root=project,
+        hosts=("devin",),
+        init_app=True,
+        with_bridge=True,
+        yes=True,
+    )
+    assert doc["app_home"]["home"]
+    bridge_root = acct / ".forge-bridge"
+    assert (bridge_root / "pair.token").is_file()
+    assert (bridge_root / "providers.json").is_file()
+    # ownership marker lives under THIS install's state dir
+    assert (project / ".product-forge" / "bridge-provisioned").is_file()
+    actions = {s["action"] for s in doc["bridge"]["plan"]}
+    assert "verify-module" in actions
+    assert "verify-cli" not in actions
+    assert any(
+        s.get("action") == "verify-module" and s.get("result") == "importable"
+        for s in doc["bridge"]["applied"]
+    )
+    # already provisioned → skipped; snapshots are not stomped
+    providers_before = (bridge_root / "providers.json").read_bytes()
+    doc2 = kit_lifecycle.install(
+        scope="project", root=project, hosts=("devin",), with_bridge=True, yes=True
+    )
+    assert doc2["bridge"]["status"] == "skipped"
+    assert (bridge_root / "providers.json").read_bytes() == providers_before
+
+
+def test_uninstall_removes_only_self_provisioned_bridge(project, tmp_path, monkeypatch):
+    """Ownership-aware bridge cleanup: the provisioning marker decides —
+    pair.token/events/backups are user content and always survive."""
+    monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "home"))
+    acct = tmp_path / "acct"
+    monkeypatch.setenv("FORGE_HOME_OVERRIDE", str(acct))
+    kit_lifecycle.install(
+        scope="project", root=project, hosts=("devin",), with_bridge=True, yes=True
+    )
+    bridge_root = acct / ".forge-bridge"
+    u = kit_lifecycle.uninstall(scope="project", root=project)
+    assert u["status"] == "completed"
+    assert not (bridge_root / "providers.json").exists()
+    assert not (bridge_root / "components.json").exists()
+    assert (bridge_root / "pair.token").exists()  # user content preserved
+    assert not (project / ".product-forge" / "bridge-provisioned").exists()
+
+
+def test_uninstall_preserves_foreign_bridge_state(project, tmp_path, monkeypatch):
+    """Bridge state without our marker (unknown provenance) is never
+    deleted; a registered standalone install is foreign-owned even when
+    our marker is present."""
+    monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "home"))
+    acct = tmp_path / "acct"
+    monkeypatch.setenv("FORGE_HOME_OVERRIDE", str(acct))
+    bridge_root = acct / ".forge-bridge"
+    bridge_root.mkdir(parents=True)
+    (bridge_root / "providers.json").write_text('{"foreign": true}')
+    (bridge_root / "components.json").write_text('{"foreign": true}')
+    kit_lifecycle.install(scope="project", root=project, hosts=("devin",), yes=True)
+    u = kit_lifecycle.uninstall(scope="project", root=project)
+    assert u["bridge"]["status"] == "skipped"
+    assert (bridge_root / "providers.json").read_text() == '{"foreign": true}'
+    # a standalone bridge registration outranks our marker
+    inst = acct / ".forge" / "installations"
+    inst.mkdir(parents=True, exist_ok=True)
+    (inst / "forge-agent-bridge.json").write_text('{"forge_id": "forge-agent-bridge"}')
+    (project / ".product-forge").mkdir(exist_ok=True)
+    (project / ".product-forge" / "bridge-provisioned").write_text("product-forge\n")
+    u2 = kit_lifecycle.uninstall(scope="project", root=project)
+    assert u2["bridge"]["status"] == "skipped"
+    assert "foreign-owned" in u2["bridge"]["reason"]
+    assert (bridge_root / "providers.json").read_text() == '{"foreign": true}'
+
+
+def test_discover_projects_finds_gitless_members(tmp_path):
+    """installkit 1.0.6: a directory counts as a workspace member via
+    .git OR a project manifest — gitless checkouts are first-class."""
+    from product_forge import _installkit as kit
+
+    ws = tmp_path / "ws"
+    (ws / "git-member" / ".git").mkdir(parents=True)
+    (ws / "gitless-member").mkdir()
+    (ws / "gitless-member" / "pyproject.toml").write_text("[project]\nname='x'\n")
+    (ws / "plain-dir").mkdir()  # no markers → not a member
+    (ws / ".venv" / "git-member" / ".git").mkdir(parents=True)  # IGNORED_DIRS
+    found = {p.name for p in kit.discover_projects(ws)}
+    assert found == {"git-member", "gitless-member"}
