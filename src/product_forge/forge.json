@@ -11,6 +11,53 @@
     "mcp",
     "serve"
   ],
+  "mcp_verify_tool": "productforge_status",
+  "installation_kind": "content",
+  "install": {
+    "operations": [
+      "plan",
+      "apply",
+      "status",
+      "doctor",
+      "repair",
+      "update",
+      "uninstall",
+      "mcp-verify"
+    ],
+    "flags": [
+      "--scope",
+      "--root",
+      "--host",
+      "--profile",
+      "--components",
+      "--gateway-profile",
+      "--init-app",
+      "--with-bridge",
+      "--yes",
+      "--dry-run",
+      "--purge"
+    ],
+    "hosts": [
+      "claude",
+      "devin",
+      "codex",
+      "copilot"
+    ],
+    "scopes": [
+      "project",
+      "workspace",
+      "user"
+    ],
+    "profiles": [
+      "minimal",
+      "recommended",
+      "full"
+    ],
+    "approval": "--yes"
+  },
+  "depends_on": [
+    "forge-agent-bridge"
+  ],
   "extras": [
     "api",
     "mcp",
