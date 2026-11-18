@@ -12,7 +12,7 @@ python -m pytest -q                             # tests
 python -m ruff check src tests                  # lint (line-length 110)
 productforge install --dry-run                  # install plan (installkit)
 productforge doctor                             # env diagnostics
-productforge mcp serve                          # MCP stdio (14 tools)
+productforge mcp serve                          # MCP stdio (17 tools)
 ```
 
 ## Hard rules

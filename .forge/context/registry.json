@@ -40,7 +40,7 @@
       "kind": "specialist",
       "manifest": {
         "path": "capabilities/product-forge.json",
-        "sha256": "sha256:c8a6a6e577b2bd08d726841b795892a33d5db36d8eaef76c56a52d8bd82fbcf3"
+        "sha256": "sha256:86ccec9f15c26e7ec622d8bf58ed335d71e30527b02003e2c6762ce5746aeebc"
       },
       "name": "Product Forge",
       "owner": "product-forge",
@@ -85,7 +85,7 @@
       ],
       "scope": "project",
       "state": "available",
-      "updated_at": "2026-11-13T18:48:32Z",
+      "updated_at": "2026-11-18T04:50:50Z",
       "version": "0.2.5"
     }
   ],
@@ -106,7 +106,7 @@
     "policy": "registry.json and ROUTING.md are shared documents regenerated deterministically from per-forge entries. capabilities/<forge-id>.json is fully-managed by <forge-id> alone \u2014 a forge never creates, overwrites or deletes another forge's manifest or registry entry."
   },
   "schema": "forge/context-registry/v1",
-  "updated_at": "2026-11-13T18:48:32Z",
+  "updated_at": "2026-11-18T04:50:50Z",
   "version": 1,
   "workspace_root": "E:\\projetos\\FORJAS\\product-forge"
 }

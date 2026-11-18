@@ -162,7 +162,7 @@
     "attestation": "forge_context/1.3.4 source:5674012d1a5760df",
     "files": {
       "forge.agentic.json": "sha256:108fb93a4e35a4aa136aa40e0f76bb37b8c2917c9329c8fbc8db60edb36e3c39",
-      "forge.json": "sha256:28ddc4cb4fa63ecd48a63620695a99a1d05bb3e8607baa693a79de294076cbff"
+      "forge.json": "sha256:afd8cbdd8e4b19b6baded25171b95df71612267aeca1b553e197843632a29757"
     }
   },
   "interfaces": {
@@ -211,7 +211,7 @@
       "version": "1"
     }
   ],
-  "recorded_at": "2026-11-13T18:48:32Z",
+  "recorded_at": "2026-11-18T04:50:50Z",
   "recorded_by": {
     "agent": "product-forge",
     "version": "0.2.5"

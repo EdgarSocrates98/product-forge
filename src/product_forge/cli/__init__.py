@@ -147,6 +147,18 @@ def install(
     root: str = typer.Option(None, "--root"),
     components: str = typer.Option(None, "--components", help="csv: skills,agents,mcp,tui,graph-studio"),
     gateway_profile: str = typer.Option(None, "--gateway-profile", help="economy | balanced | deep"),
+    init_app: bool | None = typer.Option(
+        None,
+        "--init-app/--no-init-app",
+        help="provision the account app home ~/.productforge "
+        "(default: only at --scope user)",
+    ),
+    with_bridge: bool | None = typer.Option(
+        None,
+        "--with-bridge/--no-bridge",
+        help="provision agent-bridge state ~/.forge-bridge "
+        "(default: only at --scope user; never rewrites existing state)",
+    ),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
     """Install Product Forge — governed by the forge installkit.
@@ -154,8 +166,12 @@ def install(
     Bare `productforge install` on a TTY opens the guided wizard (scope,
     install profile, execution profile, components, hosts, plan review).
     Same engine as spark-forge-aws: profile-gated assets, ledger-tracked
-    ownership, AGENTS.md marker block, .mcp.json registration. ``--dry-run``
+    ownership, forge:* doc blocks, .mcp.json registration. ``--dry-run``
     prints the plan; real writes need ``--yes``.
+
+    Project/workspace installs never touch user-level state
+    (``~/.productforge``, ``~/.forge-bridge``) unless ``--init-app`` /
+    ``--with-bridge`` say so.
     """
     from ..install.cli import run_flag_install
 
@@ -167,6 +183,8 @@ def install(
             root=root,
             components=components,
             gateway_profile=gateway_profile,
+            init_app=init_app,
+            with_bridge=with_bridge,
             dry_run=dry_run,
             yes=yes,
         )
@@ -222,7 +240,12 @@ def update(
 def uninstall(
     scope: str = typer.Option("project", "--scope"),
     root: str = typer.Option(None, "--root"),
-    purge_state: bool = typer.Option(False, "--purge-state"),
+    purge_state: bool = typer.Option(
+        False,
+        "--purge",
+        "--purge-state",
+        help="Also delete the forge state dir (sibling-forge flag name: --purge)",
+    ),
 ) -> None:
     """Remove only ledger-owned files; user/adopted files survive."""
     from ..install import lifecycle

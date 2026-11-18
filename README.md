@@ -37,13 +37,18 @@ productforge install
 
 It applies the recommended local profile, installs the Product Forge PM/PA
 portal assets and host integrations, records a receipt and runs diagnostics.
-It also provisions a managed PostgreSQL container for the recommended
-profile. It does not open a browser or ask for AI provider credentials.
+At `--scope user` it also initializes the account app home and the vendored
+Agent Bridge state once — project/workspace installs stay content-only
+unless `--init-app`/`--with-bridge` opt in. It does not open a browser or
+ask for AI provider credentials.
 
-The recommended profile uses an installation-scoped Docker volume and a
-generated local DSN. `productforge portal` reconciles the database before
-opening the UI; `productforge status` and `productforge doctor` report its
-health. Use `--profile minimal` for an explicit SQLite-only offline install.
+Local installs stay on zero-configuration SQLite. A managed PostgreSQL
+container is provisioned only when explicitly requested via
+`PRODUCT_FORGE_MANAGED_POSTGRES=1` (or an external DSN via
+`PRODUCT_FORGE_DATABASE_URL`); `productforge portal` reconciles the
+database before opening the UI, and `productforge status` /
+`productforge doctor` report its health. Use `--profile minimal` for an
+explicit SQLite-only offline install.
 
 On a TTY, advanced users can use the **guided wizard** (same contract as
 `sparkforge-aws install`):
@@ -65,7 +70,7 @@ productforge repair / update / uninstall          # lifecycle verbs (ledger-gove
 productforge status
 ```
 
-Install is governed by the **vendored forge installkit** (`src/product_forge/_installkit.py`, canonical `the-forge/scripts/installkit`) — the same engine spark-forge-aws uses: profile-gated assets, ledger-tracked ownership (uninstall removes only owned files), AGENTS.md marker blocks, `.mcp.json` registration, drift detection and repair. The 16 `pf-*` skills ship inside the wheel (`force-include`) into each selected host's skills dir; content bundles (`rules`, `evals`, `knowledge`) land under `<state_dir>/bundle/`.
+Install is governed by the **vendored forge installkit** (`src/product_forge/_installkit.py`, canonical `the-forge/scripts/installkit`) — the same engine spark-forge-aws uses: profile-gated assets, ledger-tracked ownership (uninstall removes only owned files), `forge:*` managed blocks in AGENTS.md/CLAUDE.md, `.mcp.json` registration, drift detection and repair. The 16 `pf-*` skills ship inside the wheel (`force-include`) into each selected host's skills dir; content bundles (`rules`, `evals`, `knowledge`) land under `<state_dir>/bundle/`.
 
 Full guide: [docs/INSTALL.md](docs/INSTALL.md).
 
