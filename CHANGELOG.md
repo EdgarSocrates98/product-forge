@@ -11,6 +11,45 @@ All notable changes. Format follows the evolution cycles (see
 
 ## [Unreleased]
 
+### Changed — install-2.1 (cycle-16 wave-06)
+
+- Re-vendored the forge installkit 1.0.4 → 1.0.6 (`--root` precedence,
+  gitless workspace-member discovery, `InstallContext.exclude` conflict
+  skips, `manifest_for` declared-surface params) and `forge_bootstrap`
+  with the matching registration passthrough.
+- `forge.json` now declares the install-2.1 surface verbatim:
+  `installation_kind: "content"`, the `install{}` surface (operations
+  including `mcp-verify`, flags, hosts, scopes, profiles,
+  `approval: "--yes"`), `mcp_verify_tool: "productforge_status"` and
+  `depends_on: ["forge-agent-bridge"]` — install-order only; the wheel
+  vendors the bridge, so it is an optional companion service, never a
+  required prior install.
+- **User-level provisioning decoupled from content install**: a
+  `project`/`workspace` install no longer writes `~/.productforge`,
+  `~/.forge-bridge` or reconciles the runtime backend. New opt-in flags
+  `--init-app` / `--with-bridge` (default = `scope == "user"`); skipped
+  steps report named `skipped` states in the receipt.
+- Bridge provisioning is once-per-account: existing
+  `~/.forge-bridge/components.json` reports `skipped` instead of
+  rewriting providers/config/ledger snapshots. The vendored `verify-cli`
+  PATH probe (unreachable — the wheel ships no `forge-bridge` script)
+  is replaced by an import-based `verify-module` check.
+- Uninstall is bridge-ownership-aware: a `bridge-provisioned` marker
+  under this install's state dir proves what it provisioned; a
+  registered standalone `forge-agent-bridge` or unknown-provenance
+  state is preserved. `pair.token`, `events/` and `backups/` remain
+  user content in every path.
+- Declared fields (`installation_kind`, `install`, `depends_on`) now
+  propagate to the `~/.forge/installations/product-forge.json`
+  manifest.
+- `uninstall --purge` is the canonical flag (sibling parity);
+  `--purge-state` remains an alias.
+- Docs: profile matrix is honest — `full` installs the same asset kinds
+  as `recommended` today; `tui`/`graph-studio` are opt-in components,
+  never profile-gated. INSTALL.md/README reflect `forge:*` doc blocks,
+  `.agents/skills` host surface, scope-gated user state and the
+  ownership-aware bridge lifecycle. MCP tool count corrected to 17.
+
 ## [0.2.4] - 2026-11-12
 
 Cycle 2.7 patch release: federated SDD contracts and adapters, forge-context kind taxonomy, universal Obsidian export verbs, portal and install UX improvements, provider context-registry wiring, CI hardening and generated-artifact refresh.

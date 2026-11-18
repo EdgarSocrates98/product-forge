@@ -104,23 +104,34 @@ productforge install --yes \
   --host claude,devin --components skills,agents,mcp \
   --gateway-profile balanced
 productforge install --dry-run          # plan only, zero writes
-productforge install --host none --yes  # runtime home only, no host writes
+productforge install --host none --yes  # content only, no host writes
+```
+
+User-level state is **opt-in at project/workspace scope** — a content
+install never touches `~/.productforge` or `~/.forge-bridge` unless asked:
+
+```bash
+productforge install --scope project --init-app --with-bridge --yes
+productforge install --scope user --no-bridge --yes   # account install, no bridge
 ```
 
 ## What lands where
 
 | Selection | Destination |
 |---|---|
-| `skills` component | `skills/pf-*` (16 domain skills) → each host's skills dir (`.claude/skills/`, `.devin/skills/`, `.agents/skills/`, `.codex/…`) |
-| `agents` component | `agents/*.md` coordinators + `agents/executors/pf-*` → host agents dirs |
+| `skills` component | `skills/pf-*` (16 domain skills) → each host's skills dir (`.claude/skills/` for Claude; `.agents/skills/` shared by Devin/Codex/Copilot) |
+| `agents` component | `agents/*.md` coordinators + `agents/executors/pf-*` → host agents dirs (`.claude/agents/`, `.agents/agents/`) |
 | `mcp` component | `.mcp.json` → `product-forge` server entry (`productforge mcp serve`) |
 | `graph-studio` | graph studio assets flag in `components.json` |
 | `tui` | TUI assets flag |
-| marker block | `<!-- product-forge:managed -->` section in `AGENTS.md`/`CLAUDE.md` |
+| consumer docs | `<!-- forge:product-forge:begin -->` managed blocks in `AGENTS.md`/`CLAUDE.md` + `<!-- forge:ecosystem:begin -->`, written by the forge_context layer — user content outside the markers is never touched |
+| context registry | `.forge/context/` (project/workspace scopes) — registry.json, ROUTING.md, capability manifest |
 | content bundles | `rules/catalog/`, `evals/`, `knowledge/` → `<state_dir>/bundle/` (self-contained; code packages never bundled, `.pyc`/`__pycache__` excluded) |
-| ledger | `<state_dir>/ledger.json` — every owned write tracked for uninstall/repair/drift |
+| ledger | `<state_dir>/install-ledger.json` — every owned write tracked for uninstall/repair/drift |
 | selection | `<state_dir>/components.json` — `asset_kinds`, `gateway_profile`, `profile` |
-| app home | `~/.productforge/` — config (`gateway_profile` persisted), db, API token |
+| app home | `~/.productforge/` — config (`gateway_profile` persisted), db, API token. **Scope-gated**: written at `--scope user` or with `--init-app` only |
+| bridge state | `~/.forge-bridge/` — dirs, `pair.token` (0600), providers snapshot, ledger. **Scope-gated + once**: `--scope user` or `--with-bridge`; skipped when already provisioned |
+| account registry | `~/.forge/installations/product-forge.json` — records the declared install surface (`installation_kind`, `install`, `depends_on`) |
 
 ### Scopes
 
@@ -130,11 +141,26 @@ productforge install --host none --yes  # runtime home only, no host writes
 | `workspace` | workspace dir (or `--root`) | `.product-forge/` |
 | `user` | `~` | `.product-forge/` |
 
+`--root` is authoritative when given — the ancestor walk never resolves a
+root above it (installkit 1.0.6). Workspace member discovery is gitless:
+a directory counts as a member via `.git` **or** a project manifest
+(`forge.json`, `pyproject.toml`, `package.json`, …); `.venv`,
+`node_modules` and hidden dirs are skipped, symlinks/junctions never
+followed.
+
 ### Profiles
 
-- `minimal` — marker + MCP only (no skills).
-- `recommended` — skills + agents + MCP.
-- `full` — everything including `tui`/`graph-studio` assets.
+The installed asset kinds per profile (`lifecycle.PROFILE_ASSET_MATRIX`,
+from the vendored installkit):
+
+| Profile | Asset kinds |
+|---|---|
+| `minimal` | `config`, `mcp`, `marker`, `state` — no skills/agents/bundles |
+| `recommended` | + `skill`, `agent`, `knowledge`, `rules`, `evals` |
+| `full` | **identical to `recommended` today** — a declared alias, not a superset |
+
+`tui` and `graph-studio` are **opt-in components**, never profile-gated:
+select them with `--components ...,tui,graph-studio` at any profile.
 
 ### Execution profile (`--gateway-profile`)
 
@@ -148,11 +174,15 @@ productforge status                 # installed state + drift
 productforge repair                 # restore owned files to ledger state
 productforge update --yes           # re-apply current assets (upgrades)
 productforge uninstall              # removes only ledger-owned files
+productforge uninstall --purge      # + the forge state dir (alias: --purge-state)
 productforge doctor                 # env diagnostics (python, deps, home)
 ```
 
 Uninstall removes **only files the ledger owns** — your edits outside marker
-blocks and unmanaged paths survive.
+blocks and unmanaged paths survive. Bridge state leaves only when this
+install provisioned it (a `bridge-provisioned` marker under the state dir)
+and no standalone `forge-agent-bridge` is registered; `pair.token`,
+`events/` and `backups/` are user content and are always preserved.
 
 ## Troubleshooting
 

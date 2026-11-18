@@ -68,6 +68,7 @@ def test_minimal_profile_skips_skills(project):
 
 def test_status_repair_uninstall(project, tmp_path, monkeypatch):
     monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("FORGE_HOME_OVERRIDE", str(tmp_path / "acct"))
     kit_lifecycle.install(scope="project", root=project, hosts=("devin",), yes=True)
     s = kit_lifecycle.status(scope="project", root=project)
     assert s["status"] == "healthy" and s["ledger_entries"] > 0
@@ -87,9 +88,12 @@ def test_status_repair_uninstall(project, tmp_path, monkeypatch):
 
 def test_update_idempotent(project, tmp_path, monkeypatch):
     monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("FORGE_HOME_OVERRIDE", str(tmp_path / "acct"))
     kit_lifecycle.install(scope="project", root=project, hosts=("devin",), yes=True)
     s1 = kit_lifecycle.status(scope="project", root=project)["ledger_entries"]
-    kit_lifecycle.update(scope="project", hosts=("devin",), yes=True)
+    # root must be explicit — without it the scope resolver walks to the
+    # repo VCS root and the update would rewrite this checkout.
+    kit_lifecycle.update(scope="project", root=project, hosts=("devin",), yes=True)
     assert kit_lifecycle.status(scope="project", root=project)["ledger_entries"] == s1
 
 
@@ -172,6 +176,7 @@ def test_workspace_scope_and_gateway_profile(project, tmp_path, monkeypatch):
 
 def test_rules_bundle_and_no_code_packages(project, tmp_path, monkeypatch):
     monkeypatch.setenv("PRODUCT_FORGE_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("FORGE_HOME_OVERRIDE", str(tmp_path / "acct"))
     kit_lifecycle.install(scope="project", root=project, hosts=("devin",), yes=True)
     bundle = project / ".product-forge" / "bundle"
     assert (bundle / "rules" / "catalog" / "pf-sql.yaml").is_file()
