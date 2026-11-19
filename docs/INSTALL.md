@@ -223,3 +223,4 @@ and no standalone `forge-agent-bridge` is registered; `pair.token`,
 | skills missing in host | `--host` didn't include it, or profile `minimal` |
 | drift detected | `productforge repair` restores ledger state |
 | bootstrap refuses | JSON report names the stage (`E-*` code) — fix and re-run |
+| `setup: FORGE-PYTHON-NOT-FOUND` | no python on PATH — install Python >=3.11 and reopen the shell (rc=2; previously `setup.sh` exited 1 silently) |

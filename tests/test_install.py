@@ -310,3 +310,52 @@ def test_discover_projects_finds_gitless_members(tmp_path):
     (ws / ".venv" / "git-member" / ".git").mkdir(parents=True)  # IGNORED_DIRS
     found = {p.name for p in kit.discover_projects(ws)}
     assert found == {"git-member", "gitless-member"}
+
+
+def test_setup_sh_python_ausente_recusa_nomeada(tmp_path):
+    """cycle-16.1.1 wave-07b: `setup.sh` sob `set -e` — sem python no PATH
+    deve emitir FORGE-PYTHON-NOT-FOUND + rc=2, nunca rc=1 silencioso."""
+    import shutil
+    import subprocess
+
+    bash = shutil.which("bash")
+    if not bash:
+        pytest.skip("bash indisponivel")
+    stub = tmp_path / "stubbin"
+    stub.mkdir()
+    real_dirname = shutil.which("dirname")
+    if real_dirname:
+        (stub / "dirname").symlink_to(real_dirname)
+    repo = Path(__file__).resolve().parents[1]
+    out = subprocess.run(  # noqa: S603 — script do repo, argv fixo
+        [bash, "setup.sh"],
+        cwd=repo,
+        env={"PATH": str(stub), "HOME": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert out.returncode == 2
+    assert "FORGE-PYTHON-NOT-FOUND" in out.stderr
+
+
+def test_vendored_ui_kit_parity_canonical():
+    """Os três arquivos do kit UI (nos DOIS pacotes) devem ser
+    byte-parity com o canônico the-forge modulo rewrite de pacote —
+    cobre o drift que o gate the-forge não ve (product-forge fora do
+    KIT_PARITY_REPOS)."""
+    canonical_dir = (
+        Path(__file__).resolve().parents[1].parent / "the-forge" / "src" / "theforge" / "ui"
+    )
+    if not canonical_dir.is_dir():
+        pytest.skip("sibling the-forge checkout ausente")
+    for pkg in ("product_forge", "forge_agent_bridge"):
+        for fname in ("kit.py", "i18n.py", "wizard.py"):
+            expected = (canonical_dir / fname).read_text(encoding="utf-8").replace(
+                "theforge.ui", f"{pkg}.ui"
+            )
+            vendored = (
+                Path(__file__).resolve().parents[1] / "src" / pkg / "ui" / fname
+            ).read_text(encoding="utf-8")
+            assert vendored == expected, f"{pkg}/ui/{fname} drifted from canonical"

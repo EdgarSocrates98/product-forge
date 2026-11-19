@@ -12,6 +12,7 @@ without side effects; nothing is written before the explicit confirm.
 
 from __future__ import annotations
 
+import importlib
 import json
 import shutil
 import sys
@@ -66,7 +67,8 @@ def _scope_choices(ctx: UIContext) -> list[str]:
             _c(
                 ctx,
                 "33",
-                "  No repository detected; choose Entire workspace to use this directory or My user account.",
+                "  No repository detected; choose Entire workspace to use this directory "
+                "or My user account.",
             )
         )
         scopes.remove("project")
@@ -228,32 +230,52 @@ def run_wizard(
         return 1
 
     planned = plan.get("planned") or plan.get("planned_files") or plan.get("writes") or []
+    rows: list[tuple[str, str]] = [
+        ("scope", scope),
+        ("profile", profile),
+        ("execution", gateway_profile),
+        ("mode", "family" if family else "this forge"),
+        ("components", ", ".join(components) or "none"),
+        ("hosts", host_arg or "none"),
+        ("managed writes", str(len(planned) if isinstance(planned, list) else planned)),
+    ]
+    # install-2.1 — the consolidated plan on the review screen: workspace
+    # root, discovered members, registered forges and the closed plan
+    # categories (new/updated/reused/preserved/conflict/unsupported).
+    ws = plan.get("workspace") if isinstance(plan.get("workspace"), dict) else {}
+    inst = plan.get("installation") if isinstance(plan.get("installation"), dict) else {}
+    if plan.get("target_root"):
+        rows.append(("workspace", str(plan["target_root"])))
+    members = ws.get("members") or inst.get("members") or []
+    if members:
+        names = [str(m.get("path")) if isinstance(m, dict) else str(m) for m in members]
+        rows.append(("members", f"{len(names)}: {', '.join(names[:6])}"))
+    forge_rows = [f for f in (plan.get("forges") or []) if isinstance(f, dict)]
+    if forge_rows:
+        fid_list = ", ".join(str(f.get("forge_id")) for f in forge_rows)
+        rows.append(("forges", f"{len(forge_rows)}: {fid_list}"))
+    if inst:
+        counts: dict[str, int] = {}
+        for f in inst.get("forges") or []:
+            cls = str((f or {}).get("classification") or "?")
+            counts[cls] = counts.get(cls, 0) + 1
+        if counts:
+            rows.append(("plan", " · ".join(f"{k} {n}" for k, n in sorted(counts.items()))))
+        n_conflicts = len(inst.get("conflicts") or [])
+        if n_conflicts:
+            rows.append(("conflicts", str(n_conflicts)))
     dashboard(
         f"{forge_name} — {i18n.t('review', ctx.language)}",
-        [
-            (
-                "Plan",
-                [
-                    ("scope", scope),
-                    ("profile", profile),
-                    ("execution", gateway_profile),
-                    ("mode", "family" if family else "this forge"),
-                    ("components", ", ".join(components) or "none"),
-                    ("hosts", host_arg or "none"),
-                    ("managed writes", str(len(planned) if isinstance(planned, list) else planned)),
-                ],
-            )
-        ],
+        [("Plan", rows)],
         ctx=ctx,
     )
-    if isinstance(planned, list):
-        for entry in planned[:10]:
-            path = str(entry.get("path")) if isinstance(entry, dict) else str(entry)
-            print(f"    {_c(ctx, '2', path)}")
-        if len(planned) > 10:
-            print(f"    … {len(planned) - 10} more")
+    # The full consolidated doc — same formatter the CLI approve path
+    # prints; deterministic and identical in non-TTY/JSON modes.
+    from product_forge.ui.kit import format_status_doc
 
-    if not confirm(i18n.t("confirm_q", ctx.language), default=True, ctx=ctx):
+    sys.stdout.write(format_status_doc(plan, ctx=ctx))
+
+    if not confirm(i18n.t("confirm_q", ctx.language), default=False, ctx=ctx):
         return 130
 
     # --- apply (real governed install) ---------------------------------------
@@ -275,6 +297,34 @@ def run_wizard(
         print(f"  {i18n.t('health', ctx.language)}: {_c(ctx, color, str(hstatus))}")
 
     if status == "completed":
-        print("  next: productforge status · productforge doctor · productforge mcp verify")
+        print("  next: theforge specialists status · theforge doctor · theforge portal")
 
     return 0 if status == "completed" else 1
+
+
+def run_setup_wizard(
+    *,
+    root: Any = None,
+    ctx: UIContext | None = None,
+    out_json: bool = False,
+) -> int:
+    """Family onboarding over the same real plan/approval/apply wizard."""
+    try:
+        service = importlib.import_module("theforge.install.service")
+    except ModuleNotFoundError as exc:
+        if exc.name == "theforge" or (exc.name or "").startswith("theforge."):
+            print(
+                "family onboarding unavailable: install The Forge separately; "
+                "native Forge commands remain available"
+            )
+            return 2
+        raise
+
+    return run_wizard(
+        forge_name="the-forge family",
+        install_fn=lambda **kw: service.install_auto(root=root, **kw),
+        doctor_fn=lambda **kw: service.doctor(root=root, **kw),
+        ctx=ctx,
+        out_json=out_json,
+        family=True,
+    )

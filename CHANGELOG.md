@@ -11,6 +11,20 @@ All notable changes. Format follows the evolution cycles (see
 
 ## [Unreleased]
 
+### Fixed — cycle-16.1.1 wave-07b
+
+- `setup.sh`: python probe tolerates all-missing (`|| true`) — under
+  `set -euo pipefail` the unguarded substitution exited `rc=1` silently
+  before `FORGE-PYTHON-NOT-FOUND` could print (vendored defect;
+  canonical fix in the-forge wave-01).
+- `product_forge/ui/` + `forge_agent_bridge/ui/` — `kit.py`, `i18n.py`,
+  `wizard.py` re-vendored to canonical the-forge: both packages had
+  drifted (the vendored bridge kit was missing the `installation`
+  consolidated-plan block and lifecycle states; product_forge carried a
+  pre-refactor kit). product-forge sits outside the the-forge
+  `KIT_PARITY_REPOS` gate — a repo-local parity test now covers all six
+  vendored copies.
+
 ### Changed — cycle-16.1 wave-07
 
 - Re-vendored the canonical installkit + forge_context to the cycle-16.1
