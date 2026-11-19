@@ -1053,6 +1053,21 @@ def mcp_serve(
         serve()
 
 
+@mcp_app.command("verify")
+def mcp_verify() -> None:
+    """Probe the managed ``.mcp.json`` server argv — read-only JSON-RPC
+    handshake (initialize → tools/list) against the resolved absolute
+    command the install wrote, never a PATH guess. Reports BLOCKED when
+    the argv is unresolvable — a named state, not a fabricated success."""
+    from .._installkit import mcp_verify as _probe
+    from ..install import lifecycle
+
+    out = _probe(lifecycle.mcp_spec())
+    _out(out)
+    if out.get("status") in ("FAIL", "BLOCKED"):
+        raise typer.Exit(1)
+
+
 def main() -> None:
     if sys.argv[1:] in ([], ["tui"]):
         if sys.stdin.isatty() and sys.stdout.isatty():

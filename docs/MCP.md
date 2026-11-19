@@ -1,11 +1,20 @@
 # Product Forge — MCP tools
 
 `productforge mcp serve` exposes 17 tools over stdio (JSON-RPC). Hosts
-register it via `.mcp.json` (the `mcp` install component writes the entry):
+register it via `.mcp.json` (the `mcp` install component writes the entry).
+
+The managed entry declares a **resolved absolute argv** — never a PATH
+lookup: the bootstrap-registered launcher shim when one exists, else the
+interpreter-pinned module launch (`§9.3` of the install contract):
 
 ```json
-{"mcpServers": {"product-forge": {"command": "productforge", "args": ["mcp", "serve"]}}}
+{"mcpServers": {"product-forge": {"command": "/abs/path/python", "args": ["-m", "product_forge", "mcp", "serve"]}}}
 ```
+
+`productforge mcp verify` runs a read-only handshake (initialize →
+tools/list → `productforge_status` invoke) against exactly the argv the
+managed key declares — `PASS`/`BLOCKED`/`FAIL` are real evidence, never
+file-presence inference.
 
 HTTP transport is also available: `productforge mcp serve --transport http`.
 

@@ -1,6 +1,7 @@
 """Install lifecycle (vendored forge installkit) + expanded MCP tools."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -42,7 +43,11 @@ def test_install_plan_then_apply(project, tmp_path, monkeypatch):
     check_ids = {c["id"] for c in doc["checks"]}
     assert {"context-registry", "consumer-docs"} <= check_ids
     mcp = json.loads((project / ".mcp.json").read_text())
-    assert mcp["mcpServers"]["product-forge"]["command"] == "productforge"
+    # §9.3: the managed key declares a resolved, absolute argv — never a
+    # PATH lookup. No registered shim → interpreter-pinned module launch.
+    entry = mcp["mcpServers"]["product-forge"]
+    assert Path(entry["command"]).is_absolute() and Path(entry["command"]).exists()
+    assert entry["args"] == ["-m", "product_forge", "mcp", "serve"]
     # install-2.1: user-level state is opt-in at project scope — named
     # skipped states, and zero writes under the account dirs.
     assert doc["app_home"]["status"] == "skipped"

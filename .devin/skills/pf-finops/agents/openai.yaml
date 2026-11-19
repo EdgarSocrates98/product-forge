@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Finops"
-  short_description: "Agent budgets and honest cloud cost states"
-  default_prompt: "Use $pf-finops to review agent budgets and verifiable cloud cost signals."

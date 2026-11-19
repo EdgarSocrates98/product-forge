@@ -121,7 +121,7 @@ productforge install --scope user --no-bridge --yes   # account install, no brid
 |---|---|
 | `skills` component | `skills/pf-*` (16 domain skills) → each host's skills dir (`.claude/skills/` for Claude; `.agents/skills/` shared by Devin/Codex/Copilot) |
 | `agents` component | `agents/*.md` coordinators + `agents/executors/pf-*` → host agents dirs (`.claude/agents/`, `.agents/agents/`) |
-| `mcp` component | `.mcp.json` → `product-forge` server entry (`productforge mcp serve`) |
+| `mcp` component | `.mcp.json` → `product-forge` server entry — **resolved absolute argv** (the registered shim when present, else `python -m product_forge mcp serve`), never a PATH lookup (§9.3) |
 | `graph-studio` | graph studio assets flag in `components.json` |
 | `tui` | TUI assets flag |
 | consumer docs | `<!-- forge:product-forge:begin -->` managed blocks in `AGENTS.md`/`CLAUDE.md` + `<!-- forge:ecosystem:begin -->`, written by the forge_context layer — user content outside the markers is never touched |
@@ -172,11 +172,41 @@ Context gateway budgets: `economy` (8 caps / ~6KB), `balanced` (16 / ~16KB),
 ```bash
 productforge status                 # installed state + drift
 productforge repair                 # restore owned files to ledger state
+productforge repair --dry-run       # read-only plan: actions, no writes
 productforge update --yes           # re-apply current assets (upgrades)
 productforge uninstall              # removes only ledger-owned files
 productforge uninstall --purge      # + the forge state dir (alias: --purge-state)
 productforge doctor                 # env diagnostics (python, deps, home)
+productforge mcp verify             # JSON-RPC handshake vs the managed argv
 ```
+
+### Receipts — `forge/InstallLifecycle/v1`
+
+Every lifecycle verb's document (plan, install/update receipt, repair,
+uninstall, `status`) carries an additive `lifecycle` block
+(`forge/InstallLifecycle/v1`): a closed-vocabulary state *derived* from the
+evidence — `planned` → `applied`/`partially_applied` → `verified` →
+`ready`/`certified`, with `blocked`, `failed` and `unverified` as named
+honest states. `status: "completed"` alone never means production-ready —
+only `verified`/`ready`/`certified` may back a success claim. Receipts
+persisted under `<state_dir>/receipts/` carry the same block; pre-16.1
+receipts without it still parse (the state is a view, not a stored verdict).
+
+### Incremental reinstall
+
+Re-running `install`/`update` on an unchanged workspace does **not**
+re-write byte-identical managed files: each asset lands in the receipt as
+`created`/`updated`/`unchanged`/`adopted`/`skipped` and `counts`
+(`written`, `written_bytes`) reports real byte writes — `0` on a clean
+reinstall. Only drifted paths are re-touched; `repair` restores them.
+
+### `repair` is read-only until run for real
+
+`productforge repair --dry-run` emits the plan (`repair_plan.actions` —
+`restore`/`reheal`/`skipped` per drifted path) and writes nothing; the
+plain `repair` run applies it, snapshots pre-state under
+`<state_dir>/backups/` and leaves a rerunnable receipt.
+
 
 Uninstall removes **only files the ledger owns** — your edits outside marker
 blocks and unmanaged paths survive. Bridge state leaves only when this

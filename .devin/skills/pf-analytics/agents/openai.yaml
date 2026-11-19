@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Analytics"
-  short_description: "Schema exploration and assisted queries"
-  default_prompt: "Use $pf-analytics to explore governed product data and build a safe query."

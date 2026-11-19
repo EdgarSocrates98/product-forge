@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Product Discovery"
-  short_description: "Continuous discovery: opportunities to initiatives"
-  default_prompt: "Use $pf-product-discovery to move evidence from opportunities to initiatives."

@@ -11,6 +11,46 @@ All notable changes. Format follows the evolution cycles (see
 
 ## [Unreleased]
 
+### Changed — cycle-16.1 wave-07
+
+- Re-vendored the canonical installkit + forge_context to the cycle-16.1
+  wave-01 state (byte-parity, `_SOURCE_SHA256`-stamped; no in-place edits):
+  - **Incremental install** — byte-identical managed files are never
+    re-touched; receipts now carry per-asset actions
+    (`created`/`updated`/`unchanged`/`adopted`/`skipped`) plus `counts`
+    (`written`, `written_bytes`) and an honest `context` byte budget.
+  - **Resolved `.mcp.json` argv** — the managed server key now declares
+    the bootstrap shim (absolute) or `python -m product_forge mcp serve`;
+    hosts never launch the forge through a PATH lookup (§9.3).
+  - **Compact `forge:*` doc block** — the AGENTS.md per-forge block is
+    the routing-critical minimum (identity, domains, verifiable
+    pointers), not a duplicated instruction dump (§8.1).
+  - The install `doctor` now runs a real MCP JSON-RPC handshake
+    (`mcp-handshake`/`mcp-invoke` checks) instead of inferring health
+    from file presence.
+- New `forge/InstallLifecycle/v1` envelope on every install-surface
+  document (ported from `the-forge`'s lifecycle model; the vendored
+  engine is untouched): plan/install/update/repair/uninstall receipts
+  and `status`/`doctor` health docs carry a derived closed-vocabulary
+  `lifecycle.state` — `completed` never implies production-ready; only
+  `verified`/`ready`/`certified` back a success claim. Persisted
+  receipts carry the same block; older receipts still parse.
+- `productforge mcp verify` — the verb `forge.json` already declared
+  (`install.operations` includes `mcp-verify`): read-only handshake
+  probe against the resolved argv; `FAIL`/`BLOCKED` exit 1.
+- `repair --dry-run` is now truly read-only (previously it ran the
+  write path and returned a "repaired" receipt): it emits a
+  `repair_plan` with per-path `restore`/`reheal`/`skipped` actions.
+- `status`/`doctor` reconcile docs-only installs: an empty kit ledger +
+  a real `.forge/context` registry entry reports `healthy`
+  (`context_registered: true`), not a false NOT_INSTALLED.
+- Committed host-mirror hygiene: removed `.devin/skills/` — a stale,
+  byte-identical duplicate of `.agents/skills/` from a pre-consolidation
+  install (`.agents/` is the shared Devin/Codex/Copilot surface; §7.2).
+- Docs: INSTALL.md gains the lifecycle receipt model, incremental
+  reinstall and read-only repair plan; MCP.md/README document the
+  resolved `.mcp.json` argv, `mcp verify` and the 17-tool count.
+
 ### Changed — install-2.1 (cycle-16 wave-06)
 
 - Re-vendored the forge installkit 1.0.4 → 1.0.6 (`--root` precedence,

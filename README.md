@@ -70,7 +70,7 @@ productforge repair / update / uninstall          # lifecycle verbs (ledger-gove
 productforge status
 ```
 
-Install is governed by the **vendored forge installkit** (`src/product_forge/_installkit.py`, canonical `the-forge/scripts/installkit`) — the same engine spark-forge-aws uses: profile-gated assets, ledger-tracked ownership (uninstall removes only owned files), `forge:*` managed blocks in AGENTS.md/CLAUDE.md, `.mcp.json` registration, drift detection and repair. The 16 `pf-*` skills ship inside the wheel (`force-include`) into each selected host's skills dir; content bundles (`rules`, `evals`, `knowledge`) land under `<state_dir>/bundle/`.
+Install is governed by the **vendored forge installkit** (`src/product_forge/_installkit.py`, canonical `the-forge/scripts/installkit`) — the same engine spark-forge-aws uses: profile-gated assets, ledger-tracked ownership (uninstall removes only owned files), `forge:*` managed blocks in AGENTS.md/CLAUDE.md, `.mcp.json` registration with a resolved absolute argv, drift detection and repair. Reinstalls are incremental — byte-identical managed files are not re-touched, and every receipt carries a derived `forge/InstallLifecycle/v1` state (`planned`/`verified`/`unverified`/`ready`/… — `completed` alone never means production-ready). The 16 `pf-*` skills ship inside the wheel (`force-include`) into each selected host's skills dir; content bundles (`rules`, `evals`, `knowledge`) land under `<state_dir>/bundle/`.
 
 Full guide: [docs/INSTALL.md](docs/INSTALL.md).
 
@@ -104,7 +104,7 @@ productforge mcp serve            # MCP tools for agent hosts
 
 ## MCP
 
-`productforge mcp serve` — stdio JSON-RPC server exposing 16 tools, including body-free `knowledge_evidence` and authorized `obsidian_preview`. Mutating Obsidian operations remain explicit CLI/API flows with receipts and conflict checks. `install --scope project` registers it in `.mcp.json` for host auto-discovery.
+`productforge mcp serve` — stdio JSON-RPC server exposing 17 tools, including body-free `knowledge_evidence` and authorized `obsidian_preview`. Mutating Obsidian operations remain explicit CLI/API flows with receipts and conflict checks. `install --scope project` registers it in `.mcp.json` with a resolved absolute argv (no PATH lookup); `productforge mcp verify` handshakes the declared argv for real evidence.
 
 ## Status
 
@@ -116,7 +116,7 @@ Beta — Cycles 1–18 complete: foundation → knowledge/graph → agent runtim
 |---|---|
 | [docs/INSTALL.md](docs/INSTALL.md) | bootstrap scripts, guided wizard, scopes/profiles/components/hosts, bundles, lifecycle verbs |
 | [docs/API.md](docs/API.md) | `forge/PortalApi/1` envelope, auth, full `/api/v1` route index |
-| [docs/MCP.md](docs/MCP.md) | 14 MCP tools + transport + registration |
+| [docs/MCP.md](docs/MCP.md) | 17 MCP tools + transport + registration |
 | [docs/adr/](docs/adr/) | architecture decisions |
 | [docs/audit/](docs/audit/) | ecosystem audit, integration contracts, readiness report |
 | [CHANGELOG.md](CHANGELOG.md) | cycle history + hard invariants |

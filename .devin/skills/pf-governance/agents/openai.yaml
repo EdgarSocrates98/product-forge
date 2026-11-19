@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Governance"
-  short_description: "Approvals, audit trail and policy gates"
-  default_prompt: "Use $pf-governance to gate changes with approvals and an auditable trail."

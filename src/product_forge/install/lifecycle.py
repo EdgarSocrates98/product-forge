@@ -15,12 +15,15 @@ manifest + registration into install/uninstall/repair.
 from __future__ import annotations
 
 import os
+import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from .. import __version__
 from .. import _forgecontext as fctx
 from .. import _installkit as kit
+from . import lifecycle_state as lcs
 
 SCOPES = ("project", "workspace", "user")
 PROFILES = kit.PROFILES
@@ -148,6 +151,45 @@ def _render_assets(ctx: kit.InstallContext) -> dict[str, bytes]:
     return assets
 
 
+def _manifest() -> dict[str, Any]:
+    """The account-registry manifest this forge last registered
+    (``~/.forge/installations/product-forge.json``) — the source of the
+    launcher shim the bootstrap wrote, when one exists."""
+    doc = kit._load_json(kit.installations_dir() / f"{FORGE_ID}.json", None)
+    return doc if isinstance(doc, dict) else {}
+
+
+def _resolved_mcp_command(spec: kit.ForgeSpec) -> tuple[str, ...] | None:
+    """The PATH-independent argv for this forge's managed ``.mcp.json`` key.
+
+    §9.3 — a host must never launch the forge's MCP server through a PATH
+    lookup. Resolution order (same as the-forge's service wrapper):
+
+    1. the registered install manifest's ``cli.shim`` (absolute launcher
+       written by the bootstrap) → ``(shim, *mcp_command[1:])``;
+    2. ``(sys.executable, "-m", <package>, *mcp_command[1:])`` — the
+       current interpreter, absolute by construction, module-pinned.
+
+    ``None`` when the spec declares no MCP command at all.
+    """
+    if not spec.mcp_command:
+        return None
+    tail = spec.mcp_command[1:]
+    shim = (_manifest().get("cli") or {}).get("shim")
+    if isinstance(shim, str) and shim and Path(shim).is_absolute():
+        return (shim, *tail)
+    return (sys.executable, "-m", spec.package, *tail)
+
+
+def mcp_spec() -> kit.ForgeSpec:
+    """``_spec()`` carrying the argv the managed key actually declares —
+    probes (``productforge mcp verify``) exercise the written config, not a
+    PATH guess (§9.3)."""
+    spec = _spec()
+    resolved = _resolved_mcp_command(spec)
+    return replace(spec, mcp_command=resolved) if resolved else spec
+
+
 def _ctx(
     scope: str,
     profile: str,
@@ -173,6 +215,9 @@ def _ctx(
         hosts=hosts,
         dry_run=dry_run,
         options=kit.component_options(profile, components),
+        # Resolved once at ctx build: managed .mcp.json keys and MCP
+        # probes use the absolute argv, never a PATH guess (§9.3).
+        mcp_command_resolved=_resolved_mcp_command(spec),
     )
 
 
@@ -435,6 +480,7 @@ def install(
             doc["bridge"] = _skipped(
                 "forge-agent-bridge", f"scope={scope} — opt in with --with-bridge"
             )
+        doc["lifecycle"] = lcs.receipt_block(doc)
         return doc
     with kit.acquire_lock(ctx.state_dir):
         result = kit.apply_install(ctx, approved=yes)
@@ -442,6 +488,13 @@ def install(
     if result.get("status") == "completed":
         _register_context(ctx, result)
         _drop_stale_doc_entries(ctx)
+        # Derived AFTER the context layer — it may append checks or flip
+        # the status to failed, and the lifecycle view must see the final
+        # receipt, never the pre-context one.
+        result["lifecycle"] = lcs.receipt_block(result)
+        kit._write_receipt(ctx.state_dir, result)
+    else:
+        result["lifecycle"] = lcs.receipt_block(result)
     _register(ctx.spec, ctx.root)
     result["app_home"] = (
         _init_app_home(gateway_profile)
@@ -472,16 +525,52 @@ def _persist_components(ctx: kit.InstallContext, gateway_profile: str | None) ->
     (ctx.state_dir / "components.json").write_text(json.dumps(doc, indent=2), encoding="utf-8")
 
 
+def _context_registry_truth(root: Path | None) -> bool:
+    """``True`` when ``.forge/context/registry.json`` names this forge —
+    e.g. a docs-only install (``--host none`` + minimal components)
+    leaves the kit ledger empty while being fully installed. The registry
+    entry is the authoritative "installed here" signal in that case."""
+    if root is None:
+        return False
+    reg = fctx.load_registry(Path(root).resolve())
+    if not reg:
+        return False
+    return any(e.get("forge_id") == FORGE_ID for e in reg.get("forges", []))
+
+
 def status(*, scope: str = "project", root: Path | None = None) -> dict[str, Any]:
     # HOSTS superset: render_assets is host-driven and repair needs canonical
     # content for any ledger entry, regardless of which hosts were installed.
     ctx = _ctx(scope, "recommended", tuple(HOSTS), root, False)
-    return kit.status(ctx)
+    doc = kit.status(ctx)
+    if doc.get("status") == "unverified" and _context_registry_truth(ctx.root):
+        # Empty ledger + registry entry = docs-only install — report the
+        # truth instead of a false NOT_INSTALLED.
+        doc["status"] = "healthy"
+        doc["context_registered"] = True
+    doc["lifecycle"] = lcs.health_block(doc)
+    return doc
 
 
 def doctor(*, scope: str = "project", root: Path | None = None, verify_mcp: bool = False) -> dict[str, Any]:
     ctx = _ctx(scope, "recommended", tuple(HOSTS), root, False)
     doc = kit.doctor(ctx)
+    if doc.get("status") == "unverified" and _context_registry_truth(ctx.root):
+        doc["status"] = "healthy"
+        for c in doc.get("checks", []):
+            if c.get("id") == "ledger":
+                c["status"] = "NOT_APPLICABLE"
+                c["detail"] = (
+                    "0 managed entries — consumer docs owned by "
+                    ".forge/context registry (docs-only install)"
+                )
+        doc.setdefault("checks", []).append(
+            {
+                "id": "context-registry",
+                "status": "PASS",
+                "detail": f"{FORGE_ID} present in .forge/context/registry.json",
+            }
+        )
     try:
         from forge_agent_bridge.install import lifecycle as _bridge_lc
 
@@ -490,7 +579,10 @@ def doctor(*, scope: str = "project", root: Path | None = None, verify_mcp: bool
         doc["bridge"] = {"status": "unverified", "error": str(exc)}
     doc["portal"] = _portal_composition()
     if verify_mcp:
-        doc["mcp_verify"] = kit.mcp_verify(ctx.spec)
+        # Probe the argv the managed key actually declares — resolved,
+        # absolute — never a PATH guess (§9.3).
+        doc["mcp_verify"] = kit.mcp_verify(mcp_spec())
+    doc["lifecycle"] = lcs.health_block(doc)
     return doc
 
 
@@ -526,12 +618,76 @@ def _portal_composition() -> dict[str, Any]:
     }
 
 
+def _repair_plan(ctx: kit.InstallContext) -> dict[str, Any]:
+    """Read-only repair plan (§10.3): every action repair *would* take,
+    derived from ledger drift — paths, kinds and action names only.
+
+    Nothing here reads or echoes file content, so the plan cannot carry
+    secrets; ``deletes`` is always empty (repair never removes data); a
+    partial failure leaves both a rollback path (backups under the state
+    dir) and a rerunnable receipt, which the plan states explicitly."""
+    ledger = kit.Ledger.load(ctx.state_dir)
+    drift = [
+        d
+        for d in ledger.drift(ctx.root, ctx.spec, mcp_argv=ctx.mcp_command_resolved)
+        if d["status"] != "ok"
+    ]
+    actions: list[dict[str, Any]] = []
+    for d in drift:
+        rel, st = d["path"], d["status"]
+        entry = ledger.get(rel)
+        if entry is None or st == "unsafe":
+            actions.append(
+                {
+                    "path": rel,
+                    "status": st,
+                    "action": "skipped",
+                    "reason": "foreign or unsafe path — repair never touches it",
+                }
+            )
+        else:
+            actions.append(
+                {
+                    "path": rel,
+                    "status": st,
+                    "action": "restore" if st == "missing" else "reheal",
+                    "kind": entry.get("kind"),
+                }
+            )
+    return {
+        "actions": actions,
+        "drift_count": len(drift),
+        "nothing_to_repair": not actions,
+        "destructive": False,
+        "deletes": [],
+        "recovery": {
+            "rollback": f"pre-write backups under {ctx.spec.state_dir}/backups/",
+            "rerunnable": f"receipt recorded under {ctx.spec.state_dir}/receipts/ — "
+            "a partial repair is idempotent and safe to rerun",
+        },
+    }
+
+
 def repair(*, scope: str = "project", root: Path | None = None, dry_run: bool = False) -> dict[str, Any]:
     ctx = _ctx(scope, "recommended", tuple(HOSTS), root, dry_run)
+    if dry_run:
+        # §10.3 — diagnosis is read-only by default: the plan doc is the
+        # whole output and no write happens until the real run. (The
+        # installkit's repair() is the write path; it must not run here.)
+        doc: dict[str, Any] = dict(kit.status(ctx))
+        doc.update(
+            {
+                "operation": "repair",
+                "status": "planned",
+                "repair_plan": _repair_plan(ctx),
+                "next": "re-run without --dry-run to apply the plan (writes "
+                "only managed content, never deletes data)",
+            }
+        )
+        doc["lifecycle"] = lcs.receipt_block(doc)
+        return doc
     with kit.acquire_lock(ctx.state_dir):
         receipt = kit.repair(ctx)
-        if dry_run:
-            return receipt
         # Registry de contexto (recuperacao §9.2): refaz journal encalhado,
         # reclaim de lock velho, rebuild de registry+ROUTING.md — so quando
         # `.forge/context/` ja existe (repair nunca cria residuo num root
@@ -579,6 +735,7 @@ def repair(*, scope: str = "project", root: Path | None = None, dry_run: bool = 
             receipt.setdefault("checks", []).append(
                 {"id": "consumer-docs", "status": "BLOCKED", "detail": f"{exc.kind}: {exc.detail}"}
             )
+        receipt["lifecycle"] = lcs.receipt_block(receipt)
         return receipt
 
 
@@ -601,7 +758,9 @@ def update(
     selected = tuple(HOSTS) if hosts == ("all",) else hosts
     ctx = _ctx(scope, profile, selected, root, dry_run)
     if ctx.dry_run:
-        return kit.plan(ctx)
+        doc = kit.plan(ctx)
+        doc["lifecycle"] = lcs.receipt_block(doc)
+        return doc
     with kit.acquire_lock(ctx.state_dir):
         result = kit.apply_install(ctx, approved=yes)
     _persist_components(ctx, gateway_profile)
@@ -610,6 +769,10 @@ def update(
         # (idempotente: re-registro inalterado = zero writes).
         _register_context(ctx, result)
         _drop_stale_doc_entries(ctx)
+        result["lifecycle"] = lcs.receipt_block(result)
+        kit._write_receipt(ctx.state_dir, result)
+    else:
+        result["lifecycle"] = lcs.receipt_block(result)
     result["bridge"] = (
         _bridge_install(state_dir=ctx.state_dir, dry_run=False, yes=yes)
         if with_bridge
@@ -633,6 +796,11 @@ def uninstall(
             doc.setdefault("checks", []).extend(checks)
             if any(c.get("status") == "BLOCKED" for c in checks):
                 doc["status"] = "failed"
+    doc["lifecycle"] = lcs.receipt_block(doc)
+    if not purge_state and ctx.state_dir.exists():
+        # kit.uninstall persisted the receipt before the context layer ran
+        # — rewrite so the file reflects the final checks/status/lifecycle.
+        kit._write_receipt(ctx.state_dir, doc)
     # Ownership-aware: bridge files leave only when THIS install
     # provisioned them (marker under our state_dir) and no standalone
     # forge-agent-bridge is registered. `purge_state` purges PF state —
