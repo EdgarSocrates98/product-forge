@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Agent Factory"
-  short_description: "Create, eval and publish product agents"
-  default_prompt: "Use $pf-agent-factory to create, evaluate, or publish a Product Forge agent."

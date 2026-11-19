@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Apis"
-  short_description: "OpenAPI/AsyncAPI import, diff, breaking changes"
-  default_prompt: "Use $pf-apis to import an API contract and assess breaking changes."

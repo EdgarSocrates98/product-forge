@@ -13,7 +13,7 @@ Same hard rules as AGENTS.md — kept in sync manually (edit both).
   `factory/` loop (inbox → active → archive; human decides).
 
 Commands: `python -m pytest -q` · `python -m ruff check src tests` ·
-`productforge install --dry-run` · `productforge doctor`.
+`productforge install --dry-run` · `productforge doctor` · `productforge mcp verify`.
 
 <!-- forge:ecosystem:begin -->
 ## Forge Ecosystem

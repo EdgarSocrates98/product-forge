@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Aws"
-  short_description: "AWS product intelligence with honest states"
-  default_prompt: "Use $pf-aws to inspect AWS product intelligence with honest credential states."

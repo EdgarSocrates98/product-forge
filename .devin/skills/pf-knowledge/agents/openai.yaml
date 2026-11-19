@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Knowledge"
-  short_description: "Doc import, cited search, entity graph"
-  default_prompt: "Use $pf-knowledge to import, search, cite, and assess product knowledge."

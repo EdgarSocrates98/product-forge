@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Azure"
-  short_description: "Azure/Fabric/PowerBI intelligence, honest states"
-  default_prompt: "Use $pf-azure to inspect Azure product intelligence and configuration gaps."

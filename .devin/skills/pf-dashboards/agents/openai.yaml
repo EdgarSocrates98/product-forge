@@ -1,4 +1,0 @@
-interface:
-  display_name: "PF Dashboards"
-  short_description: "Dashboards rendered from real query runs"
-  default_prompt: "Use $pf-dashboards to build a dashboard from real, executed query runs."
